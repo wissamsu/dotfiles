@@ -1,0 +1,99 @@
+{
+  "explorer.icon.source": "nerdfont.vim",
+  "explorer.file.showHiddenFiles": true,
+  "explorer.icon.enableNerdfont": true,
+  "explorer.keyMappings.global": {
+    "d": "delete"
+  },
+  "codeLens.position": "eol",
+  "codeLens.enable": true,
+  "coc.preferences.useQuickfixForLocations": true,
+  "coc.preferences.formatOnSave": true,
+  "coc.preferences.willSaveHandlerTimeout": 500,
+  "suggest.autoTrigger": "always",
+  "suggest.timeout": 1000,
+  "suggest.triggerAfterInsertEnter": true,
+  "suggest.maxCompleteItemCount": 20,
+  "suggest.virtualText": false,
+  "coc.source.buffer.enable": true,
+  "coc.source.buffer.priority": 10,
+  "coc.source.buffer.ignoreGitignore": true,
+  "semanticTokens.enable": true,
+  "java.saveActions.organizeImports": true,
+  "java.maven.downloadSources": false,
+  "java.maven.updateSnapshots": false,
+  "java.autobuild.enabled": false,
+  "java.contentProvider.preferred": "fernflower",
+  "snippets.loadFromVSCode": [
+    "~/.config/nvim/friendly-snippets/snippets"
+  ],
+  "snippets.ultisnips.pythonPrompt": false,
+  "diagnostic.enable": true,
+  "diagnostic.virtualText": true,
+  "diagnostic.virtualTextCurrentLineOnly": false,
+  "diagnostic.errorSign": "E",
+  "diagnostic.warningSign": "W",
+  "diagnostic.messageTarget": "echo",
+  "yaml.format.enable": true,
+  "languageserver": {
+    "angular": {
+      "command": "node",
+      "args": [
+        "./node_modules/@angular/language-server/index.js",
+        "--ngProbeLocations",
+        "./node_modules",
+        "--tsProbeLocations",
+        "./node_modules",
+        "--stdio"
+      ],
+      "filetypes": [
+        "typescript",
+        "html"
+      ],
+      "rootPatterns": [
+        "angular.json"
+      ],
+      "initializationOptions": {
+        "angularOnly": true
+      }
+    },
+    "kotlin": {
+      "command": "~/.local/share/kotlin-language-server/bin/kotlin-language-server",
+      "filetypes": [
+        "kotlin"
+      ],
+      "rootPatterns": [
+        "settings.gradle",
+        "settings.gradle.kts",
+        "build.gradle",
+        "build.gradle.kts",
+        "gradlew",
+        ".git"
+      ]
+    }
+  },
+  "java.referencesCodeLens.enabled": true,
+  "java.implementationsCodeLens.enabled": true,
+  "typescript.referencesCodeLens.enabled": true,
+  "typescript.implementationsCodeLens.enabled": true,
+  "javascript.referencesCodeLens.enabled": true,
+  "javascript.implementationsCodeLens.enabled": true,
+  "Lua.codeLens.enable": true,
+  "boot-java.change-detection.on": true,
+  "boot-java.embedded-syntax-highlighting": true,
+  "boot-java.highlight-codelens.on": true,
+  "boot-java.validation.java.boot3": "ON",
+  "boot-java.validation.java.boot2": "ON",
+  "boot-java.validation.java.version-validation": "ON",
+  "boot-java.validation.spel.on": "ON",
+  "boot-java.validation.data-query": "ON",
+  "boot-java.support-spring-xml-config.on": true,
+  "boot-java.support-spring-xml-config.hyperlinks": true,
+  "boot-java.support-spring-xml-config.content-assist": true,
+  "boot-java.validation.java.spring-aot": "ON",
+  "boot-java.modulith-project-tracking": true,
+  "boot-java.live-information.automatic-connection.on": true,
+  "boot-java.live-information.all-local-java-processes": true,
+  "boot-java.live-information.fetch-data.max-retries": 5,
+  "boot-java.live-information.fetch-data.retry-delay-in-seconds": 3
+}
