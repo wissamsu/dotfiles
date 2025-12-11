@@ -69,11 +69,19 @@ vim.keymap.set("i", "<CR>", [[coc#pum#visible() ? coc#pum#confirm() : "<CR>"]], 
   desc = "Coc Confirm Completion with Enter",
 })
 
-vim.keymap.set("i", "<S-Tab>", [[coc#pum#visible() ? coc#pum#next(1) : "<S-Tab>"]], {
+-- Navigate coc.nvim completion menu
+vim.keymap.set("i", "<Tab>", [[coc#pum#visible() ? coc#pum#next(1) : "\<Tab>"]], {
+  expr = true,
   silent = true,
   noremap = true,
-  expr = true,
   desc = "Coc Next Completion",
+})
+
+vim.keymap.set("i", "<S-Tab>", [[coc#pum#visible() ? coc#pum#prev(1) : "\<S-Tab>"]], {
+  expr = true,
+  silent = true,
+  noremap = true,
+  desc = "Coc Previous Completion",
 })
 
 vim.keymap.set("n", "<leader>ds", ":CocList diagnostics<CR>", { silent = true })

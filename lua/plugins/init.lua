@@ -56,6 +56,60 @@ return {
   },
 
   {
+    "luk400/vim-jukit",
+    event = { "BufReadPost *.ipynb", "BufNewFile *.ipynb" },
+  },
+
+  {
+    "jellydn/quick-code-runner.nvim",
+    dependencies = { "MunifTanjim/nui.nvim" },
+
+    opts = {
+      debug = true, -- print debug info
+
+      file_types = {
+        python = { "python3 -u" },
+        go = { "go run ." },
+        java = {
+          command = "mvn spring-boot:run",
+          run_from_project_root = true, -- ⭐ IMPORTANT FIX
+          pass_filepath = false,
+          filename = nil,
+        },
+        lua = { "lua" },
+      },
+    },
+
+    cmd = { "QuickCodeRunner", "QuickCodePad" },
+
+    keys = {
+      -- Visual mode: run selected code
+      {
+        "<leader>cr",
+        ":QuickCodeRunner<CR>",
+        desc = "Quick Code Runner",
+      },
+
+      -- Open the code pad (editable window to run snippets)
+      {
+        "<leader>cp",
+        ":QuickCodePad<CR>",
+        desc = "Quick Code Pad",
+      },
+    },
+  },
+
+  {
+    "romus204/go-tagger.nvim",
+    event = { "BufReadPost *.go", "BufNewFile *.go" },
+    config = function()
+      require("go-tagger").setup({
+        skip_private = true, -- Skip unexported fields (starting with lowercase)
+      })
+    end,
+  },
+
+  {
     "folke/snacks.nvim",
     priority = 1000,
     lazy = false,
