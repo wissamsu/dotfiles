@@ -1,4 +1,13 @@
 {
+  "java.debug.settings.enableRunDebugCodeLens": true,
+  "java.debug.settings.forceBuildBeforeLaunch": true,
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-21",
+      "path": "/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home",
+      "default": true
+    }
+  ],
   "Lua.diagnostics.enable": false,
   "explorer.icon.source": "nerdfont.vim",
   "explorer.file.showHiddenFiles": true,

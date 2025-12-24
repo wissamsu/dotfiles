@@ -18,6 +18,8 @@ end, { desc = "float term" })
 
 
 
+map("n", "<leader>lr", ":Leet run<CR>", { desc = "Run Leet command" })
+map("n", "<leader>ls", ":Leet submit<CR>", { desc = "Run Submit command" })
 -- ======== PICKERS ========
 map("n", "<leader>ff", function() Snacks.picker.files() end, { desc = "Snacks Files" })
 map("n", "<leader>fg", function() Snacks.picker.grep() end, { desc = "Snacks Live Grep" })
@@ -47,9 +49,6 @@ map("n", "<leader>gc", function() Snacks.git.log() end, { desc = "Snacks Git Log
 -- ======== NOTIFICATIONS ========
 map("n", "<leader>sn", function() Snacks.notifier.show_history() end, { desc = "Notifications History" })
 map("n", "<leader>sN", function() Snacks.notifier.dismiss() end, { desc = "Dismiss Notifications" })
-
--- ======== INDENT ========
-map("n", "<leader>si", function() Snacks.indent.toggle() end, { desc = "Indent Guides Toggle" })
 
 -- ======== WORD HIGHLIGHT ========
 map("n", "<leader>sw", function() Snacks.words.toggle() end, { desc = "Toggle Word Highlights" })

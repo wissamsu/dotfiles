@@ -1,12 +1,41 @@
 return {
   --disabling
+
+  -- {
+  --   "puremourning/vimspector",
+  --   cmd = { "VimspectorInstall", "VimspectorUpdate" },
+  --   fn = { "vimspector#Launch()", "vimspector#ToggleBreakpoint", "vimspector#Continue" },
+  --   config = function()
+  --     require("configs.vimspector").setup()
+  --   end,
+  -- },
+
+  -- {
+  --   "askfiy/visual_studio_code",
+  --   priority = 100,
+  --   config = function()
+  --     vim.cmd([[colorscheme visual_studio_code]])
+  --   end,
+  -- },
+  {
+    "CopilotC-Nvim/CopilotChat.nvim",
+    cmd = "CopilotChat",
+    dependencies = {
+      { "nvim-lua/plenary.nvim", branch = "master" },
+    },
+    build = "make tiktoken",
+    opts = {
+      -- See Configuration section for options
+    },
+  },
   {
     "hrsh7th/nvim-cmp",
     enabled = false,
   },
-  { "nvim-treesitter/nvim-treesitter", branch = 'master', lazy = false, build = ":TSUpdate" },
+  { "nvim-treesitter/nvim-treesitter", branch = 'master', event = { "BufReadPost", "BufNewFile" }, build = ":TSUpdate" },
   {
     "wojciech-kulik/xcodebuild.nvim",
+    ft = "swift",
     dependencies = {
       -- Uncomment a picker that you want to use, snacks.nvim might be additionally
       -- useful to show previews and failing snapshots.
@@ -50,14 +79,63 @@ return {
   --disable end
   {
     "lukas-reineke/indent-blankline.nvim",
+    event = { "BufReadPost", "BufNewFile" },
     main = "ibl",
     ---@module "ibl"
     opts = {},
   },
+  {
+    'jkeresman01/spring-initializr.nvim',
+    cmd = { 'SpringInitializr', 'SpringGenerateProject' },
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'MunifTanjim/nui.nvim',
+      'nvim-telescope/telescope.nvim',
+    },
+    config = function()
+      require('spring-initializr').setup()
+      vim.keymap.set("n", "<leader>si", "<CMD>SpringInitializr<CR>")
+      vim.keymap.set("n", "<leader>sg", "<CMD>SpringGenerateProject<CR>")
+    end
+  },
 
   {
-    "luk400/vim-jukit",
-    event = { "BufReadPost *.ipynb", "BufNewFile *.ipynb" },
+    "mfussenegger/nvim-dap",
+    cmd = { "DapToggleBreakpoint", "DapContinue" },
+    dependencies = {
+      {
+        "rcarriga/nvim-dap-ui",
+        dependencies = { "nvim-neotest/nvim-nio" }, -- ✅ add this
+      },
+      "leoluz/nvim-dap-go",
+      "williamboman/mason.nvim", -- mason base
+      "jay-babu/mason-nvim-dap.nvim",
+    },
+    ft = { "go", "c", "cpp", "java", "python", "typescript", "javascript" },
+    config = function()
+      local dap = require("dap")
+      local dapui = require("dapui")
+      require("mason-nvim-dap").setup({
+        automatic_setup = true,
+      })
+      require("dap-go").setup()
+      require("dapui").setup()
+      require("configs.dap").setup()
+      dap.listeners.before.attach.dapui_config = function()
+        dapui.open()
+      end
+      dap.listeners.before.launch.dapui_config = function()
+        dapui.open()
+      end
+      dap.listeners.before.event_terminated.dapui_config = function()
+        dapui.close()
+      end
+      dap.listeners.before.event_exited.dapui_config = function()
+        dapui.close()
+      end
+      vim.keymap.set("n", "<leader>db", dap.toggle_breakpoint, {})
+      vim.keymap.set("n", "<leader>dc", dap.continue, {})
+    end
   },
 
   {
@@ -100,8 +178,27 @@ return {
   },
 
   {
+    "christoomey/vim-tmux-navigator",
+    cmd = {
+      "TmuxNavigateLeft",
+      "TmuxNavigateDown",
+      "TmuxNavigateUp",
+      "TmuxNavigateRight",
+      "TmuxNavigatePrevious",
+      "TmuxNavigatorProcessList",
+    },
+    keys = {
+      { "<c-h>",  "<cmd><C-U>TmuxNavigateLeft<cr>" },
+      { "<c-j>",  "<cmd><C-U>TmuxNavigateDown<cr>" },
+      { "<c-k>",  "<cmd><C-U>TmuxNavigateUp<cr>" },
+      { "<c-l>",  "<cmd><C-U>TmuxNavigateRight<cr>" },
+      { "<c-\\>", "<cmd><C-U>TmuxNavigatePrevious<cr>" },
+    },
+  },
+
+  {
     "romus204/go-tagger.nvim",
-    event = { "BufReadPost *.go", "BufNewFile *.go" },
+    ft = "go",
     config = function()
       require("go-tagger").setup({
         skip_private = true, -- Skip unexported fields (starting with lowercase)
@@ -111,8 +208,6 @@ return {
 
   {
     "folke/snacks.nvim",
-    priority = 1000,
-    lazy = false,
     ---@type snacks.Config
     opts = {
       -- your configuration comes here
@@ -180,7 +275,7 @@ return {
   },
   {
     "ariedov/android-nvim",
-    lazy = false,
+    cmd = { "LaunchAvd" },
     config = function()
       vim.g.android_sdk_path = "/Users/wsayadi/Library/Android/sdk"
       require("android-nvim").setup()
@@ -188,11 +283,12 @@ return {
   },
   {
     "tpope/vim-dadbod",
-    lazy = false,
+    cmd = { "DB", "DBUIOpen", "DBUIToggle" },
+    event = { "BufReadPost", "BufNewFile" },
   },
   {
     "kristijanhusak/vim-dadbod-ui",
-    lazy = false,
+    cmd = { "DBUIOpen", "DBUIToggle", "DBUI" },
     dependencies = { "tpope/vim-dadbod" },
     init = function()
       vim.g.db_ui_use_nerd_fonts = 1
@@ -204,7 +300,7 @@ return {
   },
   {
     "kndndrj/nvim-dbee",
-    lazy = false,
+    cmd = { "Dbee" },
     dependencies = { "MunifTanjim/nui.nvim", },
     build = function()
       require("dbee").install()
@@ -213,22 +309,21 @@ return {
   },
   {
     "kawre/leetcode.nvim",
+    cmd = { "Leet", "Leet submit", "Leet run" },
     build = ":TSUpdate html",
-    lazy = false,
     dependencies = { "nvim-telescope/telescope.nvim", "nvim-lua/plenary.nvim", "MunifTanjim/nui.nvim", },
     config = function()
       require("leetcode").setup({ lang = "java", })
     end
   },
-  {
-    "vague-theme/vague.nvim",
-    lazy = false,
-    priority = 1000,
-    config = function()
-      require("vague").setup({})
-      vim.cmd("colorscheme vague")
-    end
-  },
+  -- {
+  --   "vague-theme/vague.nvim",
+  --   event = { "BufReadPost", "BufNewFile" },
+  --   config = function()
+  --     require("vague").setup({})
+  --     vim.cmd("colorscheme vague")
+  --   end
+  -- },
   {
     "neovim/nvim-lspconfig",
     config = function()
@@ -243,7 +338,7 @@ return {
 
   {
     "folke/which-key.nvim",
-    event = "VeryLazy",
+    event = { "BufReadPost", "BufNewFile" },
     opts = {
       -- your configuration comes here
       -- or leave it empty to use the default settings
@@ -263,7 +358,7 @@ return {
   {
     'nvim-telescope/telescope.nvim',
     tag = 'v0.2.0',
-    lazy = false,
+    -- lazy = false,
     dependencies = { 'nvim-lua/plenary.nvim' }
   },
 
@@ -299,7 +394,7 @@ return {
 
   {
     "kdheepak/lazygit.nvim",
-    lazy = true,
+    event = { "BufReadPost", "BufNewFile" },
     cmd = {
       "LazyGit",
       "LazyGitConfig",
@@ -315,11 +410,10 @@ return {
 
   {
     "lewis6991/gitsigns.nvim",
-    event = "BufReadPre",
+    event = { "BufReadPost", "BufNewFile" },
     config = function()
       require("mason").setup()
     end
   },
-
 
 }

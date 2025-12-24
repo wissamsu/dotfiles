@@ -1,0 +1,388 @@
+--- Startup times for process: Primary (or UI client) ---
+
+times in msec
+ clock   self+sourced   self:  sourced script
+ clock   elapsed:              other lines
+
+000.001  000.001: --- NVIM STARTING ---
+000.117  000.116: event init
+000.300  000.184: early init
+000.807  000.507: locale set
+000.869  000.061: init first window
+013.625  012.757: inits 1
+013.647  000.021: window checked
+013.653  000.007: parsing arguments
+014.330  000.058  000.058: require('vim.shared')
+014.456  000.051  000.051: require('vim.inspect')
+014.519  000.051  000.051: require('vim._options')
+014.521  000.187  000.086: require('vim._editor')
+014.523  000.285  000.040: require('vim._init_packages')
+014.528  000.590: init lua interpreter
+017.816  003.287: nvim_ui_attach
+018.336  000.520: nvim_set_client_info
+018.341  000.005: --- NVIM STARTED ---
+
+--- Startup times for process: Embedded ---
+
+times in msec
+ clock   self+sourced   self:  sourced script
+ clock   elapsed:              other lines
+
+000.001  000.001: --- NVIM STARTING ---
+000.128  000.127: event init
+000.283  000.156: early init
+000.761  000.478: locale set
+000.819  000.058: init first window
+001.367  000.547: inits 1
+001.392  000.026: window checked
+001.399  000.006: parsing arguments
+002.067  000.057  000.057: require('vim.shared')
+002.198  000.057  000.057: require('vim.inspect')
+002.260  000.051  000.051: require('vim._options')
+002.263  000.191  000.084: require('vim._editor')
+002.265  000.295  000.047: require('vim._init_packages')
+002.269  000.575: init lua interpreter
+004.479  002.210: expanding arguments
+004.506  000.027: inits 2
+004.845  000.339: init highlight
+004.847  000.002: waiting for UI
+005.146  000.299: done waiting for UI
+005.161  000.015: clear screen
+005.339  000.015  000.015: require('vim.keymap')
+006.444  000.244  000.244: sourcing nvim_exec2()
+006.709  001.545  001.286: require('vim._defaults')
+006.716  000.010: init default mappings & autocommands
+007.458  000.084  000.084: sourcing /usr/local/Cellar/neovim/0.11.5/share/nvim/runtime/ftplugin.vim
+007.578  000.039  000.039: sourcing /usr/local/Cellar/neovim/0.11.5/share/nvim/runtime/indent.vim
+008.659  000.722  000.722: require('configs.lazy')
+008.913  000.250  000.250: require('lazy')
+008.958  000.021  000.021: require('ffi')
+009.076  000.092  000.092: require('vim.fs')
+009.362  000.282  000.282: require('vim.uri')
+009.407  000.446  000.072: require('vim.loader')
+009.695  000.246  000.246: require('lazy.stats')
+009.937  000.182  000.182: require('lazy.core.util')
+010.191  000.251  000.251: require('lazy.core.config')
+010.563  000.160  000.160: require('lazy.core.handler')
+011.160  000.210  000.210: require('lazy.pkg')
+011.167  000.427  000.216: require('lazy.core.meta')
+011.181  000.613  000.187: require('lazy.core.plugin')
+011.192  000.996  000.222: require('lazy.core.loader')
+011.790  000.170  000.170: require('lazy.core.fragments')
+016.338  000.212  000.212: require('lazy.core.handler.event')
+016.525  000.179  000.179: require('lazy.core.handler.keys')
+016.750  000.220  000.220: require('lazy.core.handler.cmd')
+016.982  000.226  000.226: require('lazy.core.handler.ft')
+017.146  000.012  000.012: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+017.171  000.003  000.003: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+017.928  000.006  000.006: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+017.950  000.003  000.003: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+018.351  000.005  000.005: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+018.373  000.002  000.002: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+020.250  000.007  000.007: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+020.281  000.003  000.003: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+020.643  000.066  000.066: sourcing nvim_exec2() called at /usr/local/Cellar/neovim/0.11.5/share/nvim/runtime/filetype.lua:0
+020.648  000.235  000.169: sourcing /usr/local/Cellar/neovim/0.11.5/share/nvim/runtime/filetype.lua
+020.654  000.344  000.109: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+021.731  000.666  000.666: require('snacks')
+021.737  000.790  000.123: sourcing /Users/wissam/.local/share/nvim/lazy/snacks.nvim/plugin/snacks.lua
+021.745  000.860  000.071: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+021.759  000.004  000.004: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+021.783  000.002  000.002: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+022.733  000.198  000.198: sourcing /Users/wissam/.local/share/nvim/lazy/vim-dadbod/plugin/dadbod.vim
+022.740  000.268  000.070: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+022.750  000.003  000.003: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+022.773  000.002  000.002: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+023.210  000.316  000.316: sourcing /Users/wissam/.local/share/nvim/lazy/vim-dadbod-ui/plugin/db_ui.vim
+023.216  000.384  000.067: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+023.226  000.002  000.002: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+023.246  000.002  000.002: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+023.926  000.007  000.007: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+023.948  000.002  000.002: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+026.032  000.493  000.493: require('dbee.install')
+027.562  000.293  000.293: require('dbee.utils')
+027.570  000.555  000.262: require('dbee.ui.common.floats')
+028.379  000.329  000.329: require('nui.object')
+029.223  000.511  000.511: require('vim.version')
+031.127  002.743  002.233: require('nui.utils')
+031.583  000.182  000.182: require('nui.text')
+031.593  000.323  000.140: require('nui.line')
+031.595  000.465  000.142: require('nui.tree.util')
+031.604  003.770  000.233: require('nui.tree')
+031.745  000.139  000.139: require('dbee.ui.common')
+032.484  000.282  000.282: require('nui.popup.border')
+032.651  000.162  000.162: require('nui.utils.buf_storage')
+032.964  000.310  000.310: require('nui.utils.autocmd')
+033.124  000.155  000.155: require('nui.utils.keymap')
+033.368  000.240  000.240: require('nui.layout.utils')
+033.402  001.356  000.206: require('nui.popup')
+033.416  001.540  000.185: require('nui.menu')
+033.591  000.174  000.174: require('nui.input')
+033.595  001.846  000.132: require('dbee.ui.drawer.menu')
+033.802  000.205  000.205: require('dbee.ui.drawer.convert')
+033.956  000.151  000.151: require('dbee.ui.drawer.expansion')
+033.960  006.387  000.277: require('dbee.ui.drawer')
+034.222  000.112  000.112: require('dbee.ui.editor.welcome')
+034.228  000.266  000.154: require('dbee.ui.editor')
+034.551  000.116  000.116: require('dbee.ui.result.progress')
+034.561  000.331  000.215: require('dbee.ui.result')
+034.703  000.139  000.139: require('dbee.ui.call_log')
+034.945  000.105  000.105: require('dbee.handler.__events')
+034.954  000.248  000.143: require('dbee.handler')
+035.068  000.112  000.112: require('dbee.api.__register')
+035.080  008.348  000.309: require('dbee.api.state')
+035.085  008.686  000.339: require('dbee.api.core')
+035.200  000.113  000.113: require('dbee.api.ui')
+035.203  009.165  000.366: require('dbee.api')
+035.490  000.138  000.138: require('dbee.sources')
+035.871  000.151  000.151: require('dbee.layouts.tools')
+035.879  000.349  000.199: require('dbee.layouts')
+035.882  000.677  000.190: require('dbee.config')
+035.889  011.558  001.223: require('dbee')
+035.900  011.809  000.251: sourcing /Users/wissam/.local/share/nvim/lazy/nvim-dbee/plugin/dbee.lua
+035.908  011.892  000.082: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+035.926  000.008  000.008: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+035.943  000.002  000.002: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+036.325  000.182  000.182: require('vim.health')
+036.333  000.334  000.151: require('vim.deprecated.health')
+038.301  000.227  000.227: require('nvim-treesitter.utils')
+040.283  000.112  000.112: require('vim.treesitter.language')
+040.379  000.092  000.092: require('vim.func')
+040.487  000.102  000.102: require('vim.func._memoize')
+040.529  000.500  000.193: require('vim.treesitter.query')
+040.641  000.109  000.109: require('vim.treesitter._range')
+040.657  000.862  000.253: require('vim.treesitter.languagetree')
+040.663  001.801  000.939: require('vim.treesitter')
+041.340  003.035  001.234: require('nvim-treesitter.parsers')
+041.816  000.099  000.099: require('nvim-treesitter.compat')
+042.033  000.112  000.112: require('nvim-treesitter.ts_utils')
+042.040  000.221  000.108: require('nvim-treesitter.tsrange')
+042.140  000.097  000.097: require('nvim-treesitter.caching')
+042.195  000.590  000.172: require('nvim-treesitter.query')
+042.208  000.724  000.134: require('nvim-treesitter.configs')
+042.211  000.867  000.143: require('nvim-treesitter.info')
+042.331  000.119  000.119: require('nvim-treesitter.shell_command_selectors')
+042.350  004.498  000.251: require('nvim-treesitter.install')
+042.454  000.101  000.101: require('nvim-treesitter.statusline')
+042.564  000.108  000.108: require('nvim-treesitter.query_predicates')
+042.568  005.319  000.612: require('nvim-treesitter')
+042.687  000.113  000.113: require('vim.iter')
+043.433  006.289  000.857: sourcing /Users/wissam/.local/share/nvim/lazy/nvim-treesitter/plugin/nvim-treesitter.lua
+043.442  006.373  000.083: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+043.453  000.003  000.003: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+043.479  000.002  000.002: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+043.748  000.004  000.004: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+043.760  000.002  000.002: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+044.059  000.573  000.568: require('nvchad.configs.treesitter')
+045.336  000.143  000.143: require('nvim-treesitter.indent')
+045.594  000.114  000.114: require('nvim-treesitter.highlight')
+045.809  000.036  000.036: sourcing /Users/wissam/.local/share/nvim/lazy/plenary.nvim/plugin/plenary.vim
+045.815  000.101  000.065: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+045.824  000.002  000.002: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+045.842  000.002  000.002: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+046.194  000.243  000.243: sourcing /Users/wissam/.local/share/nvim/lazy/telescope.nvim/plugin/telescope.lua
+046.202  000.299  000.056: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+046.211  000.003  000.003: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+046.231  000.002  000.002: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+047.603  000.112  000.112: require('plenary.bit')
+047.704  000.098  000.098: require('plenary.functional')
+047.753  000.435  000.226: require('plenary.path')
+047.778  000.573  000.138: require('plenary.strings')
+048.207  000.009  000.009: require('vim.F')
+048.233  000.223  000.214: require('plenary.log')
+048.287  000.366  000.143: require('telescope.log')
+048.722  000.105  000.105: require('plenary.compat')
+048.736  000.262  000.157: require('plenary.job')
+048.845  000.107  000.107: require('telescope.state')
+048.996  000.125  000.125: require('vim.hl')
+049.016  000.726  000.233: require('telescope.utils')
+049.026  001.246  000.154: require('telescope.sorters')
+051.424  004.385  002.566: require('telescope.config')
+051.791  000.172  000.172: require('plenary.window.border')
+051.938  000.144  000.144: require('plenary.window')
+052.052  000.111  000.111: require('plenary.popup.utils')
+052.060  000.631  000.204: require('plenary.popup')
+052.191  000.129  000.129: require('telescope.pickers.scroller')
+052.311  000.118  000.118: require('telescope.actions.state')
+052.434  000.120  000.120: require('telescope.actions.utils')
+052.728  000.153  000.153: require('telescope.actions.mt')
+052.780  000.343  000.191: require('telescope.actions.set')
+053.051  000.138  000.138: require('telescope.config.resolve')
+053.057  000.274  000.136: require('telescope.pickers.entry_display')
+053.163  000.105  000.105: require('telescope.from_entry')
+053.568  006.787  000.682: require('telescope.actions')
+053.571  007.321  000.533: require('nvchad.configs.telescope')
+053.836  000.139  000.139: require('telescope._extensions')
+053.841  000.267  000.128: require('telescope')
+055.737  000.006  000.006: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+055.765  000.002  000.002: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+056.270  000.113  000.113: require('leetcode.config.template')
+056.383  000.109  000.109: require('leetcode.config.langs')
+056.480  000.093  000.093: require('leetcode.config.icons')
+056.569  000.086  000.086: require('leetcode.config.sessions')
+056.658  000.087  000.087: require('leetcode.config.stats')
+056.746  000.085  000.085: require('leetcode.config.imports')
+056.836  000.088  000.088: require('leetcode.config.hooks')
+056.840  000.861  000.201: require('leetcode.config')
+056.843  001.073  000.212: require('leetcode')
+057.243  000.095  000.095: require('leetcode.translator')
+057.248  000.198  000.103: require('leetcode.logger')
+057.349  000.099  000.099: require('leetcode.command.arguments')
+057.364  000.465  000.167: require('leetcode.command')
+057.461  000.004  000.004: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+057.472  000.002  000.002: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+058.324  000.108  000.108: require('chadrc')
+058.418  000.338  000.230: require('nvconfig')
+058.566  000.136  000.136: require('nvchad.stl.utils')
+058.747  000.166  000.166: require('nvchad.tabufline.lazyload')
+058.754  001.277  000.637: require('nvchad')
+058.844  000.004  000.004: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+058.856  000.002  000.002: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+060.134  000.091  000.091: require('nui.split.utils')
+060.180  000.250  000.159: require('nui.split')
+060.296  000.113  000.113: require('nui.layout.float')
+060.393  000.094  000.094: require('nui.layout.split')
+060.405  000.588  000.132: require('nui.layout')
+060.710  000.090  000.090: require('spring-initializr.utils.window_utils')
+060.813  000.100  000.100: require('spring-initializr.trace.log')
+060.932  000.115  000.115: require('spring-initializr.ui.managers.buffer_manager')
+061.108  000.086  000.086: require('spring-initializr.utils.message_utils')
+061.112  000.178  000.092: require('spring-initializr.ui.managers.reset_manager')
+061.116  000.603  000.119: require('spring-initializr.ui.managers.focus_manager')
+061.289  000.084  000.084: require('spring-initializr.config.config')
+061.294  000.177  000.093: require('spring-initializr.ui.icons.icons')
+061.298  000.891  000.112: require('spring-initializr.ui.components.common.radios.radios')
+061.477  000.078  000.078: require('spring-initializr.events.events')
+061.482  000.183  000.104: require('spring-initializr.ui.components.common.inputs.inputs')
+062.345  000.155  000.155: require('plenary.tbl')
+062.350  000.238  000.083: require('plenary.vararg.rotate')
+062.351  000.315  000.077: require('plenary.vararg')
+062.448  000.095  000.095: require('plenary.errors')
+062.452  000.499  000.089: require('plenary.async.async')
+062.789  000.102  000.102: require('plenary.async.structs')
+062.796  000.192  000.090: require('plenary.async.control')
+062.801  000.272  000.080: require('plenary.async.util')
+062.803  000.348  000.076: require('plenary.async.tests')
+062.805  000.941  000.093: require('plenary.async')
+062.966  000.159  000.159: require('telescope.debounce')
+063.217  000.248  000.248: require('telescope.mappings')
+063.360  000.141  000.141: require('telescope.pickers.highlights')
+063.467  000.104  000.104: require('telescope.pickers.window')
+063.561  000.091  000.091: require('telescope.pickers.layout')
+063.739  000.085  000.085: require('telescope.algos.linked_list')
+063.744  000.180  000.096: require('telescope.entry_manager')
+063.868  000.096  000.096: require('telescope.pickers.multi')
+063.883  002.208  000.247: require('telescope.pickers')
+064.199  000.219  000.219: require('telescope.make_entry')
+064.338  000.136  000.136: require('telescope.finders.async_static_finder')
+064.629  000.087  000.087: require('plenary.class')
+064.709  000.271  000.184: require('telescope._')
+064.713  000.373  000.102: require('telescope.finders.async_oneshot_finder')
+064.831  000.117  000.117: require('telescope.finders.async_job_finder')
+064.836  000.951  000.107: require('telescope.finders')
+065.057  000.120  000.120: require('plenary.curl')
+065.061  000.223  000.102: require('spring-initializr.metadata.metadata')
+065.205  000.106  000.106: require('spring-initializr.algo.hashset')
+065.211  003.623  000.136: require('spring-initializr.telescope.telescope')
+065.454  000.241  000.241: require('spring-initializr.ui.components.dependencies.dependency_card')
+065.464  003.980  000.116: require('spring-initializr.ui.components.dependencies.dependencies_display')
+065.564  000.098  000.098: require('spring-initializr.ui.context.form_context')
+065.572  005.868  000.127: require('spring-initializr.ui.layout.layout')
+065.677  000.103  000.103: require('spring-initializr.ui.managers.commands_manager')
+065.771  000.092  000.092: require('spring-initializr.styles.highlights')
+065.866  000.092  000.092: require('spring-initializr.utils.buffer_utils')
+066.141  000.100  000.100: require('spring-initializr.utils.file_utils')
+066.237  000.093  000.093: require('spring-initializr.dao.model.project')
+066.326  000.086  000.086: require('spring-initializr.dao.model.dependency')
+066.330  000.374  000.095: require('spring-initializr.dao.dal.file.file_repository')
+066.332  000.464  000.090: require('spring-initializr.dao.dal.repository_factory')
+066.338  006.751  000.132: require('spring-initializr.ui.init')
+066.654  000.152  000.152: require('spring-initializr.utils.url_utils')
+066.834  000.177  000.177: require('spring-initializr.utils.http_utils')
+066.837  000.498  000.169: require('spring-initializr.core.core')
+066.840  007.400  000.151: require('spring-initializr.commands.commands')
+066.842  007.982  000.583: require('spring-initializr')
+067.285  000.189  000.189: sourcing /Users/wissam/.local/share/nvim/lazy/CopilotChat.nvim/plugin/CopilotChat.lua
+067.305  000.270  000.081: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+067.335  000.004  000.004: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+067.350  000.002  000.002: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+068.281  000.089  000.089: require('CopilotChat.constants')
+068.377  000.092  000.092: require('CopilotChat.notify')
+068.578  000.102  000.102: require('CopilotChat.utils')
+068.709  000.128  000.128: require('CopilotChat.utils.curl')
+068.867  000.155  000.155: require('CopilotChat.utils.class')
+074.278  005.899  005.513: require('CopilotChat.tiktoken')
+074.542  000.256  000.256: require('CopilotChat.utils.files')
+074.798  000.239  000.239: require('CopilotChat.utils.orderedmap')
+074.979  000.010  000.010: require('string.buffer')
+074.982  000.181  000.171: require('CopilotChat.utils.stringbuffer')
+074.996  007.017  000.261: require('CopilotChat.client')
+075.423  000.153  000.153: require('CopilotChat.functions')
+075.433  000.436  000.282: require('CopilotChat.prompts')
+075.569  000.134  000.134: require('CopilotChat.select')
+075.579  008.116  000.530: require('CopilotChat')
+075.955  000.222  000.222: require('CopilotChat.config.prompts')
+082.537  006.563  006.563: require('CopilotChat.config.providers')
+083.182  000.267  000.267: require('CopilotChat.resources')
+083.208  000.661  000.394: require('CopilotChat.config.functions')
+083.501  000.290  000.290: require('CopilotChat.config.mappings')
+083.515  007.933  000.198: require('CopilotChat.config')
+084.713  000.368  000.368: require('CopilotChat.ui.overlay')
+084.991  000.268  000.268: require('CopilotChat.ui.spinner')
+085.013  001.222  000.586: require('CopilotChat.ui.chat')
+085.658  000.138  000.138: sourcing /usr/local/Cellar/neovim/0.11.5/share/nvim/runtime/plugin/editorconfig.lua
+085.667  000.262  000.123: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+086.334  000.577  000.577: sourcing /usr/local/Cellar/neovim/0.11.5/share/nvim/runtime/plugin/man.lua
+086.350  000.671  000.094: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+086.767  000.266  000.266: sourcing /usr/local/Cellar/neovim/0.11.5/share/nvim/runtime/plugin/matchparen.vim
+086.775  000.386  000.120: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+087.281  000.369  000.369: sourcing /usr/local/Cellar/neovim/0.11.5/share/nvim/runtime/plugin/osc52.lua
+087.296  000.482  000.113: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+087.558  000.114  000.114: sourcing /usr/local/Cellar/neovim/0.11.5/share/nvim/runtime/plugin/shada.vim
+087.565  000.236  000.121: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+087.701  000.032  000.032: sourcing /usr/local/Cellar/neovim/0.11.5/share/nvim/runtime/plugin/spellfile.vim
+087.707  000.130  000.098: sourcing nvim_exec2() called at /Users/wissam/.config/nvim/init.lua:0
+089.969  000.657  000.657: require('nvchad.options')
+089.976  000.982  000.326: require('options')
+090.527  000.324  000.324: require('nvchad.autocmds')
+090.530  000.552  000.228: require('autocmds')
+090.534  082.808  017.259: sourcing /Users/wissam/.config/nvim/init.lua
+090.545  000.898: sourcing vimrc file(s)
+090.946  000.166  000.166: sourcing /usr/local/Cellar/neovim/0.11.5/share/nvim/runtime/filetype.lua
+091.340  000.104  000.104: sourcing /usr/local/Cellar/neovim/0.11.5/share/nvim/runtime/syntax/synload.vim
+091.456  000.396  000.292: sourcing /usr/local/Cellar/neovim/0.11.5/share/nvim/runtime/syntax/syntax.vim
+091.474  000.367: inits 3
+094.385  002.911: reading ShaDa
+094.501  000.116: opening buffers
+095.623  000.030  000.030: sourcing /Users/wissam/.local/share/nvim/lazy/codeium.vim/autoload/codeium/util.vim
+095.951  000.787  000.757: sourcing /Users/wissam/.local/share/nvim/lazy/codeium.vim/plugin/codeium.vim
+095.958  000.888  000.102: sourcing nvim_exec2() called at BufEnter Autocommands for "*":0
+095.969  000.003  000.003: sourcing nvim_exec2() called at BufEnter Autocommands for "*":0
+096.035  000.002  000.002: sourcing nvim_exec2() called at BufEnter Autocommands for "*":0
+096.741  000.402  000.402: sourcing /Users/wissam/.local/share/nvim/lazy/codeium.vim/autoload/codeium.vim
+097.139  000.239  000.239: sourcing /Users/wissam/.local/share/nvim/lazy/codeium.vim/autoload/codeium/command.vim
+097.785  000.564  000.564: require('snacks.explorer')
+097.855  001.256: BufEnter autocommands
+097.862  000.007: editing files in windows
+098.042  000.181: VimEnter autocommands
+099.254  000.228  000.228: require('snacks.util')
+099.292  001.192  000.964: require('snacks.dashboard')
+101.675  000.304  000.304: require('snacks.scroll')
+101.875  000.167  000.167: require('snacks.animate')
+102.507  000.175  000.175: require('vim.ui')
+102.515  000.501  000.326: require('snacks.input')
+102.720  000.201  000.201: require('snacks.scope')
+103.169  000.172  000.172: require('snacks.picker')
+103.335  000.160  000.160: require('snacks.picker.config')
+103.804  000.465  000.465: require('snacks.picker.config.highlights')
+104.036  000.226  000.226: require('snacks.picker.config.defaults')
+104.356  000.316  000.316: require('snacks.picker.config.sources')
+104.521  000.161  000.161: require('snacks.picker.config.layouts')
+107.497  000.233  000.233: require('vim.termcap')
+107.550  000.020  000.020: require('vim.text')
+107.605  005.443: UIEnter autocommands
+108.229  000.404  000.404: sourcing /usr/local/Cellar/neovim/0.11.5/share/nvim/runtime/autoload/provider/clipboard.vim
+108.242  000.233: before starting main loop
+109.390  001.148: first screen update
+109.394  000.004: --- NVIM STARTED ---
+
