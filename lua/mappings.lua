@@ -17,6 +17,7 @@ vim.keymap.set("n", "<leader>ft", function()
 end, { desc = "float term" })
 
 
+vim.keymap.set('n', '<leader>df', ':lua add_notebook_cell()<CR>', { noremap = true, silent = true })
 
 map("n", "<leader>lr", ":Leet run<CR>", { desc = "Run Leet command" })
 map("n", "<leader>ls", ":Leet submit<CR>", { desc = "Run Submit command" })
@@ -28,11 +29,9 @@ map("n", "<leader>fr", function() Snacks.picker.recent() end, { desc = "Snacks R
 map("n", "<leader>fs", function() Snacks.picker.lsp_symbols() end, { desc = "Snacks LSP Symbols" })
 map("n", "<leader>fd", function() Snacks.picker.diagnostics() end, { desc = "Snacks Diagnostics" })
 
--- ======== EXPLORER ========
 map("n", "<leader>e", function() Snacks.explorer.toggle() end, { desc = "Snacks Explorer Toggle" })
 
 
--- ======== GIT ========
 map("n", "]g", function() Snacks.git.hunk_next() end, { desc = "Next Git Hunk" })
 map("n", "[g", function() Snacks.git.hunk_prev() end, { desc = "Prev Git Hunk" })
 
@@ -46,14 +45,11 @@ map("n", "<leader>gd", function() Snacks.git.diff() end, { desc = "Snacks Diff" 
 map("n", "<leader>gh", function() Snacks.git.log_file() end, { desc = "Snacks File History" })
 map("n", "<leader>gc", function() Snacks.git.log() end, { desc = "Snacks Git Log" })
 
--- ======== NOTIFICATIONS ========
 map("n", "<leader>sn", function() Snacks.notifier.show_history() end, { desc = "Notifications History" })
 map("n", "<leader>sN", function() Snacks.notifier.dismiss() end, { desc = "Dismiss Notifications" })
 
--- ======== WORD HIGHLIGHT ========
 map("n", "<leader>sw", function() Snacks.words.toggle() end, { desc = "Toggle Word Highlights" })
 
--- ======== PROFILER ========
 map("n", "<leader>sp", function() Snacks.profiler.open() end, { desc = "Snacks Startup Profiler" })
 
 -- COC IMPORT FIX

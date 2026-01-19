@@ -7,6 +7,7 @@ local M = {}
 
 M.base46 = {
   theme = "vscode_dark",
+  hl_override = require("configs.highlights").override,
 
   -- hl_override = {
   -- 	Comment = { italic = true },

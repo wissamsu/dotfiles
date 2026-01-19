@@ -1,23 +1,11 @@
--- ~/.config/nvim/lua/configs/dap.lua
+--idk
 local M = {}
 
 function M.setup()
-  local dap = require("dap")
-
-  dap.configurations.java = {
-    {
-      type = "java",
-      request = "launch",
-      name = "Launch Current File",
-    },
-    {
-      type = "java",
-      request = "attach",
-      name = "Debug (Attach) - Remote",
-      hostName = "127.0.0.1",
-      port = 5005,
-    },
-  }
+  -- DAP setup for non-Java languages (Java uses vimspector)
+  -- Java configurations are handled by vimspector, not nvim-dap
+  -- This function exists to satisfy the require() call in plugins/init.lua
+  -- Go, Python, etc. use nvim-dap and are configured elsewhere
 end
 
 return M
