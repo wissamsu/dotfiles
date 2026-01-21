@@ -1,5 +1,5 @@
-require("nvchad.mappings")
-local Snacks = require("snacks")
+require "nvchad.mappings"
+local Snacks = require "snacks"
 
 -- add yours here
 
@@ -13,49 +13,88 @@ map("i", "jk", "<ESC>")
 -- SNACKS.NVIM MAPPINGS
 -- vim.keymap.set("n", "<leader>th", function()
 vim.keymap.set("n", "<leader>ft", function()
-  require("nvchad.term").toggle({ pos = "float" })
+  require("nvchad.term").toggle { pos = "float" }
 end, { desc = "float term" })
 
+vim.keymap.set("n", "<leader>df", ":lua add_notebook_cell()<CR>", { noremap = true, silent = true })
 
-vim.keymap.set('n', '<leader>df', ':lua add_notebook_cell()<CR>', { noremap = true, silent = true })
-
+map("n", "<leader>ww", ":tabNext<CR>", { desc = "Next Tab Command" })
 map("n", "<leader>lr", ":Leet run<CR>", { desc = "Run Leet command" })
 map("n", "<leader>ls", ":Leet submit<CR>", { desc = "Run Submit command" })
 -- ======== PICKERS ========
-map("n", "<leader>ff", function() Snacks.picker.files() end, { desc = "Snacks Files" })
-map("n", "<leader>fg", function() Snacks.picker.grep() end, { desc = "Snacks Live Grep" })
-map("n", "<leader>fb", function() Snacks.picker.buffers() end, { desc = "Snacks Buffers" })
-map("n", "<leader>fr", function() Snacks.picker.recent() end, { desc = "Snacks Recent Files" })
-map("n", "<leader>fs", function() Snacks.picker.lsp_symbols() end, { desc = "Snacks LSP Symbols" })
-map("n", "<leader>fd", function() Snacks.picker.diagnostics() end, { desc = "Snacks Diagnostics" })
+map("n", "<leader>ff", function()
+  Snacks.picker.files()
+end, { desc = "Snacks Files" })
+map("n", "<leader>fw", function()
+  Snacks.picker.grep()
+end, { desc = "Snacks Live Grep" })
+map("n", "<leader>fb", function()
+  Snacks.picker.buffers()
+end, { desc = "Snacks Buffers" })
+map("n", "<leader>fr", function()
+  Snacks.picker.recent()
+end, { desc = "Snacks Recent Files" })
+map("n", "<leader>fs", function()
+  Snacks.picker.lsp_symbols()
+end, { desc = "Snacks LSP Symbols" })
+map("n", "<leader>fd", function()
+  Snacks.picker.diagnostics()
+end, { desc = "Snacks Diagnostics" })
 
-map("n", "<leader>e", function() Snacks.explorer.toggle() end, { desc = "Snacks Explorer Toggle" })
+map("n", "<leader>e", function()
+  Snacks.explorer.toggle()
+end, { desc = "Snacks Explorer Toggle" })
 
+map("n", "]g", function()
+  Snacks.git.hunk_next()
+end, { desc = "Next Git Hunk" })
+map("n", "[g", function()
+  Snacks.git.hunk_prev()
+end, { desc = "Prev Git Hunk" })
 
-map("n", "]g", function() Snacks.git.hunk_next() end, { desc = "Next Git Hunk" })
-map("n", "[g", function() Snacks.git.hunk_prev() end, { desc = "Prev Git Hunk" })
+map("n", "gs", function()
+  Snacks.git.hunk_stage()
+end, { desc = "Stage Hunk" })
+map("n", "gr", function()
+  Snacks.git.hunk_reset()
+end, { desc = "Reset Hunk" })
+map("n", "gp", function()
+  Snacks.git.hunk_preview()
+end, { desc = "Preview Hunk" })
 
-map("n", "gs", function() Snacks.git.hunk_stage() end, { desc = "Stage Hunk" })
-map("n", "gr", function() Snacks.git.hunk_reset() end, { desc = "Reset Hunk" })
-map("n", "gp", function() Snacks.git.hunk_preview() end, { desc = "Preview Hunk" })
+map("n", "gb", function()
+  Snacks.git.blame_line()
+end, { desc = "Git Blame Line" })
 
-map("n", "gb", function() Snacks.git.blame_line() end, { desc = "Git Blame Line" })
+map("n", "<leader>gd", function()
+  Snacks.git.diff()
+end, { desc = "Snacks Diff" })
+map("n", "<leader>gh", function()
+  Snacks.git.log_file()
+end, { desc = "Snacks File History" })
+map("n", "<leader>gc", function()
+  Snacks.git.log()
+end, { desc = "Snacks Git Log" })
 
-map("n", "<leader>gd", function() Snacks.git.diff() end, { desc = "Snacks Diff" })
-map("n", "<leader>gh", function() Snacks.git.log_file() end, { desc = "Snacks File History" })
-map("n", "<leader>gc", function() Snacks.git.log() end, { desc = "Snacks Git Log" })
+map("n", "<leader>sn", function()
+  Snacks.notifier.show_history()
+end, { desc = "Notifications History" })
+map("n", "<leader>sN", function()
+  Snacks.notifier.dismiss()
+end, { desc = "Dismiss Notifications" })
 
-map("n", "<leader>sn", function() Snacks.notifier.show_history() end, { desc = "Notifications History" })
-map("n", "<leader>sN", function() Snacks.notifier.dismiss() end, { desc = "Dismiss Notifications" })
+map("n", "<leader>sw", function()
+  Snacks.words.toggle()
+end, { desc = "Toggle Word Highlights" })
 
-map("n", "<leader>sw", function() Snacks.words.toggle() end, { desc = "Toggle Word Highlights" })
-
-map("n", "<leader>sp", function() Snacks.profiler.open() end, { desc = "Snacks Startup Profiler" })
+map("n", "<leader>sp", function()
+  Snacks.profiler.open()
+end, { desc = "Snacks Startup Profiler" })
 
 -- COC IMPORT FIX
 map("n", "<leader>i", "<Plug>(coc-fix-current)", { silent = true, desc = "Coc Organize Imports / Auto-Import" })
 
-vim.keymap.set('n', '<leader>tn', ':tabnew<CR>', { silent = true })
+vim.keymap.set("n", "<leader>tn", ":tabnew<CR>", { silent = true })
 
 vim.keymap.set("i", "<CR>", [[coc#pum#visible() ? coc#pum#confirm() : "<CR>"]], {
   silent = true,

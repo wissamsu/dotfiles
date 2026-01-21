@@ -9,7 +9,9 @@ function _G.add_notebook_cell()
     local n = string.match(line, "# %%%% (%d+)D")
     if n then
       n = tonumber(n)
-      if n > max_d then max_d = n end
+      if n > max_d then
+        max_d = n
+      end
     end
   end
 
@@ -23,6 +25,28 @@ function _G.add_notebook_cell()
 end
 
 return {
+  {
+    "puremourning/vimspector",
+    -- Lazy load on first use of a Vimspector command
+    cmd = {
+      "VimspectorInstall",
+      "VimspectorLaunch",
+      "VimspectorReset",
+      -- Add other vimspector commands you use
+    },
+    -- Lazy load when a specific key mapping is used
+    keys = {
+      -- Example key mapping for launching vimspector (using <leader>dd)
+      { "<leader>dd", "<cmd>VimspectorLaunch<CR>", desc = "Launch Vimspector" },
+      -- Add other key mappings as needed
+    },
+    -- Optional: ensure all dependencies/runtime files are correctly added to rtp on demand
+    -- This is often not strictly necessary as lazy.nvim handles most of this automatically when 'cmd' or 'keys' is used
+    -- config = function()
+    --   vim.cmd [[packadd! vimspector]]
+    --   -- further configuration can go here
+    -- end,
+  },
   --disabling
 
   -- {
@@ -51,15 +75,34 @@ return {
   --     vim.cmd([[colorscheme bebop]])
   --   end,
   -- },
-  { "EdenEast/nightfox.nvim" },
-  { 'Mofiqul/vscode.nvim' },
+  -- {
+  --   "3rd/image.nvim",
+  --   event = "VeryLazy",
+  --   -- prevent building native rock (often recommended)
+  --   build = false,
+  --   opts = {
+  --     -- example backend (choose one of "kitty", "ueberzug", "sixel")
+  --     backend = "kitty",
+  --     -- optional: configure processor
+  --     processor = "magick_cli", -- or "magick_rock" if you use a rock
+  --     -- you can add integrations here if needed
+  --     integrations = {
+  --       markdown = {
+  --         enabled = true,
+  --         only_render_image_at_cursor = false,
+  --         clear_in_insert_mode = false,
+  --       },
+  --     },
+  --   },
+  -- },
+  { "Olical/conjure" },
   {
     "Vigemus/iron.nvim",
     ft = { "python" },
     config = function()
-      local iron = require("iron.core")
-      local view = require("iron.view")
-      local common = require("iron.fts.common")
+      local iron = require "iron.core"
+      local view = require "iron.view"
+      local common = require "iron.fts.common"
 
       iron.setup {
         config = {
@@ -106,7 +149,7 @@ return {
       -- extra convenience keymaps
       vim.keymap.set("n", "<space>rf", "<cmd>IronFocus<cr>")
       vim.keymap.set("n", "<space>rh", "<cmd>IronHide<cr>")
-    end
+    end,
   },
   {
     "CopilotC-Nvim/CopilotChat.nvim",
@@ -128,23 +171,33 @@ return {
     },
     opts = {}, -- options, see default configuration
     keys = {
-      { '<leader>M',  desc = '+Maven',           mode = { 'n', 'v' } },
-      { '<leader>Mm', '<cmd>Maven<cr>',          desc = 'Maven Projects' },
-      { '<leader>Mf', '<cmd>MavenFavorites<cr>', desc = 'Maven Favorite Commands' }
-    }
+      { "<leader>M",  desc = "+Maven",           mode = { "n", "v" } },
+      { "<leader>Mm", "<cmd>Maven<cr>",          desc = "Maven Projects" },
+      { "<leader>Mf", "<cmd>MavenFavorites<cr>", desc = "Maven Favorite Commands" },
+    },
   },
   {
     "nvim-tree/nvim-tree.lua",
     cmd = "NvimTreeToggle",
     opts = function()
-      return require("configs.nvimtree")
+      return require "configs.nvimtree"
     end,
   },
   {
     "hrsh7th/nvim-cmp",
     enabled = false,
   },
-  { "nvim-treesitter/nvim-treesitter", branch = 'master', event = { "BufReadPost", "BufNewFile" }, build = ":TSUpdate" },
+  {
+    "nvim-treesitter/nvim-treesitter",
+    branch = "master",
+    event = "VeryLazy",
+    build = ":TSUpdate",
+    opts = {
+      ensure_installed = { "python", "go", "lua", "java" },
+      highlight = { enable = true },
+      indent = { enable = false }, -- disable to save CPU
+    },
+  },
   {
     "wojciech-kulik/xcodebuild.nvim",
     ft = "swift",
@@ -163,9 +216,9 @@ return {
       "nvim-treesitter/nvim-treesitter", -- (optional) for Quick tests support (required Swift parser)
     },
     config = function()
-      require("xcodebuild").setup({
+      require("xcodebuild").setup {
         -- put some options here or leave it empty to use default settings
-      })
+      }
     end,
   },
   {
@@ -191,29 +244,29 @@ return {
   --disable end
   {
     "lukas-reineke/indent-blankline.nvim",
-    event = { "BufReadPost", "BufNewFile" },
+    event = "VeryLazy",
     main = "ibl",
     ---@module "ibl"
     opts = {},
     config = function()
-      require("ibl").setup({
+      require("ibl").setup {
         scope = { enabled = false },
-      })
-    end
+      }
+    end,
   },
   {
-    'jkeresman01/spring-initializr.nvim',
-    cmd = { 'SpringInitializr', 'SpringGenerateProject' },
+    "jkeresman01/spring-initializr.nvim",
+    cmd = { "SpringInitializr", "SpringGenerateProject" },
     dependencies = {
-      'nvim-lua/plenary.nvim',
-      'MunifTanjim/nui.nvim',
-      'nvim-telescope/telescope.nvim',
+      "nvim-lua/plenary.nvim",
+      "MunifTanjim/nui.nvim",
+      "nvim-telescope/telescope.nvim",
     },
     config = function()
-      require('spring-initializr').setup()
+      require("spring-initializr").setup()
       vim.keymap.set("n", "<leader>si", "<CMD>SpringInitializr<CR>")
       vim.keymap.set("n", "<leader>sg", "<CMD>SpringGenerateProject<CR>")
-    end
+    end,
   },
 
   {
@@ -230,6 +283,12 @@ return {
       "jay-babu/mason-nvim-dap.nvim",
 
       {
+        "theHamsta/nvim-dap-virtual-text",
+        opts = {
+          commented = true,
+        },
+      },
+      {
         "ownself/nvim-dap-unity",
         build = function()
           require("nvim-dap-unity").install()
@@ -237,17 +296,17 @@ return {
       },
     },
     config = function()
-      local dap = require("dap")
-      local dapui = require("dapui")
+      local dap = require "dap"
+      local dapui = require "dapui"
 
-      require("mason-nvim-dap").setup({
+      require("mason-nvim-dap").setup {
         automatic_setup = true,
-      })
+      }
 
       require("dap-go").setup()
       require("dapui").setup()
       require("configs.dap").setup()
-      require("nvim-dap-unity").setup({})
+      require("nvim-dap-unity").setup {}
 
       dap.listeners.before.attach.dapui_config = function()
         dapui.open()
@@ -268,7 +327,6 @@ return {
       dap.configurations.cs = dap.configurations.cs or {}
     end,
   },
-
 
   {
     "jellydn/quick-code-runner.nvim",
@@ -329,17 +387,34 @@ return {
   },
 
   {
-    "romus204/go-tagger.nvim",
-    ft = "go",
-    config = function()
-      require("go-tagger").setup({
-        skip_private = true, -- Skip unexported fields (starting with lowercase)
+    "ray-x/go.nvim",
+    dependencies = { -- optional packages
+      "ray-x/guihua.lua",
+      { "neovim/nvim-lspconfig", enabled = false },
+      "nvim-treesitter/nvim-treesitter",
+    },
+    opts = function()
+      require("go").setup(opts)
+      local format_sync_grp = vim.api.nvim_create_augroup("GoFormat", {})
+      vim.api.nvim_create_autocmd("BufWritePre", {
+        pattern = "*.go",
+        callback = function()
+          require("go.format").goimports()
+        end,
+        group = format_sync_grp,
       })
+      return {
+        -- lsp_keymaps = false,
+        -- other options
+      }
     end,
+    ft = { "go", "gomod" },
+    build = ':lua require("go.install").update_all_sync()', -- if you need to install/update all binaries
   },
 
   {
     "folke/snacks.nvim",
+    event = "VeryLazy",
     ---@type snacks.Config
     opts = {
       -- your configuration comes here
@@ -363,20 +438,22 @@ return {
     "folke/flash.nvim",
     event = "VeryLazy",
     opts = {},
-    keys = { {
-      "s",
-      mode = { "n", "x", "o" },
-      function()
-        require(
-          "flash").jump()
-      end,
-      desc = "Flash"
-    },
+    keys = {
+      {
+        "s",
+        mode = { "n", "x", "o" },
+        function()
+          require("flash").jump()
+        end,
+        desc = "Flash",
+      },
       {
         "S",
         mode = { "n", "x", "o" },
-        function() require("flash").treesitter() end,
-        desc = "Flash Treesitter"
+        function()
+          require("flash").treesitter()
+        end,
+        desc = "Flash Treesitter",
       },
       {
         "r",
@@ -384,46 +461,53 @@ return {
         function()
           require("flash").remote()
         end,
-        desc = "Remote Flash"
+        desc = "Remote Flash",
       },
       {
         "R",
         mode = { "o", "x" },
         function()
-          require("flash")
-              .treesitter_search()
+          require("flash").treesitter_search()
         end,
-        desc = "Treesitter Search"
+        desc = "Treesitter Search",
       },
       {
         "<c-s>",
         mode = { "c" },
         function()
-          require("flash")
-              .toggle()
+          require("flash").toggle()
         end,
-        desc = "Toggle Flash Search"
-      }, },
+        desc = "Toggle Flash Search",
+      },
+    },
   },
   {
     "ariedov/android-nvim",
-    cmd = { "LaunchAvd" },
+    cmd = {
+      "AndroidRun",
+      "AndroidBuildRelease",
+      "AndroidClean",
+      "AndroidNew",
+      "AndroidRefreshDependencies",
+      "AndroidUninstall",
+      "LaunchAvd",
+    },
     config = function()
       vim.g.android_sdk_path = "/Users/wsayadi/Library/Android/sdk"
       require("android-nvim").setup()
-    end
+    end,
   },
   {
-    'kristijanhusak/vim-dadbod-ui',
+    "kristijanhusak/vim-dadbod-ui",
     dependencies = {
-      { 'tpope/vim-dadbod',                     lazy = true },
-      { 'kristijanhusak/vim-dadbod-completion', ft = { 'sql', 'mysql', 'plsql' }, lazy = true }, -- Optional
+      { "tpope/vim-dadbod",                     lazy = true },
+      { "kristijanhusak/vim-dadbod-completion", ft = { "sql", "mysql", "plsql" }, lazy = true }, -- Optional
     },
     cmd = {
-      'DBUI',
-      'DBUIToggle',
-      'DBUIAddConnection',
-      'DBUIFindBuffer',
+      "DBUI",
+      "DBUIToggle",
+      "DBUIAddConnection",
+      "DBUIFindBuffer",
     },
     init = function()
       -- Your DBUI configuration
@@ -433,20 +517,22 @@ return {
   {
     "kndndrj/nvim-dbee",
     cmd = { "Dbee" },
-    dependencies = { "MunifTanjim/nui.nvim", },
+    dependencies = { "MunifTanjim/nui.nvim" },
     build = function()
       require("dbee").install()
     end,
-    config = function() require("dbee").setup() end,
+    config = function()
+      require("dbee").setup()
+    end,
   },
   {
     "kawre/leetcode.nvim",
     cmd = { "Leet", "Leet submit", "Leet run" },
     build = ":TSUpdate html",
-    dependencies = { "nvim-telescope/telescope.nvim", "nvim-lua/plenary.nvim", "MunifTanjim/nui.nvim", },
+    dependencies = { "nvim-telescope/telescope.nvim", "nvim-lua/plenary.nvim", "MunifTanjim/nui.nvim" },
     config = function()
-      require("leetcode").setup({ lang = "java", })
-    end
+      require("leetcode").setup { lang = "java" }
+    end,
   },
   -- {
   --   "vague-theme/vague.nvim",
@@ -458,9 +544,16 @@ return {
   -- },
   {
     "neovim/nvim-lspconfig",
+    disabled = true,
     config = function()
       require "configs.lspconfig"
     end,
+  },
+  {
+    "williamboman/mason.nvim",
+    opts = {
+
+    }
   },
   {
     "neoclide/coc.nvim",
@@ -480,7 +573,7 @@ return {
       {
         "<leader>?",
         function()
-          require("which-key").show({ global = false })
+          require("which-key").show { global = false }
         end,
         desc = "Buffer Local Keymaps (which-key)",
       },
@@ -488,9 +581,9 @@ return {
   },
 
   {
-    'nvim-telescope/telescope.nvim',
-    tag = 'v0.2.0',
-    dependencies = { 'nvim-lua/plenary.nvim' }
+    "nvim-telescope/telescope.nvim",
+    tag = "v0.2.0",
+    dependencies = { "nvim-lua/plenary.nvim" },
   },
 
   -- lazy.nvim
@@ -507,7 +600,7 @@ return {
       --   `nvim-notify` is only needed, if you want to use the notification view.
       --   If not available, we use `mini` as the fallback
       "rcarriga/nvim-notify",
-    }
+    },
   },
 
   {
@@ -535,16 +628,16 @@ return {
     },
     dependencies = { "nvim-lua/plenary.nvim" },
     keys = {
-      { "<leader>lg", "<cmd>LazyGit<CR>", desc = "LazyGit" }
+      { "<leader>lg", "<cmd>LazyGit<CR>", desc = "LazyGit" },
     },
   },
 
   {
     "lewis6991/gitsigns.nvim",
-    event = { "BufReadPost", "BufNewFile" },
-    config = function()
-      require("mason").setup()
-    end
+    ft = { "gitcommit", "gitrebase", "python", "go", "lua", "java" }, -- only for files you need
+    opts = {
+      current_line_blame = false,                                     -- disable expensive blame
+    },
+    lazy = true,
   },
-
 }
