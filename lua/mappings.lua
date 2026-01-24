@@ -138,3 +138,28 @@ vim.keymap.set("n", "K", ":call CocActionAsync('doHover')<CR>", { silent = true,
 
 -- Your raw line EXACTLY as given
 -- ["<C-n>"] = { "<cmd>CocCommand explorer --toggle<CR>", "Toggle coc-explorer" },
+-- Function to add a new notebook cell
+function _G.add_notebook_cell()
+  local row = vim.api.nvim_win_get_cursor(0)[1] -- current line
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local max_d = 0
+
+  -- scan the buffer for existing # %% nD cells
+  for _, line in ipairs(lines) do
+    local n = string.match(line, "# %%%% (%d+)D")
+    if n then
+      n = tonumber(n)
+      if n > max_d then
+        max_d = n
+      end
+    end
+  end
+
+  local next_d = max_d + 1
+  local new_line = "# %% " .. next_d .. "D"
+
+  -- insert new line after current row
+  vim.api.nvim_buf_set_lines(0, row, row, false, { new_line })
+  -- move cursor to the new line
+  vim.api.nvim_win_set_cursor(0, { row + 1, 0 })
+end

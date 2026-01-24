@@ -1,80 +1,4 @@
--- Function to add a new notebook cell
-function _G.add_notebook_cell()
-  local row = vim.api.nvim_win_get_cursor(0)[1] -- current line
-  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-  local max_d = 0
-
-  -- scan the buffer for existing # %% nD cells
-  for _, line in ipairs(lines) do
-    local n = string.match(line, "# %%%% (%d+)D")
-    if n then
-      n = tonumber(n)
-      if n > max_d then
-        max_d = n
-      end
-    end
-  end
-
-  local next_d = max_d + 1
-  local new_line = "# %% " .. next_d .. "D"
-
-  -- insert new line after current row
-  vim.api.nvim_buf_set_lines(0, row, row, false, { new_line })
-  -- move cursor to the new line
-  vim.api.nvim_win_set_cursor(0, { row + 1, 0 })
-end
-
 return {
-  {
-    "puremourning/vimspector",
-    -- Lazy load on first use of a Vimspector command
-    cmd = {
-      "VimspectorInstall",
-      "VimspectorLaunch",
-      "VimspectorReset",
-      -- Add other vimspector commands you use
-    },
-    -- Lazy load when a specific key mapping is used
-    keys = {
-      -- Example key mapping for launching vimspector (using <leader>dd)
-      { "<leader>dd", "<cmd>VimspectorLaunch<CR>", desc = "Launch Vimspector" },
-      -- Add other key mappings as needed
-    },
-    -- Optional: ensure all dependencies/runtime files are correctly added to rtp on demand
-    -- This is often not strictly necessary as lazy.nvim handles most of this automatically when 'cmd' or 'keys' is used
-    -- config = function()
-    --   vim.cmd [[packadd! vimspector]]
-    --   -- further configuration can go here
-    -- end,
-  },
-  --disabling
-
-  -- {
-  --   "puremourning/vimspector",
-  --   cmd = { "VimspectorInstall", "VimspectorUpdate" },
-  --   fn = { "vimspector#Launch()", "vimspector#ToggleBreakpoint", "vimspector#Continue" },
-  --   config = function()
-  --     require("configs.vimspector").setup()
-  --   end,
-  -- },
-
-  -- {
-  --   "askfiy/visual_studio_code",
-  --   priority = 100,
-  --   config = function()
-  --     vim.cmd([[colorscheme visual_studio_code]])
-  --   end,
-  -- },
-
-  -- {
-  --   "ATTron/bebop.nvim",
-  --   lazy = false,
-  --   priority = 1000,
-  --   config = function()
-  --     require("bebop").setup()
-  --     vim.cmd([[colorscheme bebop]])
-  --   end,
-  -- },
   -- {
   --   "3rd/image.nvim",
   --   event = "VeryLazy",
@@ -95,7 +19,6 @@ return {
   --     },
   --   },
   -- },
-  { "Olical/conjure" },
   {
     "Vigemus/iron.nvim",
     ft = { "python" },
@@ -184,10 +107,6 @@ return {
     end,
   },
   {
-    "hrsh7th/nvim-cmp",
-    enabled = false,
-  },
-  {
     "nvim-treesitter/nvim-treesitter",
     branch = "master",
     event = "VeryLazy",
@@ -220,6 +139,18 @@ return {
         -- put some options here or leave it empty to use default settings
       }
     end,
+  },
+  --disable start
+  {
+    "neovim/nvim-lspconfig",
+    enabled = false,
+    config = function()
+      require "configs.lspconfig"
+    end,
+  },
+  {
+    "hrsh7th/nvim-cmp",
+    enabled = false,
   },
   {
     "L3MON4D3/LuaSnip",
@@ -542,13 +473,7 @@ return {
   --     vim.cmd("colorscheme vague")
   --   end
   -- },
-  {
-    "neovim/nvim-lspconfig",
-    disabled = true,
-    config = function()
-      require "configs.lspconfig"
-    end,
-  },
+
   {
     "williamboman/mason.nvim",
     opts = {
