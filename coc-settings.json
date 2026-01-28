@@ -1,5 +1,13 @@
 {
-  "omnisharp.path": "/Users/wissam/.omnisharp/OmniSharp",
+  "cmake.cmakePath": "/usr/local/opt/cmake/bin/cmake",
+  "inlayHint.refreshOnInsertMode": true,
+  "clangd.arguments": [
+    "--compile-commands-dir=build",
+    "--query-driver=/usr/bin/clang++",
+    "--header-insertion=never"
+  ],
+  "clangd.checkUpdates": true,
+  "cmake.lsp.enable": true,
   "python.analysis.typeCheckingMode": "off",
   "java.debug.settings.enableRunDebugCodeLens": true,
   "java.debug.settings.forceBuildBeforeLaunch": true,
@@ -10,7 +18,6 @@
       "default": true
     }
   ],
-  "Lua.diagnostics.enable": false,
   "explorer.icon.source": "nerdfont.vim",
   "explorer.file.showHiddenFiles": true,
   "explorer.icon.enableNerdfont": true,
@@ -87,5 +94,6 @@
       "allowed": false
     }
   ],
-  "extensions.updateCheck": "daily"
+  "extensions.updateCheck": "daily",
+  "clangd.path": "~/.config/coc/extensions/coc-clangd-data/install/21.1.8/clangd_21.1.8/bin/clangd"
 }

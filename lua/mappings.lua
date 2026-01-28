@@ -1,5 +1,6 @@
 require "nvchad.mappings"
 local Snacks = require "snacks"
+local dap = require "dap"
 
 -- add yours here
 
@@ -17,6 +18,15 @@ vim.keymap.set("n", "<leader>ft", function()
 end, { desc = "float term" })
 
 vim.keymap.set("n", "<leader>df", ":lua add_notebook_cell()<CR>", { noremap = true, silent = true })
+
+vim.keymap.set("n", "<leader>db", dap.toggle_breakpoint, { desc = "Dap Toggle Breakpoint" })
+vim.keymap.set("n", "<leader>dc", dap.continue, { desc = "Dap Continue" })
+vim.keymap.set("n", "<leader>dn", dap.step_over, { desc = "Dap Step Over" })
+vim.keymap.set("n", "<leader>di", dap.step_into, { desc = "Dap Step Into" })
+vim.keymap.set("n", "<leader>do", dap.step_out, { desc = "Dap Step Out" })
+vim.keymap.set("n", "<leader>dt", dap.terminate, { desc = "Dap Terminate" })
+vim.keymap.set("n", "<leader>da", dap.clear_breakpoints, { desc = "Dap Clear Breakpoints" })
+
 
 map("n", "<leader>ww", ":tabNext<CR>", { desc = "Next Tab Command" })
 map("n", "<leader>lr", ":Leet run<CR>", { desc = "Run Leet command" })
