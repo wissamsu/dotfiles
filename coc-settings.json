@@ -1,20 +1,9 @@
 {
-  "rust-analyzer.lens.references.trait.enable": true,
-  "rust-analyzer.lens.debug.enable": false,
   "rust-analyzer.lens.run.enable": false,
+  "rust-analyzer.lens.debug.enable": false,
+  "diagnostic.refreshOnInsertMode": false,
   "java.configuration.updateBuildConfiguration": "interactive",
-  "cmake.cmakePath": "/usr/local/opt/cmake/bin/cmake",
   "inlayHint.refreshOnInsertMode": true,
-  "clangd.arguments": [
-    "--compile-commands-dir=build",
-    "--query-driver=/usr/bin/clang++",
-    "--header-insertion=never"
-  ],
-  "clangd.checkUpdates": true,
-  "cmake.lsp.enable": true,
-  "python.analysis.typeCheckingMode": "off",
-  "java.debug.settings.enableRunDebugCodeLens": true,
-  "java.debug.settings.forceBuildBeforeLaunch": true,
   "java.configuration.runtimes": [
     {
       "name": "JavaSE-21",

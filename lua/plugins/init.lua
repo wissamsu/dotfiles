@@ -1,5 +1,24 @@
 return {
   -- lazy.nvim
+  -- here
+  {
+    "christoomey/vim-tmux-navigator",
+    cmd = {
+      "TmuxNavigateLeft",
+      "TmuxNavigateDown",
+      "TmuxNavigateUp",
+      "TmuxNavigateRight",
+      "TmuxNavigatePrevious",
+      "TmuxNavigatorProcessList",
+    },
+    keys = {
+      { "<c-h>",  "<cmd><C-U>TmuxNavigateLeft<cr>" },
+      { "<c-j>",  "<cmd><C-U>TmuxNavigateDown<cr>" },
+      { "<c-k>",  "<cmd><C-U>TmuxNavigateUp<cr>" },
+      { "<c-l>",  "<cmd><C-U>TmuxNavigateRight<cr>" },
+      { "<c-\\>", "<cmd><C-U>TmuxNavigatePrevious<cr>" },
+    },
+  },
   {
     "chrisgrieser/nvim-origami",
     event = "VeryLazy",
@@ -51,14 +70,14 @@ return {
     end
   },
   {
-    "chrisgrieser/nvim-origami",
-    event = "VeryLazy",
-    opts = {}, -- needed even when using default config
-
-    -- recommended: disable vim's auto-folding
-    init = function()
-      vim.opt.foldlevel = 99
-      vim.opt.foldlevelstart = 99
+    'saecki/crates.nvim',
+    event = { "BufRead Cargo.toml" },
+    config = function()
+      require('crates').setup({
+        popup = {
+          border = "rounded", -- 👈 this affects show_features, show_versions, etc.
+        },
+      })
     end,
   },
   {
@@ -363,64 +382,6 @@ return {
 
       dap.configurations.cs = dap.configurations.cs or {}
     end,
-  },
-
-  {
-    "jellydn/quick-code-runner.nvim",
-    dependencies = { "MunifTanjim/nui.nvim" },
-
-    opts = {
-      debug = true, -- print debug info
-
-      file_types = {
-        python = { "python3 -u" },
-        go = { "go run ." },
-        java = {
-          command = "mvn spring-boot:run",
-          run_from_project_root = true, -- ⭐ IMPORTANT FIX
-          pass_filepath = false,
-          filename = nil,
-        },
-        lua = { "lua" },
-      },
-    },
-
-    cmd = { "QuickCodeRunner", "QuickCodePad" },
-
-    keys = {
-      -- Visual mode: run selected code
-      {
-        "<leader>cr",
-        ":QuickCodeRunner<CR>",
-        desc = "Quick Code Runner",
-      },
-
-      -- Open the code pad (editable window to run snippets)
-      {
-        "<leader>cp",
-        ":QuickCodePad<CR>",
-        desc = "Quick Code Pad",
-      },
-    },
-  },
-
-  {
-    "christoomey/vim-tmux-navigator",
-    cmd = {
-      "TmuxNavigateLeft",
-      "TmuxNavigateDown",
-      "TmuxNavigateUp",
-      "TmuxNavigateRight",
-      "TmuxNavigatePrevious",
-      "TmuxNavigatorProcessList",
-    },
-    keys = {
-      { "<c-h>",  "<cmd><C-U>TmuxNavigateLeft<cr>" },
-      { "<c-j>",  "<cmd><C-U>TmuxNavigateDown<cr>" },
-      { "<c-k>",  "<cmd><C-U>TmuxNavigateUp<cr>" },
-      { "<c-l>",  "<cmd><C-U>TmuxNavigateRight<cr>" },
-      { "<c-\\>", "<cmd><C-U>TmuxNavigatePrevious<cr>" },
-    },
   },
 
   {

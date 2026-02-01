@@ -1,6 +1,7 @@
 require "nvchad.mappings"
 local Snacks = require "snacks"
 local dap = require "dap"
+local crates = require "crates"
 
 -- add yours here
 
@@ -173,3 +174,13 @@ function _G.add_notebook_cell()
   -- move cursor to the new line
   vim.api.nvim_win_set_cursor(0, { row + 1, 0 })
 end
+
+--crates.nvim
+vim.keymap.set("n", "<leader>cde", ":Crates show_dependencies_popup<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>cr", ":Crates open_repository<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>cu", ":Crates upgrade_all_crates<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>ct", ":Crates toggle<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>cd1", ":Crates open_documentation<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>cd2", ":Crates open_cratesio<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>cv", ":Crates show_versions_popup<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>cf", ":Crates show_features_popup<CR>", { noremap = true, silent = true })

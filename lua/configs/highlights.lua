@@ -1,7 +1,7 @@
 ---@type Base46HLGroupsList
 local M = {}
 
-local bg = "#111111" -- change this if you want
+local bg = "#1e1e1e" -- change this if you want
 
 M.override = {
   Normal = { bg = bg },
