@@ -1,4 +1,8 @@
 {
+  "rust-analyzer.lens.references.trait.enable": true,
+  "rust-analyzer.lens.debug.enable": false,
+  "rust-analyzer.lens.run.enable": false,
+  "java.configuration.updateBuildConfiguration": "interactive",
   "cmake.cmakePath": "/usr/local/opt/cmake/bin/cmake",
   "inlayHint.refreshOnInsertMode": true,
   "clangd.arguments": [
