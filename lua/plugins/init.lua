@@ -1,6 +1,27 @@
+-- Place this after coc.nvim is loaded
+vim.api.nvim_create_autocmd("User", {
+  pattern = "CocNvimInit",
+  callback = function()
+    vim.keymap.set("i", "<CR>", function()
+      if vim.fn["coc#pum#visible"]() == 1 then
+        return vim.fn["coc#pum#confirm"]()
+      else
+        return vim.api.nvim_replace_termcodes("<CR>", true, false, true)
+      end
+    end, { expr = true, silent = true, desc = "Coc Confirm Completion with Enter" })
+  end
+})
+
 return {
   -- lazy.nvim
   -- here
+  {
+    'windwp/nvim-autopairs',
+    event = "InsertEnter",
+    config = true
+    -- use opts = {} for passing setup options
+    -- this is equivalent to setup({}) function
+  },
   {
     "christoomey/vim-tmux-navigator",
     cmd = {

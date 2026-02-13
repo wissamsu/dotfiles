@@ -1,7 +1,6 @@
 require "nvchad.mappings"
 local Snacks = require "snacks"
 local dap = require "dap"
-local crates = require "crates"
 
 -- add yours here
 
@@ -107,7 +106,7 @@ map("n", "<leader>i", "<Plug>(coc-fix-current)", { silent = true, desc = "Coc Or
 
 vim.keymap.set("n", "<leader>tn", ":tabnew<CR>", { silent = true })
 
-vim.keymap.set("i", "<CR>", [[coc#pum#visible() ? coc#pum#confirm() : "<CR>"]], {
+vim.keymap.set("i", "<CR>", "vim.fn.coc#pum#visible() ? vim.fn.coc#pum#confirm() : '\\<CR>'", {
   silent = true,
   noremap = true,
   expr = true,
@@ -115,14 +114,14 @@ vim.keymap.set("i", "<CR>", [[coc#pum#visible() ? coc#pum#confirm() : "<CR>"]], 
 })
 
 -- Navigate coc.nvim completion menu
-vim.keymap.set("i", "<Tab>", [[coc#pum#visible() ? coc#pum#next(1) : "\<Tab>"]], {
+vim.keymap.set("i", "<Tab>", "vim.fn.coc#pum#visible() ? vim.fn.coc#pum#next(1) : '\\<Tab>'", {
   expr = true,
   silent = true,
   noremap = true,
   desc = "Coc Next Completion",
 })
 
-vim.keymap.set("i", "<S-Tab>", [[coc#pum#visible() ? coc#pum#prev(1) : "\<S-Tab>"]], {
+vim.keymap.set("i", "<S-Tab>", "vim.fn.coc#pum#visible() ? vim.fn.coc#pum#prev(1) : '\\<S-Tab>'", {
   expr = true,
   silent = true,
   noremap = true,

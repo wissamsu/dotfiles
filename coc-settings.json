@@ -4,19 +4,6 @@
   "diagnostic.refreshOnInsertMode": false,
   "java.configuration.updateBuildConfiguration": "interactive",
   "inlayHint.refreshOnInsertMode": true,
-  "java.configuration.runtimes": [
-    {
-      "name": "JavaSE-21",
-      "path": "/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home",
-      "default": true
-    }
-  ],
-  "explorer.icon.source": "nerdfont.vim",
-  "explorer.file.showHiddenFiles": true,
-  "explorer.icon.enableNerdfont": true,
-  "explorer.keyMappings.global": {
-    "d": "delete"
-  },
   "codeLens.position": "eol",
   "codeLens.enable": true,
   "coc.preferences.useQuickfixForLocations": true,
@@ -46,7 +33,9 @@
   "languageserver": {
     "kotlin": {
       "command": "~/.local/share/kotlin-language-server/bin/kotlin-language-server",
-      "filetypes": ["kotlin"],
+      "filetypes": [
+        "kotlin"
+      ],
       "rootPatterns": [
         "settings.gradle",
         "settings.gradle.kts",
