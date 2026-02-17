@@ -512,7 +512,7 @@ return {
       "LaunchAvd",
     },
     config = function()
-      vim.g.android_sdk_path = "/Users/wsayadi/Library/Android/sdk"
+      vim.g.android_sdk = "/Users/wissamsayadi/Library/Android/sdk"
       require("android-nvim").setup()
     end,
   },

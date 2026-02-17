@@ -32,7 +32,7 @@
   "yaml.format.enable": true,
   "languageserver": {
     "kotlin": {
-      "command": "~/.local/share/kotlin-language-server/bin/kotlin-language-server",
+      "command": "kotlin-language-server",
       "filetypes": [
         "kotlin"
       ],
@@ -41,9 +41,10 @@
         "settings.gradle.kts",
         "build.gradle",
         "build.gradle.kts",
-        "gradlew",
         ".git"
-      ]
+      ],
+      "initializationOptions": {},
+      "trace.server": "off"
     }
   },
   "java.referencesCodeLens.enabled": true,
