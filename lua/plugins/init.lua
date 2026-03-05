@@ -15,13 +15,11 @@ vim.api.nvim_create_autocmd("User", {
 return {
   -- lazy.nvim
   -- here
-  {
-    'windwp/nvim-autopairs',
-    event = "InsertEnter",
-    config = true
-    -- use opts = {} for passing setup options
-    -- this is equivalent to setup({}) function
-  },
+
+
+
+
+
   {
     "christoomey/vim-tmux-navigator",
     cmd = {
@@ -353,6 +351,7 @@ return {
         dependencies = { "nvim-neotest/nvim-nio" },
       },
       "leoluz/nvim-dap-go",
+      "wojciech-kulik/xcodebuild.nvim",
       "williamboman/mason.nvim",
       "jay-babu/mason-nvim-dap.nvim",
 
@@ -381,6 +380,8 @@ return {
         automatic_setup = true,
       }
 
+      local xcodebuild = require("xcodebuild.integrations.dap")
+      xcodebuild.setup()
       require("dap-go").setup()
       require("dap-python").setup(vim.fn.exepath("python"))
       require("dapui").setup()
@@ -653,4 +654,5 @@ return {
     },
     lazy = true,
   },
+  { "Mofiqul/vscode.nvim" },
 }

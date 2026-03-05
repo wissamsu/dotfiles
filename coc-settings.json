@@ -1,4 +1,5 @@
 {
+  "rust-analyzer.inlayHints.chainingHints.enable": false,
   "rust-analyzer.lens.run.enable": false,
   "rust-analyzer.lens.debug.enable": false,
   "diagnostic.refreshOnInsertMode": false,
@@ -10,7 +11,7 @@
   "coc.preferences.formatOnSave": true,
   "coc.preferences.willSaveHandlerTimeout": 500,
   "suggest.autoTrigger": "always",
-  "suggest.timeout": 1000,
+  "suggest.timeout": 5000,
   "suggest.triggerAfterInsertEnter": true,
   "suggest.maxCompleteItemCount": 20,
   "suggest.virtualText": false,
@@ -30,21 +31,43 @@
   "diagnostic.warningSign": "W",
   "diagnostic.messageTarget": "echo",
   "yaml.format.enable": true,
+  //"languageserver": {
+  //"kotlin": {
+  //"command": "kotlin-language-server",
+  //"filetypes": [
+  //"kotlin"
+  //],
+  //"rootPatterns": [
+  //"settings.gradle",
+  //"settings.gradle.kts",
+  //"build.gradle",
+  //"build.gradle.kts",
+  //".git"
+  //],
+  //"initializationOptions": {},
+  // "trace.server": "off"
+  //}
+  //},
   "languageserver": {
-    "kotlin": {
-      "command": "kotlin-language-server",
+    "asm": {
+      "command": "asm-lsp",
       "filetypes": [
-        "kotlin"
+        "asm",
+        "s",
+        "S"
       ],
       "rootPatterns": [
-        "settings.gradle",
-        "settings.gradle.kts",
-        "build.gradle",
-        "build.gradle.kts",
-        ".git"
+        ".git/"
+      ]
+    },
+    "swift": {
+      "command": "sourcekit-lsp",
+      "filetypes": [
+        "swift"
       ],
-      "initializationOptions": {},
-      "trace.server": "off"
+      "rootPatterns": [
+        "Package.swift"
+      ]
     }
   },
   "java.referencesCodeLens.enabled": true,
