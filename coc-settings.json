@@ -13,7 +13,7 @@
   "suggest.autoTrigger": "always",
   "suggest.timeout": 5000,
   "suggest.triggerAfterInsertEnter": true,
-  "suggest.maxCompleteItemCount": 20,
+  "suggest.maxCompleteItemCount": 80,
   "suggest.virtualText": false,
   "coc.source.buffer.enable": true,
   "coc.source.buffer.priority": 10,

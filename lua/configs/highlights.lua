@@ -1,15 +1,13 @@
----@type Base46HLGroupsList
+-- ---@type Base46HLGroupsList
 local M = {}
 
-local bg = "#1e1e1e" -- change this if you want
-
 M.override = {
-  Normal = { bg = bg },
-  NormalNC = { bg = bg },
-  NormalFloat = { bg = bg },
-  FloatBorder = { bg = bg },
-  SignColumn = { bg = bg },
-  EndOfBuffer = { bg = bg },
+  Normal = { bg = "NONE" },
+  NormalNC = { bg = "NONE" },
+  NormalFloat = { bg = "NONE" },
+  FloatBorder = { bg = "NONE" },
+  SignColumn = { bg = "NONE" },
+  EndOfBuffer = { bg = "NONE" },
 }
 
 return M
