@@ -50,22 +50,26 @@ function M.setup()
   dap.configurations.rust = dap.configurations.cpp
 
   -- Java configuration using java-debug adapter
-  dap.adapters.java = function(callback)
-    callback({
-      type = 'server',
-      host = '127.0.0.1',
-      port = 5005, -- must match Spring Boot debug port
-    })
-  end
+  dap.adapters.java = {
+    type = 'server',
+    host = '127.0.0.1',
+    port = 8080
+  }
 
   dap.configurations.java = {
     {
-      name = "Attach to Spring Boot",
-      type = "java",
-      request = "attach", -- ATTACH, not launch
-      hostName = "127.0.0.1",
-      port = 5005,        -- must match your Spring Boot debug port
+      type = 'java',
+      name = 'Debug (Attach) - Spring Boot',
+      request = 'attach',
+      hostName = '127.0.0.1',
+      port = 8080
     },
+    {
+      type = 'java',
+      name = 'Spring Boot Launch',
+      request = 'launch',
+      mainClass = 'com.Wissam.EasyApplier.EasyApplierApplication'
+    }
   }
 end
 

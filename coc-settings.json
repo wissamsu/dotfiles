@@ -31,43 +31,21 @@
   "diagnostic.warningSign": "W",
   "diagnostic.messageTarget": "echo",
   "yaml.format.enable": true,
-  //"languageserver": {
-  //"kotlin": {
-  //"command": "kotlin-language-server",
-  //"filetypes": [
-  //"kotlin"
-  //],
-  //"rootPatterns": [
-  //"settings.gradle",
-  //"settings.gradle.kts",
-  //"build.gradle",
-  //"build.gradle.kts",
-  //".git"
-  //],
-  //"initializationOptions": {},
-  // "trace.server": "off"
-  //}
-  //},
   "languageserver": {
-    "asm": {
-      "command": "asm-lsp",
+    "kotlin": {
+      "command": "kotlin-language-server",
       "filetypes": [
-        "asm",
-        "s",
-        "S"
+        "kotlin"
       ],
       "rootPatterns": [
-        ".git/"
-      ]
-    },
-    "swift": {
-      "command": "sourcekit-lsp",
-      "filetypes": [
-        "swift"
+        "settings.gradle",
+        "settings.gradle.kts",
+        "build.gradle",
+        "build.gradle.kts",
+        ".git"
       ],
-      "rootPatterns": [
-        "Package.swift"
-      ]
+      "initializationOptions": {},
+      "trace.server": "off"
     }
   },
   "java.referencesCodeLens.enabled": true,
@@ -101,5 +79,7 @@
     }
   ],
   "extensions.updateCheck": "daily",
-  "clangd.path": "~/.config/coc/extensions/coc-clangd-data/install/21.1.8/clangd_21.1.8/bin/clangd"
+  "scala": {
+    "keepUsing": true
+  },
 }

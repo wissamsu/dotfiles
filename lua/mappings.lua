@@ -28,7 +28,7 @@ vim.keymap.set("n", "<leader>dt", dap.terminate, { desc = "Dap Terminate" })
 vim.keymap.set("n", "<leader>da", dap.clear_breakpoints, { desc = "Dap Clear Breakpoints" })
 
 
-map("n", "<leader>ww", ":tabNext<CR>", { desc = "Next Tab Command" })
+map("n", "<leader>tc", ":tabNext<CR>", { desc = "Next Tab Command" })
 map("n", "<leader>lr", ":Leet run<CR>", { desc = "Run Leet command" })
 map("n", "<leader>ls", ":Leet submit<CR>", { desc = "Run Submit command" })
 -- ======== PICKERS ========
@@ -104,7 +104,8 @@ end, { desc = "Snacks Startup Profiler" })
 -- COC IMPORT FIX
 map("n", "<leader>i", "<Plug>(coc-fix-current)", { silent = true, desc = "Coc Organize Imports / Auto-Import" })
 
-vim.keymap.set("n", "<leader>tn", ":tabnew<CR>", { silent = true })
+vim.keymap.set("n", "<leader>tn", ":tabnew<CR>", { silent = true, desc = "New Tab" })
+vim.keymap.set("n", "<leader>tc", ":tabnew<CR>", { silent = true, desc = "Close Tab" })
 
 vim.keymap.set("i", "<CR>", "vim.fn.coc#pum#visible() ? vim.fn.coc#pum#confirm() : '\\<CR>'", {
   silent = true,
@@ -183,3 +184,11 @@ vim.keymap.set("n", "<leader>cd1", ":Crates open_documentation<CR>", { noremap =
 vim.keymap.set("n", "<leader>cd2", ":Crates open_cratesio<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>cv", ":Crates show_versions_popup<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>cf", ":Crates show_features_popup<CR>", { noremap = true, silent = true })
+
+vim.keymap.set("n", "<leader>mv", ":Maven<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>me", ":MavenExec<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>mi", ":MavenInit<CR>", { noremap = true, silent = true })
+
+vim.keymap.set("n", "<leader>gv", ":Gradle<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>ge", ":GradleExec<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>gi", ":GradleInit<CR>", { noremap = true, silent = true })

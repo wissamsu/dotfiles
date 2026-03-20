@@ -1,0 +1,645 @@
+2026.03.17 04:53:17 INFO  Started: Metals version 0.11.2 in workspace '/home/wiss/.config/nvim' for client coc.nvim 0.0.82.[0m
+2026.03.17 04:53:17 INFO  Parse release: 17.0.18[0m
+2026.03.17 04:53:19 INFO  time: initialize in 2.4s[0m
+2026.03.17 04:53:20 WARN  Build server is not auto-connectable.[0m
+2026.03.17 04:53:20 WARN  no build tool detected in workspace '/home/wiss/.config/nvim'. The most common cause for this problem is that the editor was opened in the wrong working directory, for example if you use sbt then the workspace directory should contain build.sbt. [0m
+2026.03.17 04:53:21 WARN  no build target for: /home/wiss/coding/scala/firstscala/src/main/scala/Main.scala[0m
+2026.03.17 04:53:24 INFO  no build target found for /home/wiss/coding/scala/firstscala/src/main/scala/Main.scala. Using presentation compiler with project's scala-library version: 3.1.1[0m
+2026.03.17 04:53:25 INFO  time: code lens generation in 3.9s[0m
+2026.03.17 04:57:55 INFO  shutting down Metals[0m
+2026.03.17 05:40:19 INFO  Attempting to connect to the build server...[0m
+2026.03.17 05:40:19 INFO  No running Bloop server found, starting one.[0m
+2026.03.17 05:40:19 INFO  Upgraded H2 database.[0m
+2026.03.17 05:40:19 INFO  Database: jdbc:h2:file:/home/wiss/.config/nvim/.metals/metals (H2 2.3)[0m
+2026.03.17 05:40:19 INFO  Successfully validated 6 migrations (execution time 00:00.008s)[0m
+2026.03.17 05:40:19 INFO  Current version of schema "PUBLIC": 3[0m
+2026.03.17 05:40:19 INFO  Migrating schema "PUBLIC" to version "4 - Fingerprints"[0m
+2026.03.17 05:40:19 INFO  Migrating schema "PUBLIC" to version "5 - Jar type hierarchy"[0m
+2026.03.17 05:40:19 INFO  Migrating schema "PUBLIC" to version "6 - Delete indices"[0m
+2026.03.17 05:40:19 INFO  Successfully applied 3 migrations to schema "PUBLIC", now at version v6 (execution time 00:00.044s)[0m
+2026.03.17 05:40:23 INFO  Running List(/home/wiss/.local/share/mise/installs/scala-cli/1.12.4/bin/scala-cli, setup-ide, /home/wiss/.config/nvim)[0m
+2026.03.17 05:40:23 INFO  Attempting to connect to the build server...[0m
+2026.03.17 05:40:23 INFO  Running BSP server List(/home/wiss/.local/share/mise/installs/scala-cli/1.12.4/bin/scala-cli, bsp, --json-options, /home/wiss/.config/nvim/.scala-build/ide-options-v2.json, --json-launcher-options, /home/wiss/.config/nvim/.scala-build/ide-launcher-options.json, --envs-file, /home/wiss/.config/nvim/.scala-build/ide-envs.json, /home/wiss/.config/nvim)[0m
+2026.03.17 05:40:24 INFO  tracing is disabled for protocol BSP, to enable tracing of incoming and outgoing JSON messages create an empty file at /home/wiss/.config/nvim/.metals/bsp.trace.json or /home/wiss/.cache/metals/bsp.trace.json[0m
+2026.03.17 05:40:24 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/bloop-frontend_2.12/2.0.19/bloop-frontend_2.12-2.0.19.pom[0m
+2026.03.17 05:40:25 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/bloop-frontend_2.12/2.0.19/bloop-frontend_2.12-2.0.19.pom[0m
+2026.03.17 05:40:25 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/bloop-frontend_2.12/2.0.19/bloop-frontend_2.12-2.0.19.pom.sha1[0m
+2026.03.17 05:40:25 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/bloop-frontend_2.12/2.0.19/bloop-frontend_2.12-2.0.19.pom.sha1[0m
+2026.03.17 05:40:25 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/ch/epfl/scala/bloop-frontend_2.12/2.0.19/bloop-frontend_2.12-2.0.19.pom[0m
+2026.03.17 05:40:27 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/ch/epfl/scala/bloop-frontend_2.12/2.0.19/bloop-frontend_2.12-2.0.19.pom[0m
+2026.03.17 05:40:27 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/bloop-backend_2.12/2.0.19/bloop-backend_2.12-2.0.19.pom[0m
+2026.03.17 05:40:27 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/qos/logback/logback-classic/1.5.27/logback-classic-1.5.27.pom[0m
+2026.03.17 05:40:27 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/bloop-config_2.12/2.3.3/bloop-config_2.12-2.3.3.pom[0m
+2026.03.17 05:40:27 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/scala-debug-adapter_2.12/4.2.8/scala-debug-adapter_2.12-4.2.8.pom[0m
+2026.03.17 05:40:27 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/bloop-shared_2.12/2.0.19/bloop-shared_2.12-2.0.19.pom[0m
+2026.03.17 05:40:27 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/bloop-backend_2.12/2.0.19/bloop-backend_2.12-2.0.19.pom[0m
+2026.03.17 05:40:27 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/bloop-backend_2.12/2.0.19/bloop-backend_2.12-2.0.19.pom.sha1[0m
+2026.03.17 05:40:27 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/bloop-shared_2.12/2.0.19/bloop-shared_2.12-2.0.19.pom[0m
+2026.03.17 05:40:27 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/bloop-shared_2.12/2.0.19/bloop-shared_2.12-2.0.19.pom.sha1[0m
+2026.03.17 05:40:27 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/qos/logback/logback-classic/1.5.27/logback-classic-1.5.27.pom[0m
+2026.03.17 05:40:27 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/qos/logback/logback-classic/1.5.27/logback-classic-1.5.27.pom.sha1[0m
+2026.03.17 05:40:27 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/bloop-config_2.12/2.3.3/bloop-config_2.12-2.3.3.pom[0m
+2026.03.17 05:40:27 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/bloop-config_2.12/2.3.3/bloop-config_2.12-2.3.3.pom.sha1[0m
+2026.03.17 05:40:27 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/scala-debug-adapter_2.12/4.2.8/scala-debug-adapter_2.12-4.2.8.pom[0m
+2026.03.17 05:40:27 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/scala-debug-adapter_2.12/4.2.8/scala-debug-adapter_2.12-4.2.8.pom.sha1[0m
+2026.03.17 05:40:27 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/bloop-backend_2.12/2.0.19/bloop-backend_2.12-2.0.19.pom.sha1[0m
+2026.03.17 05:40:27 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/ch/epfl/scala/bloop-backend_2.12/2.0.19/bloop-backend_2.12-2.0.19.pom[0m
+2026.03.17 05:40:27 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/bloop-shared_2.12/2.0.19/bloop-shared_2.12-2.0.19.pom.sha1[0m
+2026.03.17 05:40:27 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/ch/epfl/scala/bloop-shared_2.12/2.0.19/bloop-shared_2.12-2.0.19.pom[0m
+2026.03.17 05:40:27 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/bloop-config_2.12/2.3.3/bloop-config_2.12-2.3.3.pom.sha1[0m
+2026.03.17 05:40:27 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/ch/epfl/scala/bloop-config_2.12/2.3.3/bloop-config_2.12-2.3.3.pom[0m
+2026.03.17 05:40:27 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/qos/logback/logback-classic/1.5.27/logback-classic-1.5.27.pom.sha1[0m
+2026.03.17 05:40:27 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/ch/qos/logback/logback-classic/1.5.27/logback-classic-1.5.27.pom[0m
+2026.03.17 05:40:27 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/scala-debug-adapter_2.12/4.2.8/scala-debug-adapter_2.12-4.2.8.pom.sha1[0m
+2026.03.17 05:40:27 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/ch/epfl/scala/scala-debug-adapter_2.12/4.2.8/scala-debug-adapter_2.12-4.2.8.pom[0m
+2026.03.17 05:40:27 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/ch/epfl/scala/bloop-backend_2.12/2.0.19/bloop-backend_2.12-2.0.19.pom[0m
+2026.03.17 05:40:28 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/ch/epfl/scala/bloop-shared_2.12/2.0.19/bloop-shared_2.12-2.0.19.pom[0m
+2026.03.17 05:40:28 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/ch/epfl/scala/bloop-config_2.12/2.3.3/bloop-config_2.12-2.3.3.pom[0m
+2026.03.17 05:40:28 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/ch/epfl/scala/bloop-config_2.12/2.3.3/bloop-config_2.12-2.3.3.pom.sha1[0m
+2026.03.17 05:40:28 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/ch/epfl/scala/scala-debug-adapter_2.12/4.2.8/scala-debug-adapter_2.12-4.2.8.pom[0m
+2026.03.17 05:40:28 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/ch/qos/logback/logback-classic/1.5.27/logback-classic-1.5.27.pom[0m
+2026.03.17 05:40:28 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/ch/qos/logback/logback-classic/1.5.27/logback-classic-1.5.27.pom.sha1[0m
+2026.03.17 05:40:28 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/ch/epfl/scala/bloop-config_2.12/2.3.3/bloop-config_2.12-2.3.3.pom.sha1[0m
+2026.03.17 05:40:28 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/ch/qos/logback/logback-classic/1.5.27/logback-classic-1.5.27.pom.sha1[0m
+2026.03.17 05:40:28 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/qos/logback/logback-parent/1.5.27/logback-parent-1.5.27.pom[0m
+2026.03.17 05:40:28 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/qos/logback/logback-parent/1.5.27/logback-parent-1.5.27.pom[0m
+2026.03.17 05:40:28 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/qos/logback/logback-parent/1.5.27/logback-parent-1.5.27.pom.sha1[0m
+2026.03.17 05:40:30 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/qos/logback/logback-parent/1.5.27/logback-parent-1.5.27.pom.sha1[0m
+2026.03.17 05:40:30 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/ch/qos/logback/logback-parent/1.5.27/logback-parent-1.5.27.pom[0m
+2026.03.17 05:40:30 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/ch/qos/logback/logback-parent/1.5.27/logback-parent-1.5.27.pom[0m
+2026.03.17 05:40:30 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/ch/qos/logback/logback-parent/1.5.27/logback-parent-1.5.27.pom.sha1[0m
+2026.03.17 05:40:30 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/ch/qos/logback/logback-parent/1.5.27/logback-parent-1.5.27.pom.sha1[0m
+2026.03.17 05:40:30 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/scalameta/parsers_2.12/4.13.8/parsers_2.12-4.13.8.pom[0m
+2026.03.17 05:40:30 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/ow2/asm/asm/9.9.1/asm-9.9.1.pom[0m
+2026.03.17 05:40:30 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/qos/logback/logback-core/1.5.27/logback-core-1.5.27.pom[0m
+2026.03.17 05:40:30 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/com/lihaoyi/pprint_2.12/0.9.6/pprint_2.12-0.9.6.pom[0m
+2026.03.17 05:40:30 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/ow2/asm/asm-util/9.9.1/asm-util-9.9.1.pom[0m
+2026.03.17 05:40:30 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/scala-sbt/test-agent/1.12.1/test-agent-1.12.1.pom[0m
+2026.03.17 05:40:31 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/ow2/asm/asm-util/9.9.1/asm-util-9.9.1.pom[0m
+2026.03.17 05:40:31 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/com/lihaoyi/sourcecode_2.12/0.4.4/sourcecode_2.12-0.4.4.pom[0m
+2026.03.17 05:40:31 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/ow2/asm/asm/9.9.1/asm-9.9.1.pom[0m
+2026.03.17 05:40:31 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.pom[0m
+2026.03.17 05:40:31 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/scala-sbt/test-agent/1.12.1/test-agent-1.12.1.pom[0m
+2026.03.17 05:40:31 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/com-microsoft-java-debug-core/0.34.0+39/com-microsoft-java-debug-core-0.34.0+39.pom[0m
+2026.03.17 05:40:31 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/com/lihaoyi/pprint_2.12/0.9.6/pprint_2.12-0.9.6.pom[0m
+2026.03.17 05:40:31 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/ow2/asm/asm-util/9.9.1/asm-util-9.9.1.pom.sha1[0m
+2026.03.17 05:40:31 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/qos/logback/logback-core/1.5.27/logback-core-1.5.27.pom[0m
+2026.03.17 05:40:31 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/ow2/asm/asm/9.9.1/asm-9.9.1.pom.sha1[0m
+2026.03.17 05:40:31 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/scalameta/parsers_2.12/4.13.8/parsers_2.12-4.13.8.pom[0m
+2026.03.17 05:40:31 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/scala-sbt/test-agent/1.12.1/test-agent-1.12.1.pom.sha1[0m
+2026.03.17 05:40:31 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/com/lihaoyi/sourcecode_2.12/0.4.4/sourcecode_2.12-0.4.4.pom[0m
+2026.03.17 05:40:31 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/com/lihaoyi/pprint_2.12/0.9.6/pprint_2.12-0.9.6.pom.sha1[0m
+2026.03.17 05:40:31 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/com-microsoft-java-debug-core/0.34.0+39/com-microsoft-java-debug-core-0.34.0+39.pom[0m
+2026.03.17 05:40:31 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/qos/logback/logback-core/1.5.27/logback-core-1.5.27.pom.sha1[0m
+2026.03.17 05:40:31 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.pom[0m
+2026.03.17 05:40:31 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/scalameta/parsers_2.12/4.13.8/parsers_2.12-4.13.8.pom.sha1[0m
+2026.03.17 05:40:31 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/ow2/asm/asm-util/9.9.1/asm-util-9.9.1.pom.sha1[0m
+2026.03.17 05:40:31 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/net/java/dev/jna/jna/5.18.1/jna-5.18.1.pom[0m
+2026.03.17 05:40:31 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/ow2/asm/asm/9.9.1/asm-9.9.1.pom.sha1[0m
+2026.03.17 05:40:31 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/com/lihaoyi/sourcecode_2.12/0.4.4/sourcecode_2.12-0.4.4.pom.sha1[0m
+2026.03.17 05:40:31 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/scala-sbt/test-agent/1.12.1/test-agent-1.12.1.pom.sha1[0m
+2026.03.17 05:40:31 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/com-microsoft-java-debug-core/0.34.0+39/com-microsoft-java-debug-core-0.34.0+39.pom.sha1[0m
+2026.03.17 05:40:33 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/com/lihaoyi/pprint_2.12/0.9.6/pprint_2.12-0.9.6.pom.sha1[0m
+2026.03.17 05:40:33 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.pom.sha1[0m
+2026.03.17 05:40:33 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/qos/logback/logback-core/1.5.27/logback-core-1.5.27.pom.sha1[0m
+2026.03.17 05:40:33 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/asm/asm-util/9.9.1/asm-util-9.9.1.pom[0m
+2026.03.17 05:40:33 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/net/java/dev/jna/jna/5.18.1/jna-5.18.1.pom[0m
+2026.03.17 05:40:33 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/asm/asm/9.9.1/asm-9.9.1.pom[0m
+2026.03.17 05:40:33 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/scalameta/parsers_2.12/4.13.8/parsers_2.12-4.13.8.pom.sha1[0m
+2026.03.17 05:40:33 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/scala-sbt/test-agent/1.12.1/test-agent-1.12.1.pom[0m
+2026.03.17 05:40:33 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/com/lihaoyi/sourcecode_2.12/0.4.4/sourcecode_2.12-0.4.4.pom.sha1[0m
+2026.03.17 05:40:33 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/com/lihaoyi/pprint_2.12/0.9.6/pprint_2.12-0.9.6.pom[0m
+2026.03.17 05:40:33 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/ch/epfl/scala/com-microsoft-java-debug-core/0.34.0+39/com-microsoft-java-debug-core-0.34.0+39.pom.sha1[0m
+2026.03.17 05:40:33 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/ch/qos/logback/logback-core/1.5.27/logback-core-1.5.27.pom[0m
+2026.03.17 05:40:33 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/asm/asm-util/9.9.1/asm-util-9.9.1.pom[0m
+2026.03.17 05:40:33 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/net/java/dev/jna/jna/5.18.1/jna-5.18.1.pom.sha1[0m
+2026.03.17 05:40:33 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/asm/asm/9.9.1/asm-9.9.1.pom[0m
+2026.03.17 05:40:33 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/asm/asm-util/9.9.1/asm-util-9.9.1.pom.sha1[0m
+2026.03.17 05:40:33 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.pom.sha1[0m
+2026.03.17 05:40:33 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/asm/asm/9.9.1/asm-9.9.1.pom.sha1[0m
+2026.03.17 05:40:33 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/asm/asm-util/9.9.1/asm-util-9.9.1.pom.sha1[0m
+2026.03.17 05:40:33 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/scalameta/parsers_2.12/4.13.8/parsers_2.12-4.13.8.pom[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/scala-sbt/test-agent/1.12.1/test-agent-1.12.1.pom[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/com/lihaoyi/sourcecode_2.12/0.4.4/sourcecode_2.12-0.4.4.pom[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/com/lihaoyi/pprint_2.12/0.9.6/pprint_2.12-0.9.6.pom[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/ch/epfl/scala/com-microsoft-java-debug-core/0.34.0+39/com-microsoft-java-debug-core-0.34.0+39.pom[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/asm/asm/9.9.1/asm-9.9.1.pom.sha1[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/scala-sbt/test-agent/1.12.1/test-agent-1.12.1.pom.sha1[0m
+2026.03.17 05:40:34 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/net/java/dev/jna/jna/5.18.1/jna-5.18.1.pom.sha1[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/com/lihaoyi/pprint_2.12/0.9.6/pprint_2.12-0.9.6.pom.sha1[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/ch/qos/logback/logback-core/1.5.27/logback-core-1.5.27.pom[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.pom[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/scalameta/parsers_2.12/4.13.8/parsers_2.12-4.13.8.pom[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/ch/qos/logback/logback-core/1.5.27/logback-core-1.5.27.pom.sha1[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/ch/epfl/scala/com-microsoft-java-debug-core/0.34.0+39/com-microsoft-java-debug-core-0.34.0+39.pom[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/scalameta/parsers_2.12/4.13.8/parsers_2.12-4.13.8.pom.sha1[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/com/lihaoyi/sourcecode_2.12/0.4.4/sourcecode_2.12-0.4.4.pom[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/net/java/dev/jna/jna/5.18.1/jna-5.18.1.pom[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/scala-sbt/test-agent/1.12.1/test-agent-1.12.1.pom.sha1[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/com/lihaoyi/sourcecode_2.12/0.4.4/sourcecode_2.12-0.4.4.pom.sha1[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/ch/qos/logback/logback-core/1.5.27/logback-core-1.5.27.pom.sha1[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.pom[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.pom.sha1[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/scalameta/parsers_2.12/4.13.8/parsers_2.12-4.13.8.pom.sha1[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/net/java/dev/jna/jna/5.18.1/jna-5.18.1.pom[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/net/java/dev/jna/jna/5.18.1/jna-5.18.1.pom.sha1[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/com/lihaoyi/sourcecode_2.12/0.4.4/sourcecode_2.12-0.4.4.pom.sha1[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.pom.sha1[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/com/lihaoyi/pprint_2.12/0.9.6/pprint_2.12-0.9.6.pom.sha1[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/net/java/dev/jna/jna/5.18.1/jna-5.18.1.pom.sha1[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/slf4j/slf4j-parent/2.0.17/slf4j-parent-2.0.17.pom[0m
+2026.03.17 05:40:34 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/ow2/ow2/1.5.1/ow2-1.5.1.pom[0m
+2026.03.17 05:40:35 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/ow2/ow2/1.5.1/ow2-1.5.1.pom[0m
+2026.03.17 05:40:35 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/ow2/ow2/1.5.1/ow2-1.5.1.pom.sha1[0m
+2026.03.17 05:40:35 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/slf4j/slf4j-parent/2.0.17/slf4j-parent-2.0.17.pom[0m
+2026.03.17 05:40:35 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/slf4j/slf4j-parent/2.0.17/slf4j-parent-2.0.17.pom.sha1[0m
+2026.03.17 05:40:35 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/ow2/ow2/1.5.1/ow2-1.5.1.pom.sha1[0m
+2026.03.17 05:40:35 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/ow2/1.5.1/ow2-1.5.1.pom[0m
+2026.03.17 05:40:35 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/slf4j/slf4j-parent/2.0.17/slf4j-parent-2.0.17.pom.sha1[0m
+2026.03.17 05:40:35 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/slf4j/slf4j-parent/2.0.17/slf4j-parent-2.0.17.pom[0m
+2026.03.17 05:40:35 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/ow2/1.5.1/ow2-1.5.1.pom[0m
+2026.03.17 05:40:35 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/slf4j/slf4j-parent/2.0.17/slf4j-parent-2.0.17.pom[0m
+2026.03.17 05:40:35 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/slf4j/slf4j-parent/2.0.17/slf4j-parent-2.0.17.pom.sha1[0m
+2026.03.17 05:40:35 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/slf4j/slf4j-parent/2.0.17/slf4j-parent-2.0.17.pom.sha1[0m
+2026.03.17 05:40:35 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/slf4j/slf4j-bom/2.0.17/slf4j-bom-2.0.17.pom[0m
+2026.03.17 05:40:37 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/slf4j/slf4j-bom/2.0.17/slf4j-bom-2.0.17.pom[0m
+2026.03.17 05:40:37 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/slf4j/slf4j-bom/2.0.17/slf4j-bom-2.0.17.pom.sha1[0m
+2026.03.17 05:40:37 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/slf4j/slf4j-bom/2.0.17/slf4j-bom-2.0.17.pom.sha1[0m
+2026.03.17 05:40:37 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/slf4j/slf4j-bom/2.0.17/slf4j-bom-2.0.17.pom[0m
+2026.03.17 05:40:37 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/slf4j/slf4j-bom/2.0.17/slf4j-bom-2.0.17.pom[0m
+2026.03.17 05:40:37 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/slf4j/slf4j-bom/2.0.17/slf4j-bom-2.0.17.pom.sha1[0m
+2026.03.17 05:40:38 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/slf4j/slf4j-bom/2.0.17/slf4j-bom-2.0.17.pom.sha1[0m
+2026.03.17 05:40:38 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/apache/apache/31/apache-31.pom[0m
+2026.03.17 05:40:38 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/apache/apache/31/apache-31.pom[0m
+2026.03.17 05:40:38 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/apache/apache/31/apache-31.pom.sha1[0m
+2026.03.17 05:40:39 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/apache/apache/31/apache-31.pom.sha1[0m
+2026.03.17 05:40:39 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/apache/apache/31/apache-31.pom[0m
+2026.03.17 05:40:39 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/apache/apache/31/apache-31.pom[0m
+2026.03.17 05:40:39 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/com/fasterxml/oss-parent/56/oss-parent-56.pom[0m
+2026.03.17 05:40:40 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/com/fasterxml/oss-parent/56/oss-parent-56.pom[0m
+2026.03.17 05:40:40 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/com/fasterxml/oss-parent/56/oss-parent-56.pom.sha1[0m
+2026.03.17 05:40:40 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/com/fasterxml/oss-parent/56/oss-parent-56.pom.sha1[0m
+2026.03.17 05:40:40 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/com/fasterxml/oss-parent/56/oss-parent-56.pom[0m
+2026.03.17 05:40:40 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/com/fasterxml/oss-parent/56/oss-parent-56.pom[0m
+2026.03.17 05:40:40 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/ow2/asm/asm-tree/9.9.1/asm-tree-9.9.1.pom[0m
+2026.03.17 05:40:40 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/io/reactivex/rxjava2/rxjava/2.2.21/rxjava-2.2.21.pom[0m
+2026.03.17 05:40:40 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/ow2/asm/asm-analysis/9.9.1/asm-analysis-9.9.1.pom[0m
+2026.03.17 05:40:40 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.pom[0m
+2026.03.17 05:40:40 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/scalameta/trees_2.12/4.13.8/trees_2.12-4.13.8.pom[0m
+2026.03.17 05:40:41 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/commons-io/commons-io/2.19.0/commons-io-2.19.0.pom[0m
+2026.03.17 05:40:41 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/ow2/asm/asm-tree/9.9.1/asm-tree-9.9.1.pom[0m
+2026.03.17 05:40:41 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/com/google/code/gson/gson/2.13.1/gson-2.13.1.pom[0m
+2026.03.17 05:40:41 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/ow2/asm/asm-analysis/9.9.1/asm-analysis-9.9.1.pom[0m
+2026.03.17 05:40:41 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/com/lihaoyi/fansi_2.12/0.5.1/fansi_2.12-0.5.1.pom[0m
+2026.03.17 05:40:41 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/scalameta/trees_2.12/4.13.8/trees_2.12-4.13.8.pom[0m
+2026.03.17 05:40:41 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/ow2/asm/asm-tree/9.9.1/asm-tree-9.9.1.pom.sha1[0m
+2026.03.17 05:40:41 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.pom[0m
+2026.03.17 05:40:41 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/ow2/asm/asm-analysis/9.9.1/asm-analysis-9.9.1.pom.sha1[0m
+2026.03.17 05:40:41 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/io/reactivex/rxjava2/rxjava/2.2.21/rxjava-2.2.21.pom[0m
+2026.03.17 05:40:41 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/scalameta/trees_2.12/4.13.8/trees_2.12-4.13.8.pom.sha1[0m
+2026.03.17 05:40:41 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/commons-io/commons-io/2.19.0/commons-io-2.19.0.pom[0m
+2026.03.17 05:40:41 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.pom.sha1[0m
+2026.03.17 05:40:43 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/com/lihaoyi/fansi_2.12/0.5.1/fansi_2.12-0.5.1.pom[0m
+2026.03.17 05:40:43 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/io/reactivex/rxjava2/rxjava/2.2.21/rxjava-2.2.21.pom.sha1[0m
+2026.03.17 05:40:43 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/ow2/asm/asm-tree/9.9.1/asm-tree-9.9.1.pom.sha1[0m
+2026.03.17 05:40:43 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/commons-io/commons-io/2.19.0/commons-io-2.19.0.pom.sha1[0m
+2026.03.17 05:40:43 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/com/google/code/gson/gson/2.13.1/gson-2.13.1.pom[0m
+2026.03.17 05:40:43 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/com/lihaoyi/fansi_2.12/0.5.1/fansi_2.12-0.5.1.pom.sha1[0m
+2026.03.17 05:40:43 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/ow2/asm/asm-analysis/9.9.1/asm-analysis-9.9.1.pom.sha1[0m
+2026.03.17 05:40:43 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/com/google/code/gson/gson/2.13.1/gson-2.13.1.pom.sha1[0m
+2026.03.17 05:40:43 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/scalameta/trees_2.12/4.13.8/trees_2.12-4.13.8.pom.sha1[0m
+2026.03.17 05:40:43 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/asm/asm-tree/9.9.1/asm-tree-9.9.1.pom[0m
+2026.03.17 05:40:43 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.pom.sha1[0m
+2026.03.17 05:40:43 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/asm/asm-analysis/9.9.1/asm-analysis-9.9.1.pom[0m
+2026.03.17 05:40:43 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/asm/asm-tree/9.9.1/asm-tree-9.9.1.pom[0m
+2026.03.17 05:40:43 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/scalameta/trees_2.12/4.13.8/trees_2.12-4.13.8.pom[0m
+2026.03.17 05:40:43 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/io/reactivex/rxjava2/rxjava/2.2.21/rxjava-2.2.21.pom.sha1[0m
+2026.03.17 05:40:43 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/scalameta/trees_2.12/4.13.8/trees_2.12-4.13.8.pom[0m
+2026.03.17 05:40:43 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/asm/asm-tree/9.9.1/asm-tree-9.9.1.pom.sha1[0m
+2026.03.17 05:40:43 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.pom[0m
+2026.03.17 05:40:43 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/com/lihaoyi/fansi_2.12/0.5.1/fansi_2.12-0.5.1.pom.sha1[0m
+2026.03.17 05:40:43 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/scalameta/trees_2.12/4.13.8/trees_2.12-4.13.8.pom.sha1[0m
+2026.03.17 05:40:43 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/commons-io/commons-io/2.19.0/commons-io-2.19.0.pom.sha1[0m
+2026.03.17 05:40:43 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/io/reactivex/rxjava2/rxjava/2.2.21/rxjava-2.2.21.pom[0m
+2026.03.17 05:40:43 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/com/google/code/gson/gson/2.13.1/gson-2.13.1.pom.sha1[0m
+2026.03.17 05:40:43 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/com/lihaoyi/fansi_2.12/0.5.1/fansi_2.12-0.5.1.pom[0m
+2026.03.17 05:40:43 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/asm/asm-analysis/9.9.1/asm-analysis-9.9.1.pom[0m
+2026.03.17 05:40:43 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/commons-io/commons-io/2.19.0/commons-io-2.19.0.pom[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/asm/asm-tree/9.9.1/asm-tree-9.9.1.pom.sha1[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/com/google/code/gson/gson/2.13.1/gson-2.13.1.pom[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/com/google/code/gson/gson/2.13.1/gson-2.13.1.pom[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/asm/asm-analysis/9.9.1/asm-analysis-9.9.1.pom.sha1[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/commons-io/commons-io/2.19.0/commons-io-2.19.0.pom[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/io/reactivex/rxjava2/rxjava/2.2.21/rxjava-2.2.21.pom[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/com/google/code/gson/gson/2.13.1/gson-2.13.1.pom.sha1[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/commons-io/commons-io/2.19.0/commons-io-2.19.0.pom.sha1[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.pom[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/io/reactivex/rxjava2/rxjava/2.2.21/rxjava-2.2.21.pom.sha1[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/scalameta/trees_2.12/4.13.8/trees_2.12-4.13.8.pom.sha1[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.pom.sha1[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/ow2/asm/asm-analysis/9.9.1/asm-analysis-9.9.1.pom.sha1[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/com/lihaoyi/fansi_2.12/0.5.1/fansi_2.12-0.5.1.pom[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/com/lihaoyi/fansi_2.12/0.5.1/fansi_2.12-0.5.1.pom.sha1[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/com/google/code/gson/gson/2.13.1/gson-2.13.1.pom.sha1[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/commons-io/commons-io/2.19.0/commons-io-2.19.0.pom.sha1[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.pom.sha1[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/io/reactivex/rxjava2/rxjava/2.2.21/rxjava-2.2.21.pom.sha1[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/com/lihaoyi/fansi_2.12/0.5.1/fansi_2.12-0.5.1.pom.sha1[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/apache/commons/commons-parent/81/commons-parent-81.pom[0m
+2026.03.17 05:40:44 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/com/google/code/gson/gson-parent/2.13.1/gson-parent-2.13.1.pom[0m
+2026.03.17 05:40:45 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/apache/commons/commons-parent/81/commons-parent-81.pom[0m
+2026.03.17 05:40:45 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/apache/commons/commons-parent/81/commons-parent-81.pom.sha1[0m
+2026.03.17 05:40:45 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/com/google/code/gson/gson-parent/2.13.1/gson-parent-2.13.1.pom[0m
+2026.03.17 05:40:45 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/com/google/code/gson/gson-parent/2.13.1/gson-parent-2.13.1.pom.sha1[0m
+2026.03.17 05:40:45 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/com/google/code/gson/gson-parent/2.13.1/gson-parent-2.13.1.pom.sha1[0m
+2026.03.17 05:40:45 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/com/google/code/gson/gson-parent/2.13.1/gson-parent-2.13.1.pom[0m
+2026.03.17 05:40:45 INFO  BSP server: Failed to download https://central.sonatype.com/repository/maven-snapshots/org/apache/commons/commons-parent/81/commons-parent-81.pom.sha1[0m
+2026.03.17 05:40:45 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/apache/commons/commons-parent/81/commons-parent-81.pom[0m
+2026.03.17 05:40:46 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/com/google/code/gson/gson-parent/2.13.1/gson-parent-2.13.1.pom[0m
+2026.03.17 05:40:46 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/com/google/code/gson/gson-parent/2.13.1/gson-parent-2.13.1.pom.sha1[0m
+2026.03.17 05:40:46 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/apache/commons/commons-parent/81/commons-parent-81.pom[0m
+2026.03.17 05:40:46 INFO  BSP server: Downloading https://repo.scala-lang.org/artifactory/maven-nightlies/org/apache/commons/commons-parent/81/commons-parent-81.pom.sha1[0m
+2026.03.17 05:40:46 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/com/google/code/gson/gson-parent/2.13.1/gson-parent-2.13.1.pom.sha1[0m
+2026.03.17 05:40:46 INFO  BSP server: Downloaded https://repo.scala-lang.org/artifactory/maven-nightlies/org/apache/commons/commons-parent/81/commons-parent-81.pom.sha1[0m
+2026.03.17 05:40:46 INFO  BSP server: Downloading https://central.sonatype.com/repository/maven-snapshots/org/junit/junit-bom/5.11.4/junit-bom-5.11.4.pom[0m
+2026.03.17 05:40:47 INFO  no build target found for /home/wiss/coding/scala/firstscala/src/main/scala/Main.scala. Using presentation compiler with project's scala-library version: 3.3.5[0m
+2026.03.17 23:34:12 INFO  Database: jdbc:h2:file:/home/wiss/.config/nvim/.metals/metals (H2 2.3)[0m
+2026.03.17 23:34:12 INFO  Successfully validated 6 migrations (execution time 00:00.006s)[0m
+2026.03.17 23:34:12 INFO  Current version of schema "PUBLIC": 6[0m
+2026.03.17 23:34:12 INFO  Schema "PUBLIC" is up to date. No migration necessary.[0m
+2026.03.17 23:34:13 INFO  Attempting to connect to the build server...[0m
+2026.03.17 23:34:13 INFO  Running BSP server List(/home/wiss/.local/share/mise/installs/scala-cli/1.12.4/bin/scala-cli, bsp, --json-options, /home/wiss/.config/nvim/.scala-build/ide-options-v2.json, --json-launcher-options, /home/wiss/.config/nvim/.scala-build/ide-launcher-options.json, --envs-file, /home/wiss/.config/nvim/.scala-build/ide-envs.json, /home/wiss/.config/nvim)[0m
+2026.03.17 23:34:13 INFO  tracing is disabled for protocol BSP, to enable tracing of incoming and outgoing JSON messages create an empty file at /home/wiss/.config/nvim/.metals/bsp.trace.json or /home/wiss/.cache/metals/bsp.trace.json[0m
+2026.03.17 23:34:13 INFO  BSP server: Downloading https://repo1.maven.org/maven2/com/sourcegraph/semanticdb-javac/0.10.0/semanticdb-javac-0.10.0.pom[0m
+2026.03.17 23:34:13 INFO  BSP server: Downloaded https://repo1.maven.org/maven2/com/sourcegraph/semanticdb-javac/0.10.0/semanticdb-javac-0.10.0.pom[0m
+2026.03.17 23:34:13 INFO  BSP server: Downloading https://repo1.maven.org/maven2/com/sourcegraph/semanticdb-javac/0.10.0/semanticdb-javac-0.10.0.jar[0m
+2026.03.17 23:34:14 INFO  BSP server: Downloaded https://repo1.maven.org/maven2/com/sourcegraph/semanticdb-javac/0.10.0/semanticdb-javac-0.10.0.jar[0m
+2026.03.17 23:34:15 INFO  time: Connected to build server in 2.08s[0m
+2026.03.17 23:34:15 INFO  Connected to Build server: scala-cli v1.12.4[0m
+2026.03.17 23:34:17 INFO  Database: jdbc:h2:file:/home/wiss/.local/share/metals/metals (H2 2.3)[0m
+2026.03.17 23:34:17 INFO  Successfully validated 1 migration (execution time 00:00.006s)[0m
+2026.03.17 23:34:17 INFO  Current version of schema "PUBLIC": 1[0m
+2026.03.17 23:34:17 INFO  Schema "PUBLIC" is up to date. No migration necessary.[0m
+2026.03.17 23:34:19 INFO  time: indexed workspace in 3.98s[0m
+java.lang.UnsupportedOperationException
+	at org.eclipse.lsp4j.services.LanguageClient.refreshCodeLenses(LanguageClient.java:208)
+	at scala.meta.internal.metals.clients.language.ConfiguredLanguageClient.refreshModel(ConfiguredLanguageClient.scala:119)
+	at scala.meta.internal.metals.Indexer.$anonfun$indexWorkspace$23(Indexer.scala:224)
+	at scala.util.Success.foreach(Try.scala:268)
+	at scala.concurrent.impl.Promise$Transformation.run(Promise.scala:481)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+2026.03.17 23:34:19 WARN  no build target for: /home/wiss/coding/java/EasyApplier/src/main/java/com/Wissam/EasyApplier/AbstractCS.java[0m
+2026.03.17 23:34:26 INFO  Running BSP server List(/home/wiss/.local/share/mise/installs/scala-cli/1.12.4/bin/scala-cli, bsp, --json-options, /home/wiss/.config/nvim/.scala-build/ide-options-v2.json, --json-launcher-options, /home/wiss/.config/nvim/.scala-build/ide-launcher-options.json, --envs-file, /home/wiss/.config/nvim/.scala-build/ide-envs.json, /home/wiss/.config/nvim)[0m
+2026.03.17 23:34:26 INFO  tracing is disabled for protocol BSP, to enable tracing of incoming and outgoing JSON messages create an empty file at /home/wiss/.config/nvim/.metals/bsp.trace.json or /home/wiss/.cache/metals/bsp.trace.json[0m
+2026.03.17 23:34:26 INFO  Shut down connection with build server.[0m
+2026.03.18 22:35:21 INFO  Started: Metals version 0.11.2 in workspace '/home/wiss/.config/nvim' for client coc.nvim 0.0.82.[0m
+2026.03.18 22:35:21 INFO  Parse release: 21.0.2[0m
+2026.03.18 22:35:23 INFO  time: initialize in 2.45s[0m
+2026.03.18 22:35:24 WARN  resetting database: /home/wiss/.config/nvim/.metals/metals.h2.db[0m
+2026.03.18 22:35:24 ERROR org.flywaydb.core.internal.exception.FlywaySqlException: Unable to obtain connection from database (jdbc:h2:file:/home/wiss/.config/nvim/.metals/metals;AUTO_SERVER=TRUE) for user 'sa': General error: "The write format 3 is larger than the supported format 2 [2.0.206/5]" [50000-206]
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+SQL State  : HY000
+Error Code : 50000
+Message    : General error: "The write format 3 is larger than the supported format 2 [2.0.206/5]" [50000-206]
+
+	at org.flywaydb.core.internal.jdbc.JdbcUtils.openConnection(JdbcUtils.java:60)
+	at org.flywaydb.core.internal.jdbc.JdbcConnectionFactory.<init>(JdbcConnectionFactory.java:74)
+	at org.flywaydb.core.FlywayExecutor.execute(FlywayExecutor.java:147)
+	at org.flywaydb.core.Flyway.clean(Flyway.java:211)
+	at scala.meta.internal.metals.Tables.migrateOrRestart(Tables.scala:130)
+	at scala.meta.internal.metals.Tables.tryUrl(Tables.scala:118)
+	at scala.meta.internal.metals.Tables.persistentConnection(Tables.scala:112)
+	at scala.meta.internal.metals.Tables.tryAutoServer(Tables.scala:55)
+	at scala.meta.internal.metals.Tables.connect(Tables.scala:38)
+	at scala.meta.internal.metals.MetalsLanguageServer.initialized(MetalsLanguageServer.scala:964)
+	at jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.lang.reflect.Method.invoke(Method.java:580)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.lambda$null$0(GenericEndpoint.java:65)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.notify(GenericEndpoint.java:152)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.handleNotification(RemoteEndpoint.java:220)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.consume(RemoteEndpoint.java:187)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.handleMessage(StreamMessageProducer.java:194)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.listen(StreamMessageProducer.java:94)
+	at org.eclipse.lsp4j.jsonrpc.json.ConcurrentMessageProcessor.run(ConcurrentMessageProcessor.java:113)
+	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.lang.Thread.run(Thread.java:1583)
+Caused by: org.h2.jdbc.JdbcSQLNonTransientException: General error: "The write format 3 is larger than the supported format 2 [2.0.206/5]" [50000-206]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:573)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:496)
+	at org.h2.message.DbException.get(DbException.java:216)
+	at org.h2.mvstore.db.Store.convertMVStoreException(Store.java:166)
+	at org.h2.mvstore.db.Store.<init>(Store.java:140)
+	at org.h2.engine.Database.<init>(Database.java:324)
+	at org.h2.engine.Engine.openSession(Engine.java:92)
+	at org.h2.engine.Engine.openSession(Engine.java:222)
+	at org.h2.engine.Engine.createSession(Engine.java:201)
+	at org.h2.engine.SessionRemote.connectEmbeddedOrServer(SessionRemote.java:338)
+	at org.h2.jdbc.JdbcConnection.<init>(JdbcConnection.java:117)
+	at org.h2.Driver.connect(Driver.java:59)
+	at org.flywaydb.core.internal.jdbc.DriverDataSource.getConnectionFromDriver(DriverDataSource.java:259)
+	at org.flywaydb.core.internal.jdbc.DriverDataSource.getConnection(DriverDataSource.java:223)
+	at org.flywaydb.core.internal.jdbc.JdbcUtils.openConnection(JdbcUtils.java:48)
+	at org.flywaydb.core.internal.jdbc.JdbcConnectionFactory.<init>(JdbcConnectionFactory.java:74)
+	at org.flywaydb.core.FlywayExecutor.execute(FlywayExecutor.java:147)
+	at org.flywaydb.core.Flyway.clean(Flyway.java:211)
+	at scala.meta.internal.metals.Tables.migrateOrRestart(Tables.scala:130)
+	at scala.meta.internal.metals.Tables.tryUrl(Tables.scala:118)
+	at scala.meta.internal.metals.Tables.persistentConnection(Tables.scala:112)
+	at scala.meta.internal.metals.Tables.tryAutoServer(Tables.scala:55)
+	at scala.meta.internal.metals.Tables.connect(Tables.scala:38)
+	at scala.meta.internal.metals.MetalsLanguageServer.initialized(MetalsLanguageServer.scala:964)
+	at jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.lang.reflect.Method.invoke(Method.java:580)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.lambda$null$0(GenericEndpoint.java:65)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.notify(GenericEndpoint.java:152)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.handleNotification(RemoteEndpoint.java:220)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.consume(RemoteEndpoint.java:187)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.handleMessage(StreamMessageProducer.java:194)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.listen(StreamMessageProducer.java:94)
+	at org.eclipse.lsp4j.jsonrpc.json.ConcurrentMessageProcessor.run(ConcurrentMessageProcessor.java:113)
+	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.lang.Thread.run(Thread.java:1583)
+Caused by: org.h2.mvstore.MVStoreException: The write format 3 is larger than the supported format 2 [2.0.206/5]
+	at org.h2.mvstore.DataUtils.newMVStoreException(DataUtils.java:1004)
+	at org.h2.mvstore.MVStore.getUnsupportedWriteFormatException(MVStore.java:1059)
+	at org.h2.mvstore.MVStore.readStoreHeader(MVStore.java:875)
+	at org.h2.mvstore.MVStore.<init>(MVStore.java:455)
+	at org.h2.mvstore.MVStore$Builder.open(MVStore.java:4052)
+	at org.h2.mvstore.db.Store.<init>(Store.java:129)
+	at org.h2.engine.Database.<init>(Database.java:324)
+	at org.h2.engine.Engine.openSession(Engine.java:92)
+	at org.h2.engine.Engine.openSession(Engine.java:222)
+	at org.h2.engine.Engine.createSession(Engine.java:201)
+	at org.h2.engine.SessionRemote.connectEmbeddedOrServer(SessionRemote.java:338)
+	at org.h2.jdbc.JdbcConnection.<init>(JdbcConnection.java:117)
+	at org.h2.Driver.connect(Driver.java:59)
+	at org.flywaydb.core.internal.jdbc.DriverDataSource.getConnectionFromDriver(DriverDataSource.java:259)
+	at org.flywaydb.core.internal.jdbc.DriverDataSource.getConnection(DriverDataSource.java:223)
+	at org.flywaydb.core.internal.jdbc.JdbcUtils.openConnection(JdbcUtils.java:48)
+	at org.flywaydb.core.internal.jdbc.JdbcConnectionFactory.<init>(JdbcConnectionFactory.java:74)
+	at org.flywaydb.core.FlywayExecutor.execute(FlywayExecutor.java:147)
+	at org.flywaydb.core.Flyway.clean(Flyway.java:211)
+	at scala.meta.internal.metals.Tables.migrateOrRestart(Tables.scala:130)
+	at scala.meta.internal.metals.Tables.tryUrl(Tables.scala:118)
+	at scala.meta.internal.metals.Tables.persistentConnection(Tables.scala:112)
+	at scala.meta.internal.metals.Tables.tryAutoServer(Tables.scala:55)
+	at scala.meta.internal.metals.Tables.connect(Tables.scala:38)
+	at scala.meta.internal.metals.MetalsLanguageServer.initialized(MetalsLanguageServer.scala:964)
+	at jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.lang.reflect.Method.invoke(Method.java:580)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.lambda$null$0(GenericEndpoint.java:65)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.notify(GenericEndpoint.java:152)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.handleNotification(RemoteEndpoint.java:220)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.consume(RemoteEndpoint.java:187)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.handleMessage(StreamMessageProducer.java:194)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.listen(StreamMessageProducer.java:94)
+	at org.eclipse.lsp4j.jsonrpc.json.ConcurrentMessageProcessor.run(ConcurrentMessageProcessor.java:113)
+	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.lang.Thread.run(Thread.java:1583)
+[0m
+2026.03.18 22:35:24 WARN  resetting database: /home/wiss/.config/nvim/.metals/metals.h2.db[0m
+2026.03.18 22:35:24 ERROR unable to setup persistent H2 database with AUTO_SERVER=false, falling back to in-memory database. This means you may be redundantly asked to execute 'Import build', even if it's not needed. Also, code navigation will not work for existing files in the .metals/readonly/ directory. To fix this problem, make sure you only have one running Metals server in the directory '/home/wiss/.config/nvim'.
+org.flywaydb.core.internal.exception.FlywaySqlException: Unable to obtain connection from database (jdbc:h2:file:/home/wiss/.config/nvim/.metals/metals;AUTO_SERVER=TRUE) for user 'sa': General error: "The write format 3 is larger than the supported format 2 [2.0.206/5]" [50000-206]
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+SQL State  : HY000
+Error Code : 50000
+Message    : General error: "The write format 3 is larger than the supported format 2 [2.0.206/5]" [50000-206]
+
+	at org.flywaydb.core.internal.jdbc.JdbcUtils.openConnection(JdbcUtils.java:60)
+	at org.flywaydb.core.internal.jdbc.JdbcConnectionFactory.<init>(JdbcConnectionFactory.java:74)
+	at org.flywaydb.core.FlywayExecutor.execute(FlywayExecutor.java:147)
+	at org.flywaydb.core.Flyway.clean(Flyway.java:211)
+	at scala.meta.internal.metals.Tables.migrateOrRestart(Tables.scala:130)
+	at scala.meta.internal.metals.Tables.tryUrl(Tables.scala:118)
+	at scala.meta.internal.metals.Tables.persistentConnection(Tables.scala:112)
+	at scala.meta.internal.metals.Tables.tryNoAutoServer(Tables.scala:72)
+	at scala.meta.internal.metals.Tables.tryAutoServer(Tables.scala:66)
+	at scala.meta.internal.metals.Tables.connect(Tables.scala:38)
+	at scala.meta.internal.metals.MetalsLanguageServer.initialized(MetalsLanguageServer.scala:964)
+	at jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.lang.reflect.Method.invoke(Method.java:580)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.lambda$null$0(GenericEndpoint.java:65)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.notify(GenericEndpoint.java:152)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.handleNotification(RemoteEndpoint.java:220)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.consume(RemoteEndpoint.java:187)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.handleMessage(StreamMessageProducer.java:194)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.listen(StreamMessageProducer.java:94)
+	at org.eclipse.lsp4j.jsonrpc.json.ConcurrentMessageProcessor.run(ConcurrentMessageProcessor.java:113)
+	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.lang.Thread.run(Thread.java:1583)
+Caused by: org.h2.jdbc.JdbcSQLNonTransientException: General error: "The write format 3 is larger than the supported format 2 [2.0.206/5]" [50000-206]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:573)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:496)
+	at org.h2.message.DbException.get(DbException.java:216)
+	at org.h2.mvstore.db.Store.convertMVStoreException(Store.java:166)
+	at org.h2.mvstore.db.Store.<init>(Store.java:140)
+	at org.h2.engine.Database.<init>(Database.java:324)
+	at org.h2.engine.Engine.openSession(Engine.java:92)
+	at org.h2.engine.Engine.openSession(Engine.java:222)
+	at org.h2.engine.Engine.createSession(Engine.java:201)
+	at org.h2.engine.SessionRemote.connectEmbeddedOrServer(SessionRemote.java:338)
+	at org.h2.jdbc.JdbcConnection.<init>(JdbcConnection.java:117)
+	at org.h2.Driver.connect(Driver.java:59)
+	at org.flywaydb.core.internal.jdbc.DriverDataSource.getConnectionFromDriver(DriverDataSource.java:259)
+	at org.flywaydb.core.internal.jdbc.DriverDataSource.getConnection(DriverDataSource.java:223)
+	at org.flywaydb.core.internal.jdbc.JdbcUtils.openConnection(JdbcUtils.java:48)
+	at org.flywaydb.core.internal.jdbc.JdbcConnectionFactory.<init>(JdbcConnectionFactory.java:74)
+	at org.flywaydb.core.FlywayExecutor.execute(FlywayExecutor.java:147)
+	at org.flywaydb.core.Flyway.clean(Flyway.java:211)
+	at scala.meta.internal.metals.Tables.migrateOrRestart(Tables.scala:130)
+	at scala.meta.internal.metals.Tables.tryUrl(Tables.scala:118)
+	at scala.meta.internal.metals.Tables.persistentConnection(Tables.scala:112)
+	at scala.meta.internal.metals.Tables.tryNoAutoServer(Tables.scala:72)
+	at scala.meta.internal.metals.Tables.tryAutoServer(Tables.scala:66)
+	at scala.meta.internal.metals.Tables.connect(Tables.scala:38)
+	at scala.meta.internal.metals.MetalsLanguageServer.initialized(MetalsLanguageServer.scala:964)
+	at jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.lang.reflect.Method.invoke(Method.java:580)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.lambda$null$0(GenericEndpoint.java:65)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.notify(GenericEndpoint.java:152)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.handleNotification(RemoteEndpoint.java:220)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.consume(RemoteEndpoint.java:187)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.handleMessage(StreamMessageProducer.java:194)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.listen(StreamMessageProducer.java:94)
+	at org.eclipse.lsp4j.jsonrpc.json.ConcurrentMessageProcessor.run(ConcurrentMessageProcessor.java:113)
+	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.lang.Thread.run(Thread.java:1583)
+Caused by: org.h2.mvstore.MVStoreException: The write format 3 is larger than the supported format 2 [2.0.206/5]
+	at org.h2.mvstore.DataUtils.newMVStoreException(DataUtils.java:1004)
+	at org.h2.mvstore.MVStore.getUnsupportedWriteFormatException(MVStore.java:1059)
+	at org.h2.mvstore.MVStore.readStoreHeader(MVStore.java:875)
+	at org.h2.mvstore.MVStore.<init>(MVStore.java:455)
+	at org.h2.mvstore.MVStore$Builder.open(MVStore.java:4052)
+	at org.h2.mvstore.db.Store.<init>(Store.java:129)
+	at org.h2.engine.Database.<init>(Database.java:324)
+	at org.h2.engine.Engine.openSession(Engine.java:92)
+	at org.h2.engine.Engine.openSession(Engine.java:222)
+	at org.h2.engine.Engine.createSession(Engine.java:201)
+	at org.h2.engine.SessionRemote.connectEmbeddedOrServer(SessionRemote.java:338)
+	at org.h2.jdbc.JdbcConnection.<init>(JdbcConnection.java:117)
+	at org.h2.Driver.connect(Driver.java:59)
+	at org.flywaydb.core.internal.jdbc.DriverDataSource.getConnectionFromDriver(DriverDataSource.java:259)
+	at org.flywaydb.core.internal.jdbc.DriverDataSource.getConnection(DriverDataSource.java:223)
+	at org.flywaydb.core.internal.jdbc.JdbcUtils.openConnection(JdbcUtils.java:48)
+	at org.flywaydb.core.internal.jdbc.JdbcConnectionFactory.<init>(JdbcConnectionFactory.java:74)
+	at org.flywaydb.core.FlywayExecutor.execute(FlywayExecutor.java:147)
+	at org.flywaydb.core.Flyway.clean(Flyway.java:211)
+	at scala.meta.internal.metals.Tables.migrateOrRestart(Tables.scala:130)
+	at scala.meta.internal.metals.Tables.tryUrl(Tables.scala:118)
+	at scala.meta.internal.metals.Tables.persistentConnection(Tables.scala:112)
+	at scala.meta.internal.metals.Tables.tryNoAutoServer(Tables.scala:72)
+	at scala.meta.internal.metals.Tables.tryAutoServer(Tables.scala:66)
+	at scala.meta.internal.metals.Tables.connect(Tables.scala:38)
+	at scala.meta.internal.metals.MetalsLanguageServer.initialized(MetalsLanguageServer.scala:964)
+	at jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.lang.reflect.Method.invoke(Method.java:580)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.lambda$null$0(GenericEndpoint.java:65)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.notify(GenericEndpoint.java:152)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.handleNotification(RemoteEndpoint.java:220)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.consume(RemoteEndpoint.java:187)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.handleMessage(StreamMessageProducer.java:194)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.listen(StreamMessageProducer.java:94)
+	at org.eclipse.lsp4j.jsonrpc.json.ConcurrentMessageProcessor.run(ConcurrentMessageProcessor.java:113)
+	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.lang.Thread.run(Thread.java:1583)
+[0m
+2026.03.18 22:35:24 INFO  Attempting to connect to the build server...[0m
+2026.03.18 22:35:24 INFO  tracing is disabled for protocol BSP, to enable tracing of incoming and outgoing JSON messages create an empty file at /home/wiss/.config/nvim/.metals/bsp.trace.json or /home/wiss/.cache/metals/bsp.trace.json[0m
+2026.03.18 22:35:24 INFO  time: Connected to build server in 0.83s[0m
+2026.03.18 22:35:24 INFO  Connected to Build server: scala-cli v1.12.4[0m
+2026.03.18 22:35:27 ERROR Failed to fetch mtags for 3.8.2
+Error downloading org.scalameta:mtags_3.8.2:0.11.2
+  not found: /home/wiss/.ivy2/local/org.scalameta/mtags_3.8.2/0.11.2/ivys/ivy.xml
+  not found: https://repo1.maven.org/maven2/org/scalameta/mtags_3.8.2/0.11.2/mtags_3.8.2-0.11.2.pom
+  not found: https://oss.sonatype.org/content/repositories/public/org/scalameta/mtags_3.8.2/0.11.2/mtags_3.8.2-0.11.2.pom
+  not found: https://oss.sonatype.org/content/repositories/snapshots/org/scalameta/mtags_3.8.2/0.11.2/mtags_3.8.2-0.11.2.pom[0m
+2026.03.18 22:35:27 ERROR Failed to fetch mtags for 3.8.2
+Error downloading org.scalameta:mtags_3.8.2:0.11.2
+  not found: /home/wiss/.ivy2/local/org.scalameta/mtags_3.8.2/0.11.2/ivys/ivy.xml
+  not found: https://repo1.maven.org/maven2/org/scalameta/mtags_3.8.2/0.11.2/mtags_3.8.2-0.11.2.pom
+  not found: https://oss.sonatype.org/content/repositories/public/org/scalameta/mtags_3.8.2/0.11.2/mtags_3.8.2-0.11.2.pom
+  not found: https://oss.sonatype.org/content/repositories/snapshots/org/scalameta/mtags_3.8.2/0.11.2/mtags_3.8.2-0.11.2.pom[0m
+2026.03.18 22:35:28 ERROR Failed to fetch mtags for 3.8.2
+Error downloading org.scalameta:mtags_3.8.2:0.11.2
+  not found: /home/wiss/.ivy2/local/org.scalameta/mtags_3.8.2/0.11.2/ivys/ivy.xml
+  not found: https://repo1.maven.org/maven2/org/scalameta/mtags_3.8.2/0.11.2/mtags_3.8.2-0.11.2.pom
+  not found: https://oss.sonatype.org/content/repositories/public/org/scalameta/mtags_3.8.2/0.11.2/mtags_3.8.2-0.11.2.pom
+  not found: https://oss.sonatype.org/content/repositories/snapshots/org/scalameta/mtags_3.8.2/0.11.2/mtags_3.8.2-0.11.2.pom[0m
+2026.03.18 22:35:28 INFO  No mtags for 3.8.2.[0m
+2026.03.18 22:35:28 INFO  No mtags for 3.8.2.[0m
+2026.03.18 22:35:28 INFO  No mtags for 3.8.2.[0m
+2026.03.18 22:35:28 INFO  No mtags for 3.8.2.[0m
+2026.03.18 22:35:28 INFO  No mtags for 3.8.2.[0m
+2026.03.18 22:35:28 INFO  No mtags for 3.8.2.[0m
+2026.03.18 22:35:28 INFO  No mtags for 3.8.2.[0m
+2026.03.18 22:35:28 INFO  no build target found for /home/wiss/coding/scala/firstscala/src/main/scala/example/Hello.scala. Using presentation compiler with project's scala-library version: 3.1.1[0m
+2026.03.18 22:35:30 INFO  time: indexed workspace in 5.34s[0m
+2026.03.18 22:35:30 WARN  no build target for: /home/wiss/coding/scala/firstscala/src/main/scala/example/Hello.scala[0m
+2026.03.18 22:35:30 WARN  no build target for: /home/wiss/coding/scala/firstscala/src/main/scala/example/Hello.scala[0m
+2026.03.18 22:35:31 INFO  time: code lens generation in 4.68s[0m
+Exception in thread "pool-3-thread-1" java.lang.AssertionError: assertion failed: denotation class ArraySeq invalid in run 1. ValidFor: Period(1..5, run = 9)
+	at scala.runtime.Scala3RunTime$.assertFailed(Scala3RunTime.scala:8)
+	at dotty.tools.dotc.core.Denotations$SingleDenotation.updateValidity(Denotations.scala:719)
+	at dotty.tools.dotc.core.Denotations$SingleDenotation.bringForward(Denotations.scala:744)
+	at dotty.tools.dotc.core.Denotations$SingleDenotation.toNewRun$1(Denotations.scala:803)
+	at dotty.tools.dotc.core.Denotations$SingleDenotation.current(Denotations.scala:877)
+	at dotty.tools.dotc.core.Symbols$Symbol.recomputeDenot(Symbols.scala:122)
+	at dotty.tools.dotc.core.Symbols$Symbol.computeDenot(Symbols.scala:116)
+	at dotty.tools.dotc.core.Symbols$Symbol.denot(Symbols.scala:109)
+	at dotty.tools.dotc.core.Definitions.scalaClassName(Definitions.scala:1278)
+	at dotty.tools.dotc.core.Definitions.isFunctionClass(Definitions.scala:1312)
+	at dotty.tools.dotc.printing.RefinedPrinter.appliedText$1(RefinedPrinter.scala:222)
+	at dotty.tools.dotc.printing.RefinedPrinter.toText$$anonfun$1(RefinedPrinter.scala:234)
+	at dotty.tools.dotc.printing.MessageLimiter.controlled(MessageLimiter.scala:23)
+	at dotty.tools.dotc.printing.PlainPrinter.controlled(PlainPrinter.scala:35)
+	at dotty.tools.dotc.printing.RefinedPrinter.toText(RefinedPrinter.scala:300)
+	at dotty.tools.dotc.printing.PlainPrinter.toText$$anonfun$1$$anonfun$5(PlainPrinter.scala:207)
+	at dotty.tools.dotc.printing.Printer.atPrec(Printer.scala:43)
+	at dotty.tools.dotc.printing.Printer.changePrec(Printer.scala:72)
+	at dotty.tools.dotc.printing.PlainPrinter.toText$$anonfun$1(PlainPrinter.scala:208)
+	at dotty.tools.dotc.printing.MessageLimiter.controlled(MessageLimiter.scala:23)
+	at dotty.tools.dotc.printing.PlainPrinter.controlled(PlainPrinter.scala:35)
+	at dotty.tools.dotc.printing.PlainPrinter.toText(PlainPrinter.scala:248)
+	at dotty.tools.dotc.printing.RefinedPrinter.toText$$anonfun$1(RefinedPrinter.scala:298)
+	at dotty.tools.dotc.printing.MessageLimiter.controlled(MessageLimiter.scala:23)
+	at dotty.tools.dotc.printing.PlainPrinter.controlled(PlainPrinter.scala:35)
+	at dotty.tools.dotc.printing.RefinedPrinter.toText(RefinedPrinter.scala:300)
+	at dotty.tools.dotc.core.Types$Type.toText(Types.scala:1853)
+	at dotty.tools.dotc.printing.Showable.show(Showable.scala:23)
+	at dotty.tools.dotc.printing.Showable.show$(Showable.scala:9)
+	at dotty.tools.dotc.core.Types$Type.show(Types.scala:93)
+	at dotty.tools.dotc.interactive.Completion$.description(Completion.scala:149)
+	at dotty.tools.dotc.interactive.Completion$.describeCompletions$$anonfun$2$$anonfun$1(Completion.scala:145)
+	at scala.collection.immutable.List.map(List.scala:250)
+	at scala.collection.immutable.List.map(List.scala:79)
+	at dotty.tools.dotc.interactive.Completion$.describeCompletions$$anonfun$2(Completion.scala:145)
+	at scala.collection.Iterator$$anon$10.nextCur(Iterator.scala:587)
+	at scala.collection.Iterator$$anon$10.hasNext(Iterator.scala:601)
+	at scala.collection.immutable.List.prependedAll(List.scala:155)
+	at scala.collection.immutable.List$.from(List.scala:684)
+	at scala.collection.immutable.List$.from(List.scala:681)
+	at scala.collection.IterableOps$WithFilter.flatMap(Iterable.scala:894)
+	at dotty.tools.dotc.interactive.Completion$.describeCompletions(Completion.scala:145)
+	at dotty.tools.dotc.interactive.Completion$.computeCompletions(Completion.scala:125)
+	at dotty.tools.dotc.interactive.Completion$.completions(Completion.scala:49)
+	at scala.meta.internal.pc.completions.Completions.completions(Completions.scala:42)
+	at scala.meta.internal.pc.completions.CompletionsProvider.completions(CompletionsProvider.scala:66)
+	at scala.meta.internal.pc.ScalaPresentationCompiler.complete$$anonfun$1(ScalaPresentationCompiler.scala:91)
+	at scala.meta.internal.pc.CompilerAccess.withSharedCompiler(CompilerAccess.scala:137)
+	at scala.meta.internal.pc.CompilerAccess.$anonfun$1(CompilerAccess.scala:87)
+	at scala.meta.internal.pc.CompilerAccess.onCompilerJobQueue$$anonfun$1(CompilerAccess.scala:197)
+	at scala.meta.internal.pc.CompilerJobQueue$Job.run(CompilerJobQueue.scala:139)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Exception in thread "pool-1-thread-7" java.lang.InterruptedException
+	at scala.meta.internal.metals.FutureCancelToken.checkCanceled(FutureCancelToken.scala:29)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionCancelChecker.isCancelled(MtagsEnrichments.scala:70)
+	at scala.meta.internal.metals.FormattingProvider.$anonfun$isCancelled$1(FormattingProvider.scala:74)
+	at scala.meta.internal.metals.FormattingProvider.$anonfun$isCancelled$1$adapted(FormattingProvider.scala:74)
+	at scala.Option.exists(Option.scala:376)
+	at scala.meta.internal.metals.FormattingProvider.isCancelled(FormattingProvider.scala:74)
+	at scala.meta.internal.metals.FormattingProvider.$anonfun$handleMissingFile$1(FormattingProvider.scala:214)
+	at scala.meta.internal.metals.FormattingProvider.$anonfun$handleMissingFile$1$adapted(FormattingProvider.scala:209)
+	at scala.util.Success.$anonfun$map$1(Try.scala:255)
+	at scala.util.Success.map(Try.scala:213)
+	at scala.concurrent.Future.$anonfun$map$1(Future.scala:292)
+	at scala.concurrent.impl.Promise.liftedTree1$1(Promise.scala:33)
+	at scala.concurrent.impl.Promise.$anonfun$transform$1(Promise.scala:33)
+	at scala.concurrent.impl.CallbackRunnable.run(Promise.scala:64)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+2026.03.18 22:36:40 WARN  no build target for: /home/wiss/coding/scala/firstscala/src/main/scala/example/Hello.scala[0m
+2026.03.18 22:36:41 INFO  tracing is disabled for protocol BSP, to enable tracing of incoming and outgoing JSON messages create an empty file at /home/wiss/.config/nvim/.metals/bsp.trace.json or /home/wiss/.cache/metals/bsp.trace.json[0m
+2026.03.18 22:36:41 INFO  Connected to Build server: scala-cli v1.12.4[0m
+2026.03.18 22:36:41 INFO  No mtags for 3.8.2.[0m
+2026.03.18 22:36:41 INFO  No mtags for 3.8.2.[0m
+2026.03.18 22:36:41 INFO  No mtags for 3.8.2.[0m
+2026.03.18 22:36:41 INFO  No mtags for 3.8.2.[0m
+2026.03.18 22:36:41 INFO  No mtags for 3.8.2.[0m
+2026.03.18 22:36:41 INFO  No mtags for 3.8.2.[0m
+2026.03.18 22:36:41 INFO  No mtags for 3.8.2.[0m
+2026.03.18 22:36:41 INFO  No mtags for 3.8.2.[0m
+2026.03.18 22:36:41 INFO  No mtags for 3.8.2.[0m
+2026.03.18 22:36:41 INFO  No mtags for 3.8.2.[0m

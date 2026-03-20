@@ -1,0 +1,20 @@
+{
+  "name": "scala-cli",
+  "argv": [
+    "/home/wiss/.local/share/mise/installs/scala-cli/1.12.4/bin/scala-cli",
+    "bsp",
+    "--json-options",
+    "/home/wiss/.config/nvim/.scala-build/ide-options-v2.json",
+    "--json-launcher-options",
+    "/home/wiss/.config/nvim/.scala-build/ide-launcher-options.json",
+    "--envs-file",
+    "/home/wiss/.config/nvim/.scala-build/ide-envs.json",
+    "/home/wiss/.config/nvim"
+  ],
+  "version": "1.12.4",
+  "bspVersion": "2.1.1",
+  "languages": [
+    "scala",
+    "java"
+  ]
+}
