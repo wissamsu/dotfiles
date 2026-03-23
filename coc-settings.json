@@ -46,6 +46,41 @@
       ],
       "initializationOptions": {},
       "trace.server": "off"
+    },
+    "microprofile": {
+      "command": "java",
+      "args": [
+        "-jar",
+        "/home/wiss/.local/share/lsp4mp/lsp4mp-uber.jar"
+      ],
+      "filetypes": [
+        "properties",
+        "jproperties",
+        "java"
+      ],
+      "rootPatterns": [
+        "pom.xml",
+        "build.gradle",
+        "build.gradle.kts",
+        ".git"
+      ],
+      "initializationOptions": {
+        "settings": {
+          "microprofile": {
+            "tools": {
+              "enable": true
+            }
+          }
+        },
+        "extendedClientCapabilities": {
+          "commands": {
+            "commands": [
+              "microprofile.projectInfo",
+              "microprofile.java.projectLabels"
+            ]
+          }
+        }
+      }
     }
   },
   "java.referencesCodeLens.enabled": true,
@@ -79,7 +114,4 @@
     }
   ],
   "extensions.updateCheck": "daily",
-  "scala": {
-    "keepUsing": true
-  },
 }
