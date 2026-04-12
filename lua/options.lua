@@ -24,3 +24,10 @@ vim.opt.cindent = true
 vim.opt.relativenumber = true
 vim.o.autoindent = true
 vim.cmd("set whichwrap+=<,>,[,]")
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "qf" },
+  callback = function()
+    vim.keymap.set("n", "<CR>", "<CR>", { buffer = true, noremap = true })
+  end,
+})
