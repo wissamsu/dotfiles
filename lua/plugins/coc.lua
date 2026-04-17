@@ -30,6 +30,7 @@ return {
       "coc-java-vimspector",
       "coc-java-debug",
       "coc-java",
+      "coc-kotlin",
       "coc-go",
       "coc-flutter",
       "coc-docker",

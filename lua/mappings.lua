@@ -6,7 +6,7 @@ local map = vim.keymap.set
 -- Define the wrapper
 local function map(mode, lhs, rhs, opts)
   opts = opts or {}
-  opts.silent = true   -- Force silent on every map
+  opts.silent = true -- Force silent on every map
 
   -- Automatically convert ":" to "<cmd>" if it's a command string
   -- This prevents the command line from flashing
@@ -23,9 +23,9 @@ vim.keymap.set("n", ";", ":", { desc = "Enter Command Mode" })
 vim.keymap.set("n", "<leader>df", ":lua add_notebook_cell()<CR>", { noremap = true, silent = true })
 
 map("n", "<C-c>", function()
-  local line_count = vim.api.nvim_buf_line_count(0)   -- Get total lines
-  vim.cmd("%y+")                                      -- Yank entire file to clipboard
-  print("Yanked " .. line_count .. " lines")          -- Display the message
+  local line_count = vim.api.nvim_buf_line_count(0) -- Get total lines
+  vim.cmd("%y+")                                    -- Yank entire file to clipboard
+  print("Yanked " .. line_count .. " lines")        -- Display the message
 end, { desc = "Copy entire file with line count" })
 map("n", "<leader>tc", ":tabNext<CR>", { desc = "Next Tab Command" })
 map("n", "<leader>lr", ":Leet run<CR>", { desc = "Run Leet command" })
@@ -121,7 +121,7 @@ vim.keymap.set("i", "<CR>", function()
   if vim.fn["coc#pum#visible"]() ~= 0 then
     return vim.fn["coc#pum#confirm"]()
   else
-    return termcode("<CR>")     -- This "presses" Enter correctly
+    return termcode("<CR>") -- This "presses" Enter correctly
   end
 end, {
   silent = true,
@@ -166,7 +166,7 @@ vim.keymap.set("n", "K", ":call CocActionAsync('doHover')<CR>", { silent = true,
 -- ["<C-n>"] = { "<cmd>CocCommand explorer --toggle<CR>", "Toggle coc-explorer" },
 -- Function to add a new notebook cell
 function _G.add_notebook_cell()
-  local row = vim.api.nvim_win_get_cursor(0)[1]   -- current line
+  local row = vim.api.nvim_win_get_cursor(0)[1] -- current line
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
   local max_d = 0
 
