@@ -15,10 +15,6 @@ return {
     sidebar_filetypes = {
       -- Use the exact FileType of your explorer.
       -- For NvimTree, it's 'NvimTree'
-      NvimTree = {
-        text = 'File Explorer',   -- Optional text to show above the tree
-        align = 'left',
-      },
       -- Add others if you use them (e.g., undotree, vista)
       undotree = { text = 'Undotree' },
     },

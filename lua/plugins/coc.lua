@@ -1,5 +1,6 @@
 return {
   "neoclide/coc.nvim",
+  lazy = false,
   branch = "release",
   event = { "BufReadPost", "BufNewFile" },
   config = function()
@@ -38,6 +39,8 @@ return {
       "coc-cmake",
       "coc-clangd",
       "coc-angular",
+      "coc-qml",
+      "coc-explorer",
     }
 
     -- Optional: You can add your Coc-specific keybinds here too
