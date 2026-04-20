@@ -1,5 +1,22 @@
 {
+  "explorer.file.showHiddenFiles": true,
   "explorer.width": 60,
+  "explorer.previewAction.onHover": "labeling",
+  "explorer.icon.enableNerdfont": true,
+  "explorer.icon.source": "nvim-web-devicons",
+  "explorer.file.git.showUntrackedFiles": true,
+  "explorer.keyMappings.global": {
+    "<cr>": [
+      "wait",
+      "expandable?",
+      [
+        "expanded?",
+        "collapse",
+        "expand"
+      ],
+      "open"
+    ]
+  },
   "cmake.lsp.serverPath": "cmake-language-server",
   "yaml.schemas": {
     "https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json": "compose.yaml",
@@ -27,7 +44,7 @@
   "suggest.autoTrigger": "always",
   "suggest.timeout": 5000,
   "suggest.triggerAfterInsertEnter": true,
-  "suggest.maxCompleteItemCount": 20,
+  "suggest.maxCompleteItemCount": 200,
   "suggest.virtualText": false,
   "coc.source.buffer.enable": true,
   "coc.source.buffer.priority": 10,

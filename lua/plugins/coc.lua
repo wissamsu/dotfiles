@@ -3,6 +3,9 @@ return {
   lazy = false,
   branch = "release",
   event = { "BufReadPost", "BufNewFile" },
+  dependencies = {
+    "nvim-tree/nvim-web-devicons",
+  },
   config = function()
     -- List the extensions you want to autoinstall
     vim.g.coc_global_extensions = {
