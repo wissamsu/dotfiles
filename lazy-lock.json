@@ -1,8 +1,6 @@
 {
   "Comment.nvim": { "branch": "master", "commit": "e30b7f2008e52442154b66f7c519bfd2f1e32acb" },
   "android-nvim": { "branch": "main", "commit": "7e28fe6c708b970204c13def5ba16a3c8a75fcf1" },
-  "auto-indent.nvim": { "branch": "main", "commit": "46801cf8857d42a20a73c40b0a5d3dfe8b2b6192" },
-  "barbar.nvim": { "branch": "master", "commit": "539d73def39c9172b4d4d769f14090e08f37b29d" },
   "cmake-tools.nvim": { "branch": "master", "commit": "bac6ba2354a52c61f731c751cdb0f4e24669bf0d" },
   "coc.nvim": { "branch": "release", "commit": "0086d8919c7ce312338cca5076e79b1cc3a64ba8" },
   "codeium.vim": { "branch": "main", "commit": "3c0a4f8a7be75113a6e19be13b7cc37210d6e26a" },
@@ -25,6 +23,7 @@
   "modus-themes.nvim": { "branch": "master", "commit": "17a64464c27c1be605adca13dbe48f2f402fe107" },
   "noice.nvim": { "branch": "main", "commit": "7bfd942445fb63089b59f97ca487d605e715f155" },
   "nui.nvim": { "branch": "main", "commit": "de740991c12411b663994b2860f1a4fd0937c130" },
+  "nvim-cokeline": { "branch": "main", "commit": "9fbed130683b7b6f73198c09e35ba4b33f547c08" },
   "nvim-dbee": { "branch": "master", "commit": "dda517694889a5d238d7aa407403984da9f80cc0" },
   "nvim-notify": { "branch": "master", "commit": "8701bece920b38ea289b457f902e2ad184131a5d" },
   "nvim-origami": { "branch": "main", "commit": "e5b527f41d18c2ee5af868e1a3939b60f15fdb90" },

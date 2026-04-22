@@ -29,8 +29,9 @@ map("n", "<C-c>", function()
 end, { desc = "Copy entire file with line count" })
 map("n", "<leader>tc", ":tabNext<CR>", { desc = "Next Tab Command" })
 map("n", "<C-n>", ":CocCommand explorer<CR>", { desc = "Toggle Tree", silent = true })
-map("n", "<Tab>", "<cmd>BufferNext<CR>", { desc = "Next Buffer", silent = true })
-map("n", "<S-Tab>", "<cmd>BufferPrevious<CR>", { desc = "Prev Buffer", silent = true })
+map('n', '<Tab>', '<Plug>(cokeline-focus-next)', opts)
+map('n', '<S-Tab>', '<Plug>(cokeline-focus-prev)', opts)
+vim.keymap.set('n', '<Leader>x', ':bdelete<CR>', { silent = true, desc = 'Close current buffer' })
 -- ======== PICKERS ========
 map("n", "<leader>ff", function()
   Snacks.picker.files()
@@ -106,7 +107,6 @@ map("n", "<leader>i", "<Plug>(coc-fix-current)", { silent = true, desc = "Coc Or
 
 vim.keymap.set("n", "<leader>tn", ":tabnew<CR>", { silent = true, desc = "New Tab" })
 vim.keymap.set("n", "<leader>tc", ":tabnew<CR>", { silent = true, desc = "Close Tab" })
-vim.keymap.set("n", "<leader>x", ":BufferClose<CR>", { silent = true, desc = "Close Buffer" })
 
 local function termcode(str)
   return vim.api.nvim_replace_termcodes(str, true, true, true)
@@ -203,8 +203,8 @@ vim.keymap.set("n", "<leader>n", ":set number!<CR>", { noremap = true, silent = 
 vim.keymap.set("n", "<leader>gv", ":Gradle<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>ge", ":GradleExec<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>gi", ":GradleInit<CR>", { noremap = true, silent = true })
-map("n", "<Tab>", ":BufferNext<CR>")
-map("n", "<S-Tab>", ":BufferPrevious<CR>")
+-- map("n", "<Tab>", ":BufferNext<CR>")
+-- map("n", "<S-Tab>", ":BufferPrevious<CR>")
 
 map('n', '<leader>dc', '<cmd>call vimspector#Continue()<cr>', opts)
 map('n', '<leader>di', '<cmd>call vimspector#StepInto()<cr>', opts)

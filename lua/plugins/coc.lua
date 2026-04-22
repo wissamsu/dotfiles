@@ -44,6 +44,7 @@ return {
       "coc-angular",
       "coc-qml",
       "coc-explorer",
+      "coc-lightbulb",
     }
 
     -- Optional: You can add your Coc-specific keybinds here too
