@@ -1,6 +1,6 @@
 return {
   "jkeresman01/spring-initializr.nvim",
-  cmd = { "SpringInitializr", "SpringGenerateProject" },
+  cmd = { "SpringInitializr" },
   dependencies = {
     "nvim-lua/plenary.nvim",
     "MunifTanjim/nui.nvim",
