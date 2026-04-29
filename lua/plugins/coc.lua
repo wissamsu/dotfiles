@@ -29,7 +29,6 @@ return {
       "coc-rust-analyzer",
       "coc-react-refactor",
       "coc-pyright",
-      "coc-omnisharp",
       "coc-json",
       "coc-java-vimspector",
       "coc-java-debug",
