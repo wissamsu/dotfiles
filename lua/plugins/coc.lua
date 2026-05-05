@@ -44,6 +44,8 @@ return {
       "coc-qml",
       "coc-explorer",
       "coc-lightbulb",
+      "coc-java-intellicode",
+      "coc-git",
     }
 
     -- Optional: You can add your Coc-specific keybinds here too
