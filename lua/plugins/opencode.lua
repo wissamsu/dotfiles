@@ -1,6 +1,6 @@
 return {
   "NickvanDyke/opencode.nvim",
-  lazy = false,
+  event = "VeryLazy",
   dependencies = {
     -- Recommended for `ask()` and `select()`.
     -- Required for `snacks` provider.

@@ -1,7 +1,7 @@
 return {
   "nvim-treesitter/nvim-treesitter",
   branch = "master",
-  event = "VeryLazy",
+  event = { "BufReadPost", "BufNewFile" },
   build = ":TSUpdate",
   opts = {
     ensure_installed = { "python", "go", "lua", "java" },

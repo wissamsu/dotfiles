@@ -1,10 +1,11 @@
 {
-  "explorer.file.showHiddenFiles": true,
-  "explorer.width": 60,
-  "explorer.previewAction.onHover": "labeling",
-  "explorer.icon.enableNerdfont": true,
-  "explorer.icon.source": "nvim-web-devicons",
-  "explorer.file.git.showUntrackedFiles": true,
+  //"explorer.file.showHiddenFiles": true,
+  //"explorer.width": 60,
+  //"explorer.previewAction.onHover": "labeling",
+  //"explorer.icon.enableNerdfont": true,
+  //"explorer.icon.source": "nvim-web-devicons",
+  //"explorer.file.git.showUntrackedFiles": true,
+  /*
   "explorer.keyMappings.global": {
     "<cr>": [
       "wait",
@@ -17,6 +18,7 @@
       "open"
     ]
   },
+  */
   "cmake.lsp.serverPath": "cmake-language-server",
   "yaml.schemas": {
     "https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json": [

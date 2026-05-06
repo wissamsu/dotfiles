@@ -28,7 +28,7 @@ map("n", "<C-c>", function()
   print("Yanked " .. line_count .. " lines")        -- Display the message
 end, { desc = "Copy entire file with line count" })
 map("n", "<leader>tc", ":tabNext<CR>", { desc = "Next Tab Command" })
-map("n", "<C-n>", ":CocCommand explorer<CR>", { desc = "Toggle Tree", silent = true })
+map("n", "<C-n>", ":Oil<CR>", { desc = "Toggle Tree", silent = true })
 map('n', '<Tab>', '<Plug>(cokeline-focus-next)', opts)
 map('n', '<S-Tab>', '<Plug>(cokeline-focus-prev)', opts)
 vim.keymap.set('n', '<Leader>x', ':bdelete<CR>', { silent = true, desc = 'Close current buffer' })

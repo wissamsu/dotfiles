@@ -1,6 +1,14 @@
 return {
   "neoclide/coc.nvim",
-  lazy = false,
+  cmd = {
+    "CocCommand",
+    "CocList",
+    "CocConfig",
+    "CocInstall",
+    "CocUpdate",
+    "CocAction",
+    "CocFix"
+  },
   branch = "release",
   event = { "BufReadPost", "BufNewFile" },
   dependencies = {
@@ -42,7 +50,6 @@ return {
       "coc-clangd",
       "coc-angular",
       "coc-qml",
-      "coc-explorer",
       "coc-lightbulb",
       "coc-java-intellicode",
       "coc-git",
