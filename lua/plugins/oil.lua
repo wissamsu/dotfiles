@@ -3,14 +3,14 @@ return {
   ---@module 'oil'
   ---@type oil.SetupOpts
   opts = {},
-  dependencies = { "nvim-tree/nvim-web-devicons" }, -- use if you prefer nvim-web-devicons
+  dependencies = { "nvim-tree/nvim-web-devicons" },
   cmd = { "Oil" },
   opts = {
-    -- Keymaps are defined here
+    skip_confirm_for_simple_edits = true,
+    confirmation_strategy = "yes",
     keymaps = {
-      ["q"] = "actions.close", -- Closes Oil with 'q'
+      ["q"] = "actions.close",
     },
-    -- Optional: This makes it look cleaner by showing hidden files by default
     view_options = {
       show_hidden = true,
     },

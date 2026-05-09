@@ -54,9 +54,5 @@ return {
       "coc-java-intellicode",
       "coc-git",
     }
-
-    -- Optional: You can add your Coc-specific keybinds here too
-    -- Example: use <tab> for trigger completion with characters ahead and navigate
-    -- vim.keymap.set("i", "<TAB>", 'coc#pum#visible() ? coc#pum#next(1) : v:lua.check_back_space() ? "<TAB>" : coc#refresh()', {silent = true, noremap = true, expr = true, replace_keycodes = false})
   end,
 }
