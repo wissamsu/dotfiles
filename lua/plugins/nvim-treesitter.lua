@@ -3,9 +3,17 @@ return {
   branch = "master",
   event = { "BufReadPost", "BufNewFile" },
   build = ":TSUpdate",
-  opts = {
-    ensure_installed = { "python", "go", "lua", "java" },
-    highlight = { enable = true },
-    indent = { enable = false }, -- disable to save CPU
-  },
+  config = function()
+    require('nvim-treesitter.configs').setup {
+      ensure_installed = { "go", "lua", "javascript", "python", "java", "typescript", "tsx", "html", "css", "cmake" },
+      sync_install = false,
+      auto_install = true,
+
+      highlight = {
+        enable = true,
+        additional_vim_regex_highlighting = false,
+      },
+      indent = { enable = false }, -- disable to save CPU
+    }
+  end
 }

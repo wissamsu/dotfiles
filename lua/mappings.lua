@@ -1,15 +1,11 @@
 local Snacks = require "snacks"
--- add yours here
 
 local map = vim.keymap.set
 
--- Define the wrapper
 local function map(mode, lhs, rhs, opts)
   opts = opts or {}
-  opts.silent = true -- Force silent on every map
+  opts.silent = true
 
-  -- Automatically convert ":" to "<cmd>" if it's a command string
-  -- This prevents the command line from flashing
   if type(rhs) == "string" then
     rhs = rhs:gsub("^:", "<cmd>"):gsub("<CR>$", "<CR>")
   end
@@ -18,21 +14,18 @@ local function map(mode, lhs, rhs, opts)
 end
 vim.keymap.set("n", ";", ":", { desc = "Enter Command Mode" })
 
--- SNACKS.NVIM MAPPINGS
--- vim.keymap.set("n", "<leader>th", function()
 vim.keymap.set("n", "<leader>df", ":lua add_notebook_cell()<CR>", { noremap = true, silent = true })
 
 map("n", "<C-c>", function()
-  local line_count = vim.api.nvim_buf_line_count(0) -- Get total lines
-  vim.cmd("%y+")                                    -- Yank entire file to clipboard
-  print("Yanked " .. line_count .. " lines")        -- Display the message
+  local line_count = vim.api.nvim_buf_line_count(0)
+  vim.cmd("%y+")
+  print("Yanked " .. line_count .. " lines")
 end, { desc = "Copy entire file with line count" })
 map("n", "<leader>tc", ":tabNext<CR>", { desc = "Next Tab Command" })
 map("n", "<C-n>", ":Oil<CR>", { desc = "Toggle Tree", silent = true })
 map('n', '<Tab>', '<Plug>(cokeline-focus-next)', opts)
 map('n', '<S-Tab>', '<Plug>(cokeline-focus-prev)', opts)
 vim.keymap.set('n', '<Leader>x', ':bdelete<CR>', { silent = true, desc = 'Close current buffer' })
--- ======== PICKERS ========
 map("n", "<leader>ff", function()
   Snacks.picker.files()
 end, { desc = "Snacks Files" })
@@ -102,7 +95,6 @@ map("n", "<leader>sp", function()
   Snacks.profiler.open()
 end, { desc = "Snacks Startup Profiler" })
 
--- COC IMPORT FIX
 map("n", "<leader>i", "<Plug>(coc-fix-current)", { silent = true, desc = "Coc Organize Imports / Auto-Import" })
 
 vim.keymap.set("n", "<leader>tn", ":tabnew<CR>", { silent = true, desc = "New Tab" })
@@ -116,7 +108,7 @@ vim.keymap.set("i", "<CR>", function()
   if vim.fn["coc#pum#visible"]() ~= 0 then
     return vim.fn["coc#pum#confirm"]()
   else
-    return termcode("<CR>") -- This "presses" Enter correctly
+    return termcode("<CR>")
   end
 end, {
   silent = true,
@@ -124,13 +116,6 @@ end, {
   expr = true,
   desc = "Coc Confirm Completion with Enter"
 })
--- Navigate coc.nvim completion menu
--- vim.keymap.set("i", "<Tab>", "vim.fn.coc#pum#visible() ? vim.fn.coc#pum#next(1) : '\\<Tab>'", {
---   expr = true,
---   silent = true,
---   noremap = true,
---   desc = "Coc Next Completion",
--- })
 
 vim.keymap.set("i", "<S-Tab>", "vim.fn.coc#pum#visible() ? vim.fn.coc#pum#prev(1) : '\\<S-Tab>'", {
   expr = true,
@@ -142,30 +127,21 @@ vim.keymap.set("i", "<S-Tab>", "vim.fn.coc#pum#visible() ? vim.fn.coc#pum#prev(1
 vim.keymap.set("n", "<leader>ds", ":CocList diagnostics<CR>", { silent = true })
 vim.keymap.set("n", "gra", "<Plug>(coc-codeaction)", { silent = true })
 
--- Go to definition
 vim.keymap.set("n", "gd", "<Plug>(coc-definition)", { silent = true, desc = "Go to Definition" })
 
--- Go to type definition
 vim.keymap.set("n", "gy", "<Plug>(coc-type-definition)", { silent = true, desc = "Go to Type Definition" })
 
--- Go to implementation
 vim.keymap.set("n", "gi", "<Plug>(coc-implementation)", { silent = true, desc = "Go to Implementation" })
 
--- Show references
 vim.keymap.set("n", "gr", "<Plug>(coc-references)", { silent = true, desc = "Show References" })
 
--- Hover documentation (optional)
 vim.keymap.set("n", "K", ":call CocActionAsync('doHover')<CR>", { silent = true, desc = "Hover Documentation" })
 
--- Your raw line EXACTLY as given
--- ["<C-n>"] = { "<cmd>CocCommand explorer --toggle<CR>", "Toggle coc-explorer" },
--- Function to add a new notebook cell
 function _G.add_notebook_cell()
-  local row = vim.api.nvim_win_get_cursor(0)[1] -- current line
+  local row = vim.api.nvim_win_get_cursor(0)[1]
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
   local max_d = 0
 
-  -- scan the buffer for existing # %% nD cells
   for _, line in ipairs(lines) do
     local n = string.match(line, "# %%%% (%d+)D")
     if n then
@@ -179,13 +155,10 @@ function _G.add_notebook_cell()
   local next_d = max_d + 1
   local new_line = "# %% " .. next_d .. "D"
 
-  -- insert new line after current row
   vim.api.nvim_buf_set_lines(0, row, row, false, { new_line })
-  -- move cursor to the new line
   vim.api.nvim_win_set_cursor(0, { row + 1, 0 })
 end
 
---crates.nvim
 vim.keymap.set("n", "<leader>cde", ":Crates show_dependencies_popup<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>cr", ":Crates open_repository<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>cu", ":Crates upgrade_all_crates<CR>", { noremap = true, silent = true })
@@ -203,8 +176,6 @@ vim.keymap.set("n", "<leader>n", ":set number!<CR>", { noremap = true, silent = 
 vim.keymap.set("n", "<leader>gv", ":Gradle<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>ge", ":GradleExec<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>gi", ":GradleInit<CR>", { noremap = true, silent = true })
--- map("n", "<Tab>", ":BufferNext<CR>")
--- map("n", "<S-Tab>", ":BufferPrevious<CR>")
 
 map('n', '<leader>dc', '<cmd>call vimspector#Continue()<cr>', opts)
 map('n', '<leader>di', '<cmd>call vimspector#StepInto()<cr>', opts)

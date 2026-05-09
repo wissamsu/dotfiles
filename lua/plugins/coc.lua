@@ -15,7 +15,6 @@ return {
     "nvim-tree/nvim-web-devicons",
   },
   config = function()
-    -- List the extensions you want to autoinstall
     vim.g.coc_global_extensions = {
       "coc-snippets",
       "coc-pairs",
@@ -53,6 +52,8 @@ return {
       "coc-lightbulb",
       "coc-java-intellicode",
       "coc-git",
+      "coc-markdown-preview-enhanced",
+      "coc-webview",
     }
   end,
 }

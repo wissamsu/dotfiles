@@ -2,7 +2,6 @@ return {
   'stevearc/oil.nvim',
   ---@module 'oil'
   ---@type oil.SetupOpts
-  opts = {},
   dependencies = { "nvim-tree/nvim-web-devicons" },
   cmd = { "Oil" },
   opts = {
@@ -12,7 +11,7 @@ return {
       ["q"] = "actions.close",
     },
     view_options = {
-      show_hidden = true,
+      show_hidden = true
     },
   },
 }

@@ -1,8 +1,8 @@
 local M = {}
 
-local fold_ranges = {}     -- { [bufnr] = { { start_line = <1 based>, end_line = <1 based> }, }, }
-local fold_ranges_map = {} -- { [bufnr] = { [start_line] = { start_line = <1 based>, end_line = <1 based> }, }, }
-local current_fold = nil   -- { start_line = <1 based>, end_line = <1 based> }
+local fold_ranges = {}
+local fold_ranges_map = {}
+local current_fold = nil
 
 function M.update_ranges(bufnr)
   local client = vim.lsp.get_clients({ bufnr = bufnr, method = "textDocument/foldingRange" })[1]
@@ -20,7 +20,6 @@ function M.update_ranges(bufnr)
       return
     end
 
-    -- Rebuild fold ranges as a map for O(1) in statuscol
     local ranges_map = {}
     for i, range in ipairs(ranges) do
       ranges[i] = {
@@ -30,7 +29,6 @@ function M.update_ranges(bufnr)
       ranges_map[range.startLine + 1] = ranges[i]
     end
 
-    -- Sort fold ranges for goto prev fold search
     table.sort(ranges, function(a, b)
       return a.start_line < b.start_line
     end)
