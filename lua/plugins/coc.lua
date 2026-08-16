@@ -54,6 +54,7 @@ return {
       "coc-git",
       "coc-markdown-preview-enhanced",
       "coc-webview",
+      "coc-sourcekit",
     }
   end,
 }
