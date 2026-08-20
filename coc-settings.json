@@ -27,9 +27,17 @@
       "docker-compose.yml",
       "compose.yml"
     ],
-    "kubernetes": [
+    "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.22.0/all.json": [
+      "**/k8s/**/*.yaml",
+      "**/k8s/**/*.yml",
+      "**/kubernetes/**/*.yaml",
+      "**/kubernetes/**/*.yml",
+      "**/deploy/**/*.yaml",
+      "**/deploy/**/*.yml",
+      "**/manifests/**/*.yaml",
+      "**/manifests/**/*.yml",
       "app2.yaml",
-      "app.yaml",
+      "app.yaml"
     ],
     "http://json.schemastore.org/github-workflow": ".github/workflows/*",
     "http://json.schemastore.org/kustomization": "kustomization.yaml"
@@ -37,6 +45,7 @@
   "yaml.completion": true,
   "yaml.hover": true,
   "yaml.format.enable": true,
+  "yaml.validate": true,
   "rust-analyzer.inlayHints.chainingHints.enable": false,
   "rust-analyzer.lens.run.enable": false,
   "rust-analyzer.lens.debug.enable": false,
