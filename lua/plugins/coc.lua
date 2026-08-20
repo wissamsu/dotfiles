@@ -27,7 +27,6 @@ return {
       "coc-xml",
       "coc-tsserver",
       "coc-toml",
-      "coc-terraform",
       "coc-swagger",
       "coc-sqlfluff",
       "coc-sql",

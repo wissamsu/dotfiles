@@ -49,9 +49,9 @@
   "coc.preferences.formatOnSave": true,
   "coc.preferences.willSaveHandlerTimeout": 500,
   "suggest.autoTrigger": "always",
-  "suggest.timeout": 5000,
+  "suggest.timeout": 500,
   "suggest.triggerAfterInsertEnter": true,
-  "suggest.maxCompleteItemCount": 20,
+  "suggest.maxCompleteItemCount": 200,
   "suggest.virtualText": false,
   "coc.source.buffer.enable": true,
   "coc.source.buffer.priority": 10,
@@ -92,6 +92,17 @@
   "boot-java.live-information.all-local-java-processes": true,
   "boot-java.live-information.fetch-data.max-retries": 5,
   "boot-java.live-information.fetch-data.retry-delay-in-seconds": 3,
+  "xml.validation.enabled": true,
+  "xml.fileAssociations": [
+    {
+      "pattern": "**/*.wsdl",
+      "systemId": "http://schemas.xmlsoap.org/wsdl/"
+    },
+    {
+      "pattern": "**/*.xsd",
+      "systemId": "http://www.w3.org/2001/XMLSchema.xsd"
+    }
+  ],
   "java.imports.gradle.wrapper.checksums": [
     {
       "sha256": "423cb469ccc0ecc31f0e4e1c309976198ccb734cdcbb7029d4bda0f18f57e8d9",
@@ -100,6 +111,27 @@
   ],
   "extensions.updateCheck": "daily",
   "languageserver": {
+    "terraform": {
+      "command": "terraform-ls",
+      "args": [
+        "serve"
+      ],
+      "filetypes": [
+        "terraform",
+        "tf"
+      ],
+      "initializationOptions": {
+        "terraform": {
+          "path": "/home/wiss/.local/share/mise/installs/terraform/latest/terraform"
+        }
+      },
+      "settings": {},
+      "rootPatterns": [
+        ".terraform",
+        "*.tf",
+        "*.tfvars"
+      ]
+    },
     "buf": {
       "command": "buf",
       "args": [
