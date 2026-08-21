@@ -58,9 +58,9 @@
   "coc.preferences.formatOnSave": true,
   "coc.preferences.willSaveHandlerTimeout": 500,
   "suggest.autoTrigger": "always",
-  "suggest.timeout": 500,
+  "suggest.timeout": 3000,
   "suggest.triggerAfterInsertEnter": true,
-  "suggest.maxCompleteItemCount": 200,
+  "suggest.maxCompleteItemCount": 20,
   "suggest.virtualText": false,
   "coc.source.buffer.enable": true,
   "coc.source.buffer.priority": 10,
@@ -130,15 +130,19 @@
         "tf"
       ],
       "initializationOptions": {
+        "experimentalFeatures": {
+          "prefillRequiredFields": true
+        },
         "terraform": {
-          "path": "/home/wiss/.local/share/mise/installs/terraform/latest/terraform"
+          "path": "/home/wiss/.local/share/mise/shims/terraform"
         }
       },
       "settings": {},
       "rootPatterns": [
         ".terraform",
+        "*.tfvars",
         "*.tf",
-        "*.tfvars"
+        ".git"
       ]
     },
     "buf": {
