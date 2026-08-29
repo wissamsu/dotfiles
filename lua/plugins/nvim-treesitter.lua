@@ -4,6 +4,7 @@ return {
   event = { "BufReadPost", "BufNewFile" },
   build = ":TSUpdate",
   config = function()
+    vim.treesitter.language.register("yaml", "spring-boot-properties-yaml")
     require('nvim-treesitter.configs').setup {
       ensure_installed = { "go", "lua", "javascript", "python", "java", "typescript", "tsx", "html", "css", "cmake" },
       sync_install = false,

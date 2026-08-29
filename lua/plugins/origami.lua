@@ -1,6 +1,6 @@
 return {
   "chrisgrieser/nvim-origami",
-  event = { "BufReadPost", "BufNewFile" },
+  lazy = true,
   opts = {
     foldtext = {
       lineCount = {

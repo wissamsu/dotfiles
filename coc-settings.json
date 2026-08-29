@@ -121,7 +121,8 @@
       ],
       "filetypes": [
         "terraform",
-        "tf"
+        "tf",
+        "tfvars"
       ],
       "initializationOptions": {
         "experimentalFeatures": {

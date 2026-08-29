@@ -14,6 +14,24 @@ return {
   dependencies = {
     "nvim-tree/nvim-web-devicons",
   },
+  init = function()
+    vim.filetype.add({
+      extension = {
+        tf = "terraform",
+        tfvars = "terraform-vars",
+      },
+      filename = {
+        ["docker-compose.yml"] = "yaml",
+        ["docker-compose.yaml"] = "yaml",
+        ["compose.yml"] = "yaml",
+        ["compose.yaml"] = "yaml",
+      },
+      pattern = {
+        [".*/src/main/resources/.*%.yaml"] = "spring-boot-properties-yaml",
+        [".*/src/main/resources/.*%.yml"] = "spring-boot-properties-yaml",
+      },
+    })
+  end,
   config = function()
     vim.g.coc_global_extensions = {
       "coc-snippets",
