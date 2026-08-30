@@ -62,6 +62,7 @@ vim.opt.nrformats:remove("octal")
 vim.opt.wildmenu = true
 
 vim.opt.laststatus = 2
+vim.opt.shortmess:append("W")
 vim.opt.sidescroll = 1
 vim.opt.sidescrolloff = 2
 vim.opt.display:append("lastline")

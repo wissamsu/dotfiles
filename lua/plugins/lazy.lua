@@ -5,9 +5,11 @@ return {
       -- Disable unused built-in Neovim plugins to speed up startup
       disabled_plugins = {
         "netrwPlugin",
+        "tarPlugin",
         "tohtml",
         "tutor",
         "zipPlugin",
+        "matchit",
       },
     },
   },

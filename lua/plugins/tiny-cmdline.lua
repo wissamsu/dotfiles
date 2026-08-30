@@ -13,7 +13,7 @@
 return {
   {
     "rachartier/tiny-cmdline.nvim",
-    event = "VeryLazy",
+    event = "CmdlineEnter",
     init = function()
       -- Required for native UI floating positioning
       vim.opt.cmdheight = 0
