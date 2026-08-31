@@ -78,15 +78,9 @@ return {
     local function terraform_init(dir, reason)
       if not dir or dir == "" or tf_init_running[dir] then return end
       tf_init_running[dir] = true
-      vim.notify("terraform: running init (" .. (reason or "for LSP completions") .. ")...")
       vim.system({ "terraform", "init", "-no-color", "-input=false" }, { cwd = dir, text = true }, function(res)
         vim.schedule(function()
           tf_init_running[dir] = nil
-          if res.code == 0 then
-            vim.notify("terraform init done - provider schemas will load shortly")
-          else
-            vim.notify("terraform init failed:\n" .. (res.stderr or res.stdout or ""), vim.log.levels.WARN)
-          end
         end)
       end)
     end

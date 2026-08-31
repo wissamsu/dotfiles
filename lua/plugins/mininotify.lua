@@ -1,21 +1,19 @@
-return {
-  {
-    "echasv/mini.notify",
-    version = false,
-    config = function()
-      local notify = require("mini.notify")
-      notify.setup({
-        -- Customize where notifications pop up on your screen
-        window = {
-          config = {
-            anchor = "NE",
-            border = "rounded",
-          },
-        },
-      })
-
-      -- This replaces Neovim's built-in notify with mini.notify globally
-      vim.notify = notify.make_notify()
-    end,
-  },
-}
+-- return {
+--   "rcarriga/nvim-notify",
+--   event = "VeryLazy",
+--   config = function()
+--     local notify = require("notify")
+--     notify.setup({
+--       -- Customize where notifications pop up on your screen
+--       stages = "fade_in_slide_out",
+--       timeout = 3000,
+--       background_colour = "#000000",
+--       render = "default",
+--       top_down = true, -- true = notifications stack from top, false = from bottom
+--     })
+--
+--     -- This replaces Neovim's built-in notify with nvim-notify globally
+--     vim.notify = notify
+--   end,
+-- }
+return {}

@@ -41,4 +41,3 @@ vim.keymap.set("n", "<CR>", function()
   -- Executes the fold toggle command
   vim.cmd("normal! za")
 end, { noremap = true, silent = true, desc = "Toggle fold with origami" })
--- Suppress file write, intro, search counts, and hit-enter prompts

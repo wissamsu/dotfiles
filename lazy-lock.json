@@ -18,7 +18,6 @@
   "leetcode.nvim": { "branch": "master", "commit": "4e8b3683940a8377379ce9398e7f329e3560b42c" },
   "mason.nvim": { "branch": "main", "commit": "2a6940af80375532e5e9e7c1f2fc6319a1b7a69d" },
   "maven.nvim": { "branch": "main", "commit": "fc1ff4e36fe6b82886c8231e1d42060aa281419a" },
-  "mini.notify": { "branch": "main", "commit": "13df5edffc3e27937b166a0f25a8329b46e15a4e" },
   "mini.statusline": { "branch": "main", "commit": "127997ebef7ef632161203b960c5ef9d158f4810" },
   "modus-themes.nvim": { "branch": "master", "commit": "56233f0986ef6c8d0eab97e924e87144e584d970" },
   "nui.nvim": { "branch": "main", "commit": "10fc361835c856ba4233ef5ea135b919bf3dce97" },
