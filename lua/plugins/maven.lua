@@ -1,16 +1,13 @@
 return {
-  "yonchando/maven.nvim",
+  "oclay1st/maven.nvim",
+  cmd = { "Maven", "MavenInit", "MavenExec", "MavenFavorites" },
   dependencies = {
-    "nvim-telescope/telescope.nvim",
+    "nvim-lua/plenary.nvim",
   },
-  config = function()
-    local mvn = require("mvn")
-
-    mvn.setup()
-
-    vim.keymap.set("n", "<leader>mvi", mvn.mvn_cli)
-    vim.keymap.set("n", "<leader>mvp", mvn.mvn_create_project)
-    vim.keymap.set("n", "<leader>spi", mvn.spring_initializr_project)
-    vim.keymap.set("n", "<leader>spd", mvn.spring_dependencies)
-  end,
+  opts = {}, -- options, see default configuration
+  keys = {
+    { "<leader>M",  desc = "+Maven",           mode = { "n", "v" } },
+    { "<leader>Mm", "<cmd>Maven<cr>",          desc = "Maven Projects" },
+    { "<leader>Mf", "<cmd>MavenFavorites<cr>", desc = "Maven Favorite Commands" },
+  },
 }
