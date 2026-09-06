@@ -165,6 +165,8 @@ vim.keymap.set("n", "<leader>cd2", ":Crates open_cratesio<CR>", { noremap = true
 vim.keymap.set("n", "<leader>cv", ":Crates show_versions_popup<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>cf", ":Crates show_features_popup<CR>", { noremap = true, silent = true })
 
+vim.keymap.set("n", "<leader>u", ":Undotree<CR>", { noremap = true, silent = true })
+
 vim.keymap.set("n", "<leader>mv", ":Maven<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>me", ":MavenExec<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>mi", ":MavenInit<CR>", { noremap = true, silent = true })
