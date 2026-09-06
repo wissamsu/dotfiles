@@ -39,10 +39,30 @@ if vim.fn.isdirectory(undodir) == 0 then
   vim.fn.mkdir(undodir, "p")
 end
 
-vim.keymap.set("n", "<CR>", function()
-  -- Forces lazy.nvim to load nvim-origami only on the very first press
-  require("lazy").load({ plugins = { "nvim-origami" } })
+-- vim.keymap.set("n", "<CR>", function()
+--   -- Forces lazy.nvim to load nvim-origami only on the very first press
+--   require("lazy").load({ plugins = { "nvim-origami" } })
+--
+--   -- Executes the fold toggle command
+--   vim.cmd("normal! za")
+-- end, { noremap = true, silent = true, desc = "Toggle fold with origami" })
+-- 1. Enable native folding and set it to use Treesitter (falls back gracefully)
+vim.opt.foldmethod = "expr"
+vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+vim.opt.foldenable = true
+vim.opt.foldlevel = 99 -- Keeps files open by default so you can choose what to fold
 
-  -- Executes the fold toggle command
-  vim.cmd("normal! za")
-end, { noremap = true, silent = true, desc = "Toggle fold with origami" })
+-- 2. Your Enter keymap with safe error handling
+vim.api.nvim_create_autocmd("BufEnter", {
+  callback = function()
+    if vim.bo.buftype == "" then
+      vim.keymap.set("n", "<CR>", function()
+        pcall(vim.cmd, "normal! za")
+      end, {
+        buffer = true,
+        silent = true,
+        desc = "Toggle fold with Enter safely"
+      })
+    end
+  end,
+})

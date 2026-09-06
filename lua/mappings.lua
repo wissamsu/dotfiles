@@ -174,12 +174,6 @@ vim.keymap.set("n", "<leader>gv", ":Gradle<CR>", { noremap = true, silent = true
 vim.keymap.set("n", "<leader>ge", ":GradleExec<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>gi", ":GradleInit<CR>", { noremap = true, silent = true })
 
-map('n', '<leader>dc', '<cmd>call vimspector#Continue()<cr>', opts)
-map('n', '<leader>di', '<cmd>call vimspector#StepInto()<cr>', opts)
-map('n', '<leader>do', '<cmd>call vimspector#StepOver()<cr>', opts)
-map('n', '<leader>dq', '<cmd>call vimspector#Reset()<cr>', opts)
-map('n', '<leader>db', '<cmd>call vimspector#ToggleBreakpoint()<cr>', opts)
-map("n", "<leader>vsj", ":CocCommand java.debug.vimspector.start<CR>", { silent = true, desc = "Start Java Debugging" })
-map("n", "<leader>vc", ":VimspectorReset<CR>", { silent = true, desc = "Reset Vimspector" })
+
 vim.keymap.set("n", "<leader>co", ":CodexToggle<CR>", { noremap = true, silent = true })
 vim.keymap.set("i", "<C-h>", "coc#refresh()", { silent = true, expr = true })
