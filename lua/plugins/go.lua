@@ -1,11 +1,17 @@
 return {
   "ray-x/go.nvim",
-  dependencies = { -- optional packages
+  ft = { "go", "gomod" },
+  dependencies = {
     "ray-x/guihua.lua",
     "nvim-treesitter/nvim-treesitter",
   },
-  opts = function()
+  build = ':lua require("go.install").update_all_sync()',
+  opts = {
+    -- lsp_keymaps = false,
+  },
+  config = function(_, opts)
     require("go").setup(opts)
+
     local format_sync_grp = vim.api.nvim_create_augroup("GoFormat", {})
     vim.api.nvim_create_autocmd("BufWritePre", {
       pattern = "*.go",
@@ -14,11 +20,5 @@ return {
       end,
       group = format_sync_grp,
     })
-    return {
-      -- lsp_keymaps = false,
-      -- other options
-    }
   end,
-  ft = { "go", "gomod" },
-  build = ':lua require("go.install").update_all_sync()', -- if you need to install/update all binaries
 }

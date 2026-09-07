@@ -1,7 +1,21 @@
-vim.loader.enable()
+if vim.loader then
+  vim.loader.enable()
+end
 
 vim.g.mapleader = " "
 vim.g.maplocalleader = "\\"
+
+require("options")
+require("mappings")
+vim.opt.undofile = true
+
+-- Explicitly set undodir to state path
+local undodir = vim.fn.stdpath("state") .. "/undo"
+vim.opt.undodir = undodir
+
+if vim.fn.isdirectory(undodir) == 0 then
+  vim.fn.mkdir(undodir, "p")
+end
 
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 local nvim_lazypath = os.getenv("HOME") .. "/.local/share/nvim2/lazy/lazy.nvim"
@@ -26,18 +40,37 @@ require("lazy").setup("plugins", {
   change_detection = {
     notify = false, -- Disables the notification message
   },
+  performance = {
+    rtp = {
+      disabled_plugins = {
+        "gzip",
+        "matchit",
+        "matchparen",
+        "netrwPlugin",
+        "tarPlugin",
+        "tohtml",
+        "tutor",
+        "zipPlugin",
+        "spellfile",
+        "rplugin",
+        "editorconfig",
+        "man",
+        "net",
+        "osc52",
+      },
+    },
+  },
 })
 
-require("options")
-require("mappings")
-vim.opt.undofile = true
 
-local undodir = os.getenv("HOME") .. "/.local/state/nvim/undo"
-vim.opt.undodir = undodir
-
-if vim.fn.isdirectory(undodir) == 0 then
-  vim.fn.mkdir(undodir, "p")
-end
+-- vim.opt.undofile = true
+--
+-- local undodir = os.getenv("HOME") .. "/.local/state/nvim/undo"
+-- vim.opt.undodir = undodir
+--
+-- if vim.fn.isdirectory(undodir) == 0 then
+--   vim.fn.mkdir(undodir, "p")
+-- end
 
 -- vim.keymap.set("n", "<CR>", function()
 --   -- Forces lazy.nvim to load nvim-origami only on the very first press
@@ -53,17 +86,16 @@ vim.opt.foldenable = true
 vim.opt.foldlevel = 99 -- Keeps files open by default so you can choose what to fold
 
 -- 2. Your Enter keymap with safe error handling
-vim.api.nvim_create_autocmd("BufEnter", {
-  callback = function()
-    if vim.bo.buftype == "" then
-      vim.keymap.set("n", "<CR>", function()
-        pcall(vim.cmd, "normal! za")
-      end, {
-        buffer = true,
-        silent = true,
-        desc = "Toggle fold with Enter safely"
-      })
-    end
-  end,
-})
-vim.cmd.packadd("nvim.undotree")
+vim.keymap.set("n", "<CR>", function()
+  if vim.bo.buftype == "" then
+    pcall(vim.cmd, "normal! za")
+  else
+    -- Fallback to standard Enter key behavior in special buffers (qf, terminal, etc.)
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, false, true), "n", false)
+  end
+end, { silent = true, desc = "Toggle fold with Enter safely" })
+-- Instead of vim.cmd.packadd("nvim.undotree") at root level:
+vim.keymap.set("n", "<leader>u", function()
+  vim.cmd.packadd("nvim.undotree")
+  vim.cmd.Undotree()
+end, { desc = "Toggle Undotree" })

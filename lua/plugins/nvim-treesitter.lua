@@ -1,7 +1,7 @@
 return {
   "nvim-treesitter/nvim-treesitter",
   branch = "master",
-  event = { "BufReadPost", "BufNewFile" },
+  ft = { "go", "lua", "javascript", "python", "java", "typescript", "tsx", "html", "css", "cmake", "properties", "jproperties", "yml", "yaml" },
   build = ":TSUpdate",
   config = function()
     vim.treesitter.language.register("yaml", "spring-boot-properties-yaml")

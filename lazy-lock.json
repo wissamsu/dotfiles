@@ -38,7 +38,6 @@
   "spring-initializr.nvim": { "branch": "main", "commit": "05bc9c5c3936c2763da3af2d002c1ad3fa1e0286" },
   "telescope.nvim": { "branch": "master", "commit": "e69b434b968a33815e2f02a5c7bd7b8dd4c7d4b2" },
   "tiny-term.nvim": { "branch": "main", "commit": "51224ee32fe0e88be1d5dd21afa8874ee7568180" },
-  "undotree": { "branch": "master", "commit": "6fa6b57cda8459e1e4b2ca34df702f55242f4e4d" },
   "vim-dadbod": { "branch": "master", "commit": "6d1d41da4873a445c5605f2005ad2c68c99d8770" },
   "vim-dadbod-completion": { "branch": "master", "commit": "a8dac0b3cf6132c80dc9b18bef36d4cf7a9e1fe6" },
   "vim-dadbod-ui": { "branch": "master", "commit": "afd07819d8efcefc3317205b855ad4e3513b0011" },

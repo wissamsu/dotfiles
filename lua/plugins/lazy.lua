@@ -4,12 +4,24 @@ return {
     rtp = {
       -- Disable unused built-in Neovim plugins to speed up startup
       disabled_plugins = {
+        "netrw",
         "netrwPlugin",
-        "tarPlugin",
-        "tohtml",
-        "tutor",
+        "netrwSettings",
+        "netrwFileHandlers",
+        "gzip",
+        "zip",
         "zipPlugin",
-        "matchit",
+        "tar",
+        "tarPlugin",
+        "getscript",
+        "getscriptPlugin",
+        "vimball",
+        "vimballPlugin",
+        "2html_plugin",
+        "logipat",
+        "rrhelper",
+        "spellfile_plugin",
+        "matchit"
       },
     },
   },

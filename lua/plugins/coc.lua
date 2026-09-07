@@ -10,11 +10,11 @@ return {
     "CocFix"
   },
   branch = "release",
-  event = { "BufReadPost", "BufNewFile" },
+  ft = { "lua", "json", "yaml", "terraform", "terraform-vars", "terraform-vars.json", "java", "properties", "jproperties", "yml" },
   dependencies = {
     "nvim-tree/nvim-web-devicons",
   },
-  init = function()
+  config = function()
     vim.filetype.add({
       extension = {
         tf = "terraform",
