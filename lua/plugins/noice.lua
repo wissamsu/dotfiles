@@ -2,28 +2,30 @@ return {
   "folke/noice.nvim",
   event = "VeryLazy",
   opts = {
-    -- Route standard notifications through top-right popups
     routes = {
       {
         filter = { event = "notify" },
-        view = "notify",
+        view = "mini",
       },
     },
     views = {
-      notify = {
-        backend = "notify",
-        replace = true,
+      mini = {
+        backend = "popup", -- Changed from "mini" to "popup"
+        relative = "editor",
+        anchor = "NE",
         align = "right",
+        reverse = false,
+        position = {
+          row = 1,
+          col = -1, -- -1 forces the window flush against the rightmost column
+        },
+        border = {
+          style = "rounded",
+        },
       },
     },
   },
   dependencies = {
-    {
-      "rcarriga/nvim-notify",
-      opts = {
-        top_down = true,   -- Stacks notifications starting from top-right down
-        stages = "static", -- Removes animations, making them instant
-      },
-    },
+    "MunifTanjim/nui.nvim",
   },
 }

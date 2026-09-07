@@ -8,11 +8,13 @@ return {
       require('mini.tabline').setup({
         show_icons = true,
         format = function(buf_id, label)
-          return MiniTabline.default_format(buf_id, label):gsub('%s+$', '') .. ' × '
+          local modified = vim.bo[buf_id].modified
+          local mod_indicator = modified and ' ●' or ''
+          return MiniTabline.default_format(buf_id, label):gsub('%s+$', '') .. mod_indicator .. ' × '
         end,
       })
-
-      -- Helper function to cycle through buffers in exact visual tabline order
+      vim.api.nvim_set_hl(0, 'MiniTablineCurrent', { bg = '#000000', fg = '#ffffff', bold = true })
+      vim.api.nvim_set_hl(0, 'MiniTablineModifiedCurrent', { bg = '#000000', fg = '#ffffff', bold = true }) -- Helper function to cycle through buffers in exact visual tabline order
       local switch_buffer = function(direction)
         local bufs = vim.tbl_filter(function(buf)
           return vim.bo[buf].buflisted

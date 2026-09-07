@@ -10,7 +10,7 @@ return {
     "CocFix"
   },
   branch = "release",
-  event = { "BufReadPre", "BufNewFile" },
+  ft = { "go","lua", "javascript", "python", "java", "typescript", "tsx", "html", "css", "cmake", "properties", "jproperties", "yml", "yaml" },
   dependencies = {
     "nvim-tree/nvim-web-devicons",
   },

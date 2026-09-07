@@ -1,6 +1,7 @@
 return {
   "nvim-telescope/telescope.nvim",
   cmd = "Telescope",
+  lazy = true,
   keys = {
     {
       "<leader>ff",
