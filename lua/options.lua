@@ -1,3 +1,4 @@
+vim.cmd("colorscheme ex-modus")
 vim.g.mapleader = " "
 vim.opt.number = true
 vim.opt.tabstop = 2

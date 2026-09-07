@@ -10,7 +10,7 @@ return {
     "CocFix"
   },
   branch = "release",
-  ft = { "lua", "json", "yaml", "terraform", "terraform-vars", "terraform-vars.json", "java", "properties", "jproperties", "yml" },
+  event = { "BufReadPre", "BufNewFile" },
   dependencies = {
     "nvim-tree/nvim-web-devicons",
   },
