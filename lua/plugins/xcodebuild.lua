@@ -1,6 +1,6 @@
 return {
   "wojciech-kulik/xcodebuild.nvim",
-  ft = "swift",
+  lazy = true,
   dependencies = {
     "nvim-tree/nvim-tree.lua",
     "stevearc/oil.nvim",
