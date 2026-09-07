@@ -1,6 +1,6 @@
 return {
   "folke/noice.nvim",
-  event = "CmdlineEnter",
+  event = "VeryLazy",
   opts = {
     -- Route standard notifications through top-right popups
     routes = {
