@@ -1,7 +1,6 @@
 {
   "Comment.nvim": { "branch": "master", "commit": "e30b7f2008e52442154b66f7c519bfd2f1e32acb" },
   "android-nvim": { "branch": "main", "commit": "54ca11bc00df0bd913083bdd6ec9f9754950311d" },
-  "browse.nvim": { "branch": "main", "commit": "dab48a9b1f6599d71e10d8cbaceb1a186a04d1c0" },
   "coc.nvim": { "branch": "release", "commit": "76536e98354d68cc44ec7773725e33342dc82680" },
   "codeium.vim": { "branch": "main", "commit": "3c0a4f8a7be75113a6e19be13b7cc37210d6e26a" },
   "codex.nvim": { "branch": "main", "commit": "4317788afc091d5e913109c55d5a04f32be4e14a" },
@@ -32,6 +31,7 @@
   "reactivex.nvim": { "branch": "main", "commit": "37c93c731c30189d235a90a3902518e55815c773" },
   "snacks.nvim": { "branch": "main", "commit": "882c996cf28183f4d63640de0b4c02ec886d01f2" },
   "spring-initializr.nvim": { "branch": "main", "commit": "05bc9c5c3936c2763da3af2d002c1ad3fa1e0286" },
+  "spring-tools.nvim": { "branch": "main", "commit": "5249891106235cc206864b9c57e1142686ab3a61" },
   "telescope.nvim": { "branch": "master", "commit": "e69b434b968a33815e2f02a5c7bd7b8dd4c7d4b2" },
   "tiny-term.nvim": { "branch": "main", "commit": "51224ee32fe0e88be1d5dd21afa8874ee7568180" },
   "vim-dadbod": { "branch": "master", "commit": "6d1d41da4873a445c5605f2005ad2c68c99d8770" },

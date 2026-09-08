@@ -133,7 +133,10 @@ vim.lsp.config['docker_compose_language_service'] = {
 vim.lsp.enable('docker_compose_language_service')
 --kotlin-lsp
 vim.lsp.config['kotlin_lsp'] = {
-  cmd = { vim.fn.stdpath('data') .. '/mason/bin/kotlin-language-server' },
+  cmd = { vim.fn.expand('~') .. '/.local/share/kls/bin/kotlin-language-server' },
+  cmd_env = {
+    JAVA_HOME = vim.env.JAVA_HOME or vim.fn.expand('~') .. '/.local/share/mise/installs/java/openjdk-21',
+  },
   filetypes = { 'kotlin' },
   root_markers = { 'settings.gradle', 'settings.gradle.kts', 'build.gradle', 'build.gradle.kts', 'pom.xml', '.git' },
   -- Add this settings block to force Java 21

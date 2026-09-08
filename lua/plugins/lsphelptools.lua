@@ -102,7 +102,6 @@ return {
   },
   {
     "jkeresman01/spring-initializr.nvim",
-    cmd = { "SpringInitializr" },
     dependencies = {
       "nvim-lua/plenary.nvim",
       "MunifTanjim/nui.nvim",
@@ -110,9 +109,11 @@ return {
     },
     config = function()
       require("spring-initializr").setup()
-      vim.keymap.set("n", "<leader>si", "<CMD>SpringInitializr<CR>")
-      vim.keymap.set("n", "<leader>sg", "<CMD>SpringGenerateProject<CR>")
     end,
+    keys = {
+      { "<leader>si", "<CMD>SpringInitializr<CR>",      desc = "Spring Initializr" },
+      { "<leader>sg", "<CMD>SpringGenerateProject<CR>", desc = "Spring Generate Project" },
+    },
   },
   {
     "oclay1st/maven.nvim",
