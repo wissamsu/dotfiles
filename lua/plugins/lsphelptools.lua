@@ -75,9 +75,30 @@ return {
       "MasonUninstallAll",
       "MasonLog",
     },
-    opts = {
+    dependencies = {
+      -- Add the tool installer plugin
+      "WhoIsSethDaniel/mason-tool-installer.nvim",
+    },
+    config = function()
+      -- 1. Initialize Mason first
+      require("mason").setup({})
 
-    }
+      -- 2. Configure the tool installer
+      require("mason-tool-installer").setup({
+        ensure_installed = {
+          "kotlin-language-server",
+          "docker-compose-language-service",
+          "air",
+          "lua-language-server",
+          "yaml-language-server",
+          -- Add any other binaries, formatters, or LSPs you need here
+        },
+        -- Automatically run on startup
+        run_on_start = true,
+        -- Optional: set to true to auto-update tools to latest versions
+        auto_update = false,
+      })
+    end
   },
   {
     "jkeresman01/spring-initializr.nvim",
