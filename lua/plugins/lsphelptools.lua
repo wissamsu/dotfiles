@@ -1,77 +1,77 @@
 return {
-  {
-    "AlexandrosAlexiou/kotlin.nvim",
-    ft = { "kotlin" },
-    dependencies = {
-      "mason.nvim",
-      "mason-org/mason-lspconfig.nvim",
-      "oil.nvim",
-      {
-        "folke/trouble.nvim",
-        cmd = "Trouble",
-        opts = {},
-      },
-    },
-    config = function()
-      require("kotlin").setup {
-        -- Root markers for project detection
-        root_markers = {
-          "gradlew",
-          ".git",
-          "mvnw",
-          "settings.gradle",
-        },
-
-        jdk_for_symbol_resolution = nil, -- Auto-detect from project
-
-        -- Use bundled JRE from Mason to run the kotlin-lsp server (recommended)
-        jre_path = nil,
-
-        -- Optional: Increase heap for large projects
-        jvm_args = {
-          "-Xmx4g",
-        },
-
-        -- Work around the time-bombed EAP build expiry: freeze the clock for
-        -- this process to just before the expiry timestamp (kotlin-lsp
-        -- v262.9593.0, released 2026-07-26, expires 2026-09-04 12:00 UTC).
-        -- The freeze is ~5 days behind real time, so build tooling is
-        -- unaffected. Bump this when JetBrains ships a fresh build.
-        cmd_env = {
-          LD_PRELOAD = "/usr/lib/faketime/libfaketimeMT.so.1",
-          FAKETIME = "2026-09-04 00:00:00",
-        },
-
-        -- Enable all inlay hints by default
-        inlay_hints = {
-          enabled = true,
-          parameters = true,
-          parameters_compiled = true,
-          parameters_excluded = false,
-          types_property = true,
-          types_variable = true,
-          function_return = true,
-          function_parameter = true,
-          lambda_return = true,
-          lambda_receivers_parameters = true,
-          value_ranges = true,
-          kotlin_time = true,
-        },
-      }
-
-      -- Keymaps with <leader>lk prefix
-      vim.keymap.set('n', '<leader>lka', ':KotlinCodeActions<CR>', { desc = 'Kotlin code actions' })
-      vim.keymap.set('n', '<leader>lkq', ':KotlinQuickFix<CR>', { desc = 'Kotlin quick fix' })
-      vim.keymap.set('n', '<leader>lko', ':KotlinOrganizeImports<CR>', { desc = 'Organize Kotlin imports' })
-      vim.keymap.set('n', '<leader>lkf', ':KotlinFormat<CR>', { desc = 'Format Kotlin buffer (LSP)' })
-      vim.keymap.set('n', '<leader>lks', ':KotlinSymbols<CR>', { desc = 'Show Kotlin document symbols' })
-      vim.keymap.set('n', '<leader>lkw', ':KotlinWorkspaceSymbols<CR>', { desc = 'Search workspace symbols' })
-      vim.keymap.set('n', '<leader>lkr', ':KotlinReferences<CR>', { desc = 'Find Kotlin references' })
-      vim.keymap.set('n', '<leader>lkn', ':KotlinRename<CR>', { desc = 'Rename Kotlin symbol' })
-      vim.keymap.set('n', '<leader>lkh', ':KotlinInlayHintsToggle<CR>', { desc = 'Toggle Kotlin inlay hints' })
-      vim.keymap.set('n', '<leader>lkc', ':KotlinCleanWorkspace<CR>', { desc = 'Clean Kotlin workspace' })
-    end,
-  },
+  -- {
+  --   "AlexandrosAlexiou/kotlin.nvim",
+  --   ft = { "kotlin" },
+  --   dependencies = {
+  --     "mason.nvim",
+  --     "mason-org/mason-lspconfig.nvim",
+  --     "oil.nvim",
+  --     {
+  --       "folke/trouble.nvim",
+  --       cmd = "Trouble",
+  --       opts = {},
+  --     },
+  --   },
+  --   config = function()
+  --     require("kotlin").setup {
+  --       -- Root markers for project detection
+  --       root_markers = {
+  --         "gradlew",
+  --         ".git",
+  --         "mvnw",
+  --         "settings.gradle",
+  --       },
+  --
+  --       jdk_for_symbol_resolution = nil, -- Auto-detect from project
+  --
+  --       -- Use bundled JRE from Mason to run the kotlin-lsp server (recommended)
+  --       jre_path = nil,
+  --
+  --       -- Optional: Increase heap for large projects
+  --       jvm_args = {
+  --         "-Xmx4g",
+  --       },
+  --
+  --       -- Work around the time-bombed EAP build expiry: freeze the clock for
+  --       -- this process to just before the expiry timestamp (kotlin-lsp
+  --       -- v262.9593.0, released 2026-07-26, expires 2026-09-04 12:00 UTC).
+  --       -- The freeze is ~5 days behind real time, so build tooling is
+  --       -- unaffected. Bump this when JetBrains ships a fresh build.
+  --       cmd_env = {
+  --         LD_PRELOAD = "/usr/lib/faketime/libfaketimeMT.so.1",
+  --         FAKETIME = "2026-09-04 00:00:00",
+  --       },
+  --
+  --       -- Enable all inlay hints by default
+  --       inlay_hints = {
+  --         enabled = true,
+  --         parameters = true,
+  --         parameters_compiled = true,
+  --         parameters_excluded = false,
+  --         types_property = true,
+  --         types_variable = true,
+  --         function_return = true,
+  --         function_parameter = true,
+  --         lambda_return = true,
+  --         lambda_receivers_parameters = true,
+  --         value_ranges = true,
+  --         kotlin_time = true,
+  --       },
+  --     }
+  --
+  --     -- Keymaps with <leader>lk prefix
+  --     vim.keymap.set('n', '<leader>lka', ':KotlinCodeActions<CR>', { desc = 'Kotlin code actions' })
+  --     vim.keymap.set('n', '<leader>lkq', ':KotlinQuickFix<CR>', { desc = 'Kotlin quick fix' })
+  --     vim.keymap.set('n', '<leader>lko', ':KotlinOrganizeImports<CR>', { desc = 'Organize Kotlin imports' })
+  --     vim.keymap.set('n', '<leader>lkf', ':KotlinFormat<CR>', { desc = 'Format Kotlin buffer (LSP)' })
+  --     vim.keymap.set('n', '<leader>lks', ':KotlinSymbols<CR>', { desc = 'Show Kotlin document symbols' })
+  --     vim.keymap.set('n', '<leader>lkw', ':KotlinWorkspaceSymbols<CR>', { desc = 'Search workspace symbols' })
+  --     vim.keymap.set('n', '<leader>lkr', ':KotlinReferences<CR>', { desc = 'Find Kotlin references' })
+  --     vim.keymap.set('n', '<leader>lkn', ':KotlinRename<CR>', { desc = 'Rename Kotlin symbol' })
+  --     vim.keymap.set('n', '<leader>lkh', ':KotlinInlayHintsToggle<CR>', { desc = 'Toggle Kotlin inlay hints' })
+  --     vim.keymap.set('n', '<leader>lkc', ':KotlinCleanWorkspace<CR>', { desc = 'Clean Kotlin workspace' })
+  --   end,
+  -- },
   {
     "ariedov/android-nvim",
     cmd = {

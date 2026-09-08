@@ -33,52 +33,14 @@ vim.api.nvim_create_autocmd("LspAttach", {
   end,
 })
 
--- Configure diagnostics to display virtual text inline next to errors
-vim.diagnostic.config({
-  virtual_text = true,      -- Enables inline virtual text
-  signs = true,             -- Shows icons in the sign column (gutter)
-  underline = true,         -- Underlines the text containing the error
-  update_in_insert = false, -- Don't update diagnostics while typing (reduces noise)
-})
--- Trigger native LSP omnifunc completion with Ctrl+h
-vim.keymap.set('i', '<C-h>', '<C-x><C-o>', { desc = "Trigger LSP autocomplete" })
-vim.o.updatetime = 200
--- 2. Set up native autocomplete options
-vim.keymap.set('n', '<leader>ds', vim.diagnostic.setqflist, { desc = "List workspace diagnostics" })
-vim.opt.completeopt = { "menu", "menuone", "noinsert" }
-vim.opt.pumheight = 20    -- Limits the suggestion popup to 20 items
-vim.o.complete = "o"      -- Use the LSP/omnifunc source
-vim.o.autocomplete = true -- Enable native auto-popup while typing
 
-local function clean_insert_key(key)
-  return function()
-    -- temporarily turn off native auto-popup
-    vim.o.autocomplete = false
-
-    -- schedule autocomplete to turn back on right after entering insert mode / keypress
-    vim.schedule(function()
-      vim.o.autocomplete = true
-    end)
-
-    -- return the literal keypress so neovim executes it normally
-    return key
-  end
-end
-
--- intercept space, backspace, and the normal mode 'o' / 'o' line openers
-vim.keymap.set('i', '<space>', clean_insert_key('<space>'), { expr = true, replace_keycodes = true })
-vim.keymap.set('i', '<bs>', clean_insert_key('<bs>'), { expr = true, replace_keycodes = true })
-vim.keymap.set('n', 'o', clean_insert_key('o'), { expr = true, replace_keycodes = true })
-vim.keymap.set('n', 'o', clean_insert_key('o'), { expr = true, replace_keycodes = true })
-vim.keymap.set('n', 'i', clean_insert_key('i'), { expr = true, replace_keycodes = true })
-vim.keymap.set('n', 'a', clean_insert_key('a'), { expr = true, replace_keycodes = true })
-vim.keymap.set('n', 'A', clean_insert_key('A'), { expr = true, replace_keycodes = true })
-local insert_chars = { "~", ";", ":", ",", "&", "|", "{", "}", "(", ")" }
-for _, char in ipairs(insert_chars) do
-  vim.keymap.set('i', char, clean_insert_key(char), { expr = true, replace_keycodes = true })
-end
 -- 3. Enable the server
-vim.lsp.enable('lua_ls')
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "lua",
+  callback = function(ev)
+    vim.lsp.enable('lua_ls', { bufnr = ev.buf })
+  end,
+})
 
 --docker-compose
 -- 1. Register compound filetypes natively in Neovim
@@ -94,7 +56,7 @@ vim.filetype.add({
 -- 2. Configure yamlls for schema validation and diagnostics
 vim.lsp.config['yamlls'] = {
   cmd = { vim.fn.stdpath('data') .. '/mason/bin/yaml-language-server', '--stdio' },
-  filetypes = { 'yaml', 'yaml.docker-compose' },
+  filetypes = { 'yaml', 'yml', 'yaml.docker-compose' },
   -- Add root_markers here:
   root_markers = { '.git', 'docker-compose.yaml', 'docker-compose.yml', 'compose.yaml', 'compose.yml' },
   settings = {
@@ -110,7 +72,12 @@ vim.lsp.config['yamlls'] = {
     },
   },
 }
-vim.lsp.enable('yamlls')
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "yaml", "yml" },
+  callback = function(ev)
+    vim.lsp.enable('yamlls', { bufnr = ev.buf })
+  end,
+})
 
 -- 3. Configure the Docker Compose language server (for compose-specific features)
 vim.lsp.config['docker_compose_language_service'] = {
@@ -130,7 +97,12 @@ vim.lsp.config['docker_compose_language_service'] = {
     },
   },
 }
-vim.lsp.enable('docker_compose_language_service')
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "yaml", "yml" },
+  callback = function(ev)
+    vim.lsp.enable('docker_compose_language_service', { bufnr = ev.buf })
+  end,
+})
 --kotlin-lsp
 -- vim.lsp.config['kotlin_lsp'] = {
 --   cmd = { vim.fn.expand('~') .. '/.local/share/kls/bin/kotlin-language-server' },
