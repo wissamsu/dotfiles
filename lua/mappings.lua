@@ -24,9 +24,7 @@ map("n", "<C-n>", ":Oil<CR>", { desc = "Toggle Tree", silent = true })
 map("n", "<leader>tn", ":tabnew<CR>", { silent = true, desc = "New Tab" })
 map("n", "<leader>tc", ":tabnew<CR>", { silent = true, desc = "Close Tab" })
 
-local function termcode(str)
-  return vim.api.nvim_replace_termcodes(str, true, true, true)
-end
+
 
 
 
@@ -74,38 +72,3 @@ map("n", "<leader>gi", ":GradleInit<CR>", { noremap = true, silent = true })
 
 
 map("n", "<leader>co", ":CodexToggle<CR>", { noremap = true, silent = true })
---coc keymaps
-map("i", "<C-h>", "coc#refresh()", { silent = true, expr = true })
-map("n", "<leader>i", "<Plug>(coc-fix-current)", { silent = true, desc = "Coc Organize Imports / Auto-Import" })
-map("i", "<CR>", function()
-  if vim.fn["coc#pum#visible"]() ~= 0 then
-    return vim.fn["coc#pum#confirm"]()
-  else
-    return termcode("<CR>")
-  end
-end, {
-  silent = true,
-  noremap = true,
-  expr = true,
-  desc = "Coc Confirm Completion with Enter"
-})
-
-map("i", "<S-Tab>", "vim.fn.coc#pum#visible() ? vim.fn.coc#pum#prev(1) : '\\<S-Tab>'", {
-  expr = true,
-  silent = true,
-  noremap = true,
-  desc = "Coc Previous Completion",
-})
-
-map("n", "<leader>ds", ":CocList diagnostics<CR>", { silent = true })
-map("n", "gra", "<Plug>(coc-codeaction)", { silent = true })
-
-map("n", "gd", "<Plug>(coc-definition)", { silent = true, desc = "Go to Definition" })
-
-map("n", "gy", "<Plug>(coc-type-definition)", { silent = true, desc = "Go to Type Definition" })
-
-map("n", "gi", "<Plug>(coc-implementation)", { silent = true, desc = "Go to Implementation" })
-
-map("n", "gr", "<Plug>(coc-references)", { silent = true, desc = "Show References" })
-
-map("n", "K", ":call CocActionAsync('doHover')<CR>", { silent = true, desc = "Hover Documentation" })

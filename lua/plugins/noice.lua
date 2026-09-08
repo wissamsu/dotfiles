@@ -4,6 +4,10 @@ return {
   opts = {
     routes = {
       {
+        filter = { event = "lsp", kind = "progress" },
+        opts = { skip = true },
+      },
+      {
         filter = { event = "notify" },
         view = "mini",
       },
@@ -23,6 +27,16 @@ return {
           style = "rounded",
         },
       },
+    },
+  },
+  lsp = {
+    progress = {
+      enabled = false, -- Keep this disabled
+    },
+    override = {
+      ["vim.lsp.util.convert_input_to_markdown_lines"] = true,
+      ["vim.lsp.util.stylize_markdown"] = true,
+      ["cmp.entry.get_documentation"] = true,
     },
   },
   dependencies = {

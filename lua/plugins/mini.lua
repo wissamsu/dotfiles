@@ -46,6 +46,11 @@ return {
       require("mini.statusline").setup({
         use_icons = false,
       })
+
+      -- Using the hex code for the light blue color in your image
+      vim.api.nvim_set_hl(0, "MiniStatuslineModeNormal", { fg = "black", bg = "#7CA9F4", bold = true })
+      vim.api.nvim_set_hl(0, "MiniStatuslineFileinfo", { fg = "black", bg = "#7CA9F4" })
+      vim.api.nvim_set_hl(0, "MiniStatuslineLocation", { fg = "black", bg = "#7CA9F4" })
     end,
   },
 }

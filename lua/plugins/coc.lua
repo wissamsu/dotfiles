@@ -5,12 +5,13 @@ return {
     "CocList",
     "CocConfig",
     "CocInstall",
+    "CocUninstall",
     "CocUpdate",
     "CocAction",
     "CocFix"
   },
   branch = "release",
-  ft = { "go","lua", "javascript", "python", "java", "typescript", "tsx", "html", "css", "cmake", "properties", "jproperties", "yml", "yaml" },
+  ft = { "go", "javascript", "python", "java", "typescript", "tsx", "html", "css", "cmake", "properties", "jproperties" },
   dependencies = {
     "nvim-tree/nvim-web-devicons",
   },
@@ -57,7 +58,6 @@ return {
       "coc-java-vimspector",
       "coc-java-debug",
       "coc-java",
-      "coc-kotlin",
       "coc-go",
       "coc-flutter",
       "coc-docker",
@@ -132,5 +132,39 @@ return {
     vim.api.nvim_create_user_command("TerraformInit", function()
       terraform_init(vim.fs.dirname(vim.api.nvim_buf_get_name(0)), "manual request")
     end, { desc = "Run terraform init in buffer's directory for LSP schemas" })
+    local map = vim.keymap.set
+
+    -- Helper function to evaluate terminal codes for the insert mode mappings
+    local function termcode(str)
+      return vim.api.nvim_replace_termcodes(str, true, true, true)
+    end
+
+    map("i", "<C-h>", "coc#refresh()", { silent = true, expr = true })
+    map("n", "<leader>i", "<Plug>(coc-fix-current)", { silent = true, desc = "Coc Organize Imports / Auto-Import" })
+
+    map("i", "<CR>", function()
+      if vim.fn["coc#pum#visible"]() ~= 0 then
+        return vim.fn["coc#pum#confirm"]()
+      else
+        return termcode("<CR>")
+      end
+    end, { silent = true, noremap = true, expr = true, desc = "Coc Confirm Completion with Enter" })
+
+    -- Converted your S-Tab mapping to a Lua function to prevent syntax errors
+    map("i", "<S-Tab>", function()
+      if vim.fn["coc#pum#visible"]() ~= 0 then
+        return vim.fn["coc#pum#prev"](1)
+      else
+        return termcode("<S-Tab>")
+      end
+    end, { expr = true, silent = true, noremap = true, desc = "Coc Previous Completion" })
+
+    map("n", "<leader>ds", ":CocList diagnostics<CR>", { silent = true })
+    map("n", "gra", "<Plug>(coc-codeaction)", { silent = true })
+    map("n", "gd", "<Plug>(coc-definition)", { silent = true, desc = "Go to Definition" })
+    map("n", "gy", "<Plug>(coc-type-definition)", { silent = true, desc = "Go to Type Definition" })
+    map("n", "gi", "<Plug>(coc-implementation)", { silent = true, desc = "Go to Implementation" })
+    map("n", "gr", "<Plug>(coc-references)", { silent = true, desc = "Show References" })
+    map("n", "K", ":call CocActionAsync('doHover')<CR>", { silent = true, desc = "Hover Documentation" })
   end,
 }

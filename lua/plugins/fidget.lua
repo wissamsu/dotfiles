@@ -1,6 +1,6 @@
 return {
   "j-hui/fidget.nvim",
-  event = "User CocStatusChange",
+  event = { "User CocStatusChange", "LspAttach" },
   opts = {
     progress = {
       display = {
