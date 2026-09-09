@@ -101,3 +101,24 @@ vim.keymap.set("n", "<leader>u", function()
   vim.cmd.Undotree()
 end, { desc = "Toggle Undotree" })
 -- 1. Automatically highlight/trigger matches when the cursor pauses
+
+vim.api.nvim_create_autocmd("LspAttach", {
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    -- kotlin.nvim typically names its client 'kotlin_lsp' or uses the kotlin filetype
+    if client and (client.name == "kotlin_lsp" or client.name == "kotlin_language_server") then
+      -- Clears the native omnifunc so Neovim's native completion won't pop up
+      vim.bo[args.buf].omnifunc = ""
+    end
+  end,
+})
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "kotlin", "yaml" },
+  callback = function(args)
+    local filename = vim.fn.expand("%:t")
+    if args.match == "kotlin" or filename == "docker-compose.yml" or filename == "compose.yml" then
+      vim.b.coc_enabled = 0
+    end
+  end,
+})

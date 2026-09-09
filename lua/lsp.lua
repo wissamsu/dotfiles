@@ -1,47 +1,3 @@
--- 1. Define the lua_ls configuration
-vim.lsp.config['lua_ls'] = {
-  cmd = { vim.fn.stdpath('data') .. '/mason/bin/lua-language-server' },
-  filetypes = { 'lua' },
-  root_markers = { { '.luarc.json', '.luarc.jsonc' }, '.git' },
-  settings = {
-    Lua = {
-      runtime = {
-        version = 'LuaJIT',
-      },
-      workspace = {
-        library = {
-          vim.env.VIMRUNTIME,
-        },
-      },
-    },
-  },
-}
-
-vim.api.nvim_create_autocmd("LspAttach", {
-  group = vim.api.nvim_create_augroup("UserLspConfig", { clear = true }),
-  callback = function(ev)
-    local opts = { buffer = ev.buf }
-
-    -- Map gd to go to definition
-    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
-    vim.api.nvim_create_autocmd("BufWritePre", {
-      buffer = ev.buf,
-      callback = function()
-        vim.lsp.buf.format({ async = false })
-      end,
-    })
-  end,
-})
-
-
--- 3. Enable the server
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "lua",
-  callback = function(ev)
-    vim.lsp.enable('lua_ls', { bufnr = ev.buf })
-  end,
-})
-
 --docker-compose
 -- 1. Register compound filetypes natively in Neovim
 vim.filetype.add({
@@ -52,6 +8,7 @@ vim.filetype.add({
     ["compose.yaml"] = "yaml.docker-compose",
   },
 })
+
 
 -- 2. Configure yamlls for schema validation and diagnostics
 vim.lsp.config['yamlls'] = {

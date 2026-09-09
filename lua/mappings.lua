@@ -24,10 +24,6 @@ map("n", "<C-n>", ":Oil<CR>", { desc = "Toggle Tree", silent = true })
 map("n", "<leader>tn", ":tabnew<CR>", { silent = true, desc = "New Tab" })
 map("n", "<leader>tc", ":tabnew<CR>", { silent = true, desc = "Close Tab" })
 
-
-
-
-
 function _G.add_notebook_cell()
   local row = vim.api.nvim_win_get_cursor(0)[1]
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
