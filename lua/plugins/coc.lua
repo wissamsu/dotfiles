@@ -11,7 +11,7 @@ return {
     "CocFix"
   },
   branch = "release",
-  ft = { "go", "javascript", "python", "typescript", "tsx", "html", "css", "cmake", "properties", "jproperties" },
+  ft = { "go", "javascript", "python", "java", "typescript", "tsx", "html", "css", "cmake", "properties", "jproperties" },
   dependencies = {
     "nvim-tree/nvim-web-devicons",
   },
@@ -67,7 +67,6 @@ return {
       "coc-angular",
       "coc-qml",
       "coc-lightbulb",
-      "coc-java-intellicode",
       "coc-git",
       "coc-markdown-preview-enhanced",
       "coc-webview",

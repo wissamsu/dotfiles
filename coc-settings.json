@@ -147,5 +147,23 @@
         "proto"
       ]
     },
-  },
+    /*
+    "kotlin": {
+      "command": "kotlin-lsp",
+      "args": [
+        "--stdio"
+      ],
+      "filetypes": [
+        "kotlin"
+      ],
+      "rootPatterns": [
+        "build.gradle",
+        "build.gradle.kts",
+        "settings.gradle.kts",
+        "pom.xml",
+        ".git"
+      ]
+    }
+    */
+  }
 }

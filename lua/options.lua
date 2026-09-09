@@ -92,19 +92,21 @@ vim.o.autocomplete = true -- Enable native auto-popup while typing
 
 local function clean_insert_key(key)
   return function()
-    -- temporarily turn off native auto-popup
-    vim.o.autocomplete = false
+    local is_kotlin = vim.tbl_contains({ "kotlin", "kotlinscript" }, vim.bo.filetype)
 
-    -- schedule autocomplete to turn back on right after entering insert mode / keypress
-    vim.schedule(function()
-      vim.o.autocomplete = true
-    end)
+    if not is_kotlin then
+      vim.bo.autocomplete = false
 
-    -- return the literal keypress so neovim executes it normally
+      vim.schedule(function()
+        if vim.api.nvim_buf_is_valid(0) and not vim.tbl_contains({ "kotlin", "kotlinscript" }, vim.bo.filetype) then
+          vim.bo.autocomplete = true
+        end
+      end)
+    end
+
     return key
   end
 end
-
 -- intercept space, backspace, and the normal mode 'o' / 'o' line openers
 vim.keymap.set('i', '<space>', clean_insert_key('<space>'), { expr = true, replace_keycodes = true })
 vim.keymap.set('i', '<bs>', clean_insert_key('<bs>'), { expr = true, replace_keycodes = true })

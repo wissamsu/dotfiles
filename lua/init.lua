@@ -101,23 +101,3 @@ vim.keymap.set("n", "<leader>u", function()
   vim.cmd.Undotree()
 end, { desc = "Toggle Undotree" })
 -- 1. Automatically highlight/trigger matches when the cursor pauses
-vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
-  callback = function()
-    if vim.bo.buftype == "" then
-      vim.lsp.buf.clear_references()
-      vim.lsp.buf.document_highlight()
-    end
-  end,
-})
-
--- Clear the highlights when the cursor moves
-vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
-  callback = function()
-    vim.lsp.buf.clear_references()
-  end,
-})
-
--- 2. Style the matches to be underlined with NO background color
-vim.api.nvim_set_hl(0, "LspReferenceRead", { underline = true, bg = "NONE" })
-vim.api.nvim_set_hl(0, "LspReferenceWrite", { underline = true, bg = "NONE" })
-vim.api.nvim_set_hl(0, "LspReferenceText", { underline = true, bg = "NONE" })
