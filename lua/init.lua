@@ -117,7 +117,7 @@ vim.api.nvim_create_autocmd("FileType", {
   pattern = { "kotlin", "yaml" },
   callback = function(args)
     local filename = vim.fn.expand("%:t")
-    if args.match == "kotlin" or filename == "docker-compose.yml" or filename == "compose.yml" then
+    if filename == "docker-compose.yml" or filename == "compose.yml" then
       vim.b.coc_enabled = 0
     end
   end,

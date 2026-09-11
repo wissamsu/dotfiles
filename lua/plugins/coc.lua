@@ -11,7 +11,7 @@ return {
     "CocFix"
   },
   branch = "release",
-  ft = { "lua", "go", "javascript", "python", "java", "typescript", "tsx", "html", "css", "cmake", "properties", "jproperties" },
+  ft = { "lua", "go", "javascript", "python", "java", "kotlin", "typescript", "tsx", "html", "css", "cmake", "properties", "jproperties" },
   dependencies = {
     "nvim-tree/nvim-web-devicons",
   },
@@ -39,7 +39,6 @@ return {
       "coc-pairs",
       "coc-marketplace",
       "coc-lua",
-      "coc-license",
       "coc-html",
       "coc-dotenv",
       "coc-yaml",

@@ -108,7 +108,6 @@
     }
   ],
   "suggest.removeDuplicateItems": true,
-  "kotlin.completion.snippets.enabled": true,
   "extensions.updateCheck": "daily",
   "languageserver": {
     "terraform": {
@@ -147,7 +146,6 @@
         "proto"
       ]
     },
-    /*
     "kotlin": {
       "command": "kotlin-lsp",
       "args": [
@@ -164,6 +162,5 @@
         ".git"
       ]
     }
-    */
   }
 }
