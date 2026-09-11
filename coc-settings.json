@@ -19,6 +19,7 @@
     ]
   },
   */
+  "suggest.detailField": "abbr",
   "java.debug.vimspector.substitution.projectName": "${workspaceFolderName}",
   "cmake.lsp.serverPath": "cmake-language-server",
   "yaml.schemas": {
