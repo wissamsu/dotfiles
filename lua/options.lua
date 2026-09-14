@@ -1,4 +1,6 @@
 vim.cmd("colorscheme ex-modus")
+vim.opt.title = true
+vim.opt.titlestring = "%F"
 vim.g.mapleader = " "
 vim.opt.number = true
 vim.opt.tabstop = 2
@@ -35,7 +37,7 @@ vim.opt.complete:remove("i")
 vim.opt.nrformats:remove("octal")
 vim.opt.wildmenu = true
 
-vim.opt.laststatus = 2
+vim.opt.laststatus = 0
 vim.opt.shortmess:append("W")
 vim.opt.sidescroll = 1
 vim.opt.sidescrolloff = 2

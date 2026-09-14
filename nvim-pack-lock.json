@@ -128,10 +128,6 @@
       "rev": "5249891106235cc206864b9c57e1142686ab3a61",
       "src": "https://github.com/DevDad-Main/spring-tools.nvim"
     },
-    "telescope.nvim": {
-      "rev": "e69b434b968a33815e2f02a5c7bd7b8dd4c7d4b2",
-      "src": "https://github.com/nvim-telescope/telescope.nvim"
-    },
     "tiny-term.nvim": {
       "rev": "51224ee32fe0e88be1d5dd21afa8874ee7568180",
       "src": "https://github.com/jellydn/tiny-term.nvim"
