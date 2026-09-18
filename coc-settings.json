@@ -19,6 +19,8 @@
     ]
   },
   */
+  "git.blameUseRealTime": true,
+  "git.addGBlameToVirtualText": true,
   "suggest.detailField": "abbr",
   "java.debug.vimspector.substitution.projectName": "${workspaceFolderName}",
   "cmake.lsp.serverPath": "cmake-language-server",
@@ -162,6 +164,26 @@
         "pom.xml",
         ".git"
       ]
+    },
+    "matlab": {
+      "command": "matlab-language-server",
+      "args": [
+        "--stdio"
+      ],
+      "filetypes": [
+        "matlab"
+      ],
+      "rootPatterns": [
+        ".git"
+      ],
+      "settings": {
+        "MATLAB": {
+          "installPath": "",
+          "indexWorkspace": true,
+          "matlabConnectionTiming": "onStart",
+          "telemetry": true
+        }
+      }
     }
   }
 }
