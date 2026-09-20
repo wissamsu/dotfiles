@@ -1,4 +1,6 @@
 vim.cmd("colorscheme ex-modus")
+vim.opt.title = true
+vim.opt.titlestring = "%F"
 vim.g.mapleader = " "
 vim.opt.number = true
 vim.opt.tabstop = 2
@@ -35,7 +37,7 @@ vim.opt.complete:remove("i")
 vim.opt.nrformats:remove("octal")
 vim.opt.wildmenu = true
 
-vim.opt.laststatus = 2
+vim.opt.laststatus = 0
 vim.opt.shortmess:append("W")
 vim.opt.sidescroll = 1
 vim.opt.sidescrolloff = 2
@@ -71,3 +73,79 @@ vim.opt.incsearch = true
 vim.g.loaded_ruby_provider = 0
 vim.g.loaded_perl_provider = 0
 vim.g.loaded_node_provider = 0
+vim.opt.pumheight = 20
+
+-- Configure diagnostics to display virtual text inline next to errors
+-- vim.api.nvim_create_autocmd("LspAttach", {
+--   callback = function(args)
+--     local bufnr = args.buf
+--     vim.diagnostic.config({
+--       virtual_text = true,  -- Enables inline virtual text
+--       signs = true,         -- Shows icons in the sign column (gutter)
+--       underline = true,     -- Underlines the text containing the error
+--       update_in_insert = false, -- Don't update diagnostics while typing (reduces noise)
+--     })
+--     -- Trigger native LSP omnifunc completion with Ctrl+h
+--     vim.keymap.set('i', '<C-h>', '<C-x><C-o>', { desc = "Trigger LSP autocomplete" })
+--     vim.o.updatetime = 200
+--     -- 2. Set up native autocomplete options
+--     vim.keymap.set('n', '<leader>ds', vim.diagnostic.setqflist, { desc = "List workspace diagnostics" })
+--     vim.opt.completeopt = { "menu", "menuone", "noinsert" }
+--     vim.opt.pumheight = 20 -- Limits the suggestion popup to 20 items
+--     vim.o.complete = "o"  -- Use the LSP/omnifunc source
+--     vim.o.autocomplete = true -- Enable native auto-popup while typing
+--
+--     local function clean_insert_key(key)
+--       return function()
+--         -- temporarily turn off native auto-popup
+--         vim.o.autocomplete = false
+--
+--         -- schedule autocomplete to turn back on right after entering insert mode / keypress
+--         vim.schedule(function()
+--           vim.o.autocomplete = true
+--         end)
+--
+--         -- return the literal keypress so neovim executes it normally
+--         return key
+--       end
+--     end
+--     -- intercept space, backspace, and the normal mode 'o' / 'o' line openers
+--     vim.keymap.set('i', '<space>', clean_insert_key('<space>'), { expr = true, replace_keycodes = true })
+--     vim.keymap.set('i', '<bs>', clean_insert_key('<bs>'), { expr = true, replace_keycodes = true })
+--     vim.keymap.set('i', '"', clean_insert_key('"'), { expr = true, replace_keycodes = true })
+--     vim.keymap.set('i', '\'', clean_insert_key('\''), { expr = true, replace_keycodes = true })
+--     vim.keymap.set('n', 'o', clean_insert_key('o'), { expr = true, replace_keycodes = true })
+--     vim.keymap.set('n', 'o', clean_insert_key('o'), { expr = true, replace_keycodes = true })
+--     vim.keymap.set('n', 'i', clean_insert_key('i'), { expr = true, replace_keycodes = true })
+--     vim.keymap.set('n', 'a', clean_insert_key('a'), { expr = true, replace_keycodes = true })
+--     vim.keymap.set('n', 'A', clean_insert_key('A'), { expr = true, replace_keycodes = true })
+--     local insert_chars = { "~", ";", ":", ",", "&", "|", "{", "}", "(", ")" }
+--     for _, char in ipairs(insert_chars) do
+--       vim.keymap.set('i', char, clean_insert_key(char), { expr = true, replace_keycodes = true })
+--     end
+--   end,
+-- })
+vim.diagnostic.config({
+  virtual_text = {
+    prefix = '●',
+    spacing = 2,
+  },
+  virtual_lines = false,
+  signs = true,
+  underline = true,
+  severity_sort = true,
+  float = { border = 'rounded', source = true },
+})
+vim.filetype.add({
+  filename = {
+    ['docker-compose.yml'] = 'yaml.docker-compose',
+    ['docker-compose.yaml'] = 'yaml.docker-compose',
+    ['compose.yml'] = 'yaml.docker-compose',
+    ['compose.yaml'] = 'yaml.docker-compose',
+  },
+})
+vim.filetype.add({
+  pattern = {
+    ['docker%-compose%..*%.ya?ml'] = 'yaml.docker-compose',
+  },
+})

@@ -2,9 +2,9 @@ if vim.loader then
   vim.loader.enable()
 end
 
-vim.g.mapleader = " "
 vim.g.maplocalleader = "\\"
 
+require("lsp")
 require("options")
 require("mappings")
 vim.opt.undofile = true
@@ -63,24 +63,6 @@ require("lazy").setup("plugins", {
   },
 })
 
-
--- vim.opt.undofile = true
---
--- local undodir = os.getenv("HOME") .. "/.local/state/nvim/undo"
--- vim.opt.undodir = undodir
---
--- if vim.fn.isdirectory(undodir) == 0 then
---   vim.fn.mkdir(undodir, "p")
--- end
-
--- vim.keymap.set("n", "<CR>", function()
---   -- Forces lazy.nvim to load nvim-origami only on the very first press
---   require("lazy").load({ plugins = { "nvim-origami" } })
---
---   -- Executes the fold toggle command
---   vim.cmd("normal! za")
--- end, { noremap = true, silent = true, desc = "Toggle fold with origami" })
--- 1. Enable native folding and set it to use Treesitter (falls back gracefully)
 vim.opt.foldmethod = "expr"
 vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
 vim.opt.foldenable = true
@@ -100,24 +82,16 @@ vim.keymap.set("n", "<leader>u", function()
   vim.cmd.packadd("nvim.undotree")
   vim.cmd.Undotree()
 end, { desc = "Toggle Undotree" })
--- 1. Automatically highlight/trigger matches when the cursor pauses
-vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
-  callback = function()
-    if vim.bo.buftype == "" then
-      vim.lsp.buf.clear_references()
-      vim.lsp.buf.document_highlight()
-    end
-  end,
-})
 
--- Clear the highlights when the cursor moves
-vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
-  callback = function()
-    vim.lsp.buf.clear_references()
-  end,
+vim.diagnostic.config({
+  virtual_text = {
+    prefix = '●',        -- symbol before the message
+    spacing = 2,         -- gap between code and message
+    source = 'if_many',  -- show the source only when several servers report
+  },
+  signs = true,          -- icons in the gutter
+  underline = true,
+  update_in_insert = false,
+  severity_sort = true,  -- errors listed above warnings
+  float = { border = 'rounded', source = true },
 })
-
--- 2. Style the matches to be underlined with NO background color
-vim.api.nvim_set_hl(0, "LspReferenceRead", { underline = true, bg = "NONE" })
-vim.api.nvim_set_hl(0, "LspReferenceWrite", { underline = true, bg = "NONE" })
-vim.api.nvim_set_hl(0, "LspReferenceText", { underline = true, bg = "NONE" })

@@ -1,0 +1,50 @@
+-- return {
+--   'saghen/blink.cmp',
+--   dependencies = 'rafamadriz/friendly-snippets',
+--   version = '*',
+--   event = 'InsertEnter',
+--   opts = {
+--     keymap = { preset = 'enter' },
+--     appearance = {
+--       use_nvim_cmp_as_default = true,
+--       nerd_font_variant = 'mono',
+--     },
+--     completion = {
+--       list = {
+--         max_items = 20,
+--       },
+--       menu = {
+--         border = 'rounded',
+--         winhighlight = 'Normal:BlinkCmpMenu,FloatBorder:BlinkCmpMenuBorder,CursorLine:BlinkCmpMenuSelection,Search:None',
+--         draw = {
+--           columns = {
+--             { 'kind_icon' },
+--             { 'label', 'label_description', gap = 1 },
+--             { 'kind' },
+--           },
+--         },
+--       },
+--       documentation = {
+--         auto_show = true,
+--         auto_show_delay_ms = 200,
+--         window = {
+--           border = 'rounded',
+--           winhighlight = 'Normal:BlinkCmpDoc,FloatBorder:BlinkCmpDocBorder,CursorLine:BlinkCmpDocCursorLine,Search:None',
+--         },
+--       },
+--     },
+--     sources = {
+--       default = { 'lsp', 'path', 'snippets', 'buffer' },
+--     },
+--   },
+--   opts_extend = { 'sources.default' },
+--   config = function(_, opts)
+--     require('blink.cmp').setup(opts)
+--     -- Set the custom highlight groups to pure black (#000000)
+--     vim.api.nvim_set_hl(0, 'BlinkCmpMenu', { bg = '#000000' })
+--     vim.api.nvim_set_hl(0, 'BlinkCmpMenuBorder', { bg = '#000000', fg = '#444444' })
+--     vim.api.nvim_set_hl(0, 'BlinkCmpDoc', { bg = '#000000' })
+--     vim.api.nvim_set_hl(0, 'BlinkCmpDocBorder', { bg = '#000000', fg = '#444444' })
+--   end,
+-- }
+return {}
