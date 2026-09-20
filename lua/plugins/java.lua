@@ -1,0 +1,27 @@
+-- return {
+--   'nvim-java/nvim-java',
+--   ft = { 'java', 'jproperties', 'yaml', 'yml' },
+--   cond = function()
+--     local filepath = vim.api.nvim_buf_get_name(0)
+--     local ft = vim.bo.filetype
+--     if ft == 'yaml' or ft == 'yml' then
+--       return filepath:find('/resources/') ~= nil
+--     end
+--     return true
+--   end,
+--   config = function()
+--     require('java').setup()
+--     vim.lsp.enable('jdtls')
+--
+--     vim.api.nvim_create_autocmd('BufWritePre', {
+--       pattern = '*.java',
+--       callback = function()
+--         vim.lsp.buf.code_action({
+--           context = { only = { 'source.organizeImports' } },
+--           apply = true,
+--         })
+--       end,
+--     })
+--   end,
+-- }
+return {}

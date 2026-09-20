@@ -1,44 +1,50 @@
 -- return {
---   "saghen/blink.cmp",
---   ft = {  },
---   dependencies = { "rafamadriz/friendly-snippets" },
---
---   -- Use a release tag to download pre-built Rust binaries
---   version = "*",
---
---   ---@module 'blink.cmp'
---   ---@type blink.cmp.Config
+--   'saghen/blink.cmp',
+--   dependencies = 'rafamadriz/friendly-snippets',
+--   version = '*',
+--   event = 'InsertEnter',
 --   opts = {
---     -- Only enable blink.cmp if the current buffer is a Kotlin file
---     enabled = function()
---       return vim.tbl_contains({ "kotlin", "kotlinscript" }, vim.bo.filetype)
---     end,
---
---     keymap = {
---       -- Set enter preset (maps <CR> to accept completion, falls back to newline when menu is closed)
---       preset = "enter",
---
---       -- Set Ctrl+h to manually trigger/show suggestions
---       ["<C-h>"] = { "show" },
---     },
---
+--     keymap = { preset = 'enter' },
 --     appearance = {
 --       use_nvim_cmp_as_default = true,
---       nerd_font_variant = "mono",
+--       nerd_font_variant = 'mono',
 --     },
---
---     sources = {
---       default = { "lsp", "path", "snippets", "buffer" },
---       providers = {
---         lsp = {
---           async = true,      -- don't block the completion menu waiting on kotlin-lsp
---           timeout_ms = 2000, -- give it enough time before giving up (default is lower)
+--     completion = {
+--       list = {
+--         max_items = 20,
+--       },
+--       menu = {
+--         border = 'rounded',
+--         winhighlight = 'Normal:BlinkCmpMenu,FloatBorder:BlinkCmpMenuBorder,CursorLine:BlinkCmpMenuSelection,Search:None',
+--         draw = {
+--           columns = {
+--             { 'kind_icon' },
+--             { 'label', 'label_description', gap = 1 },
+--             { 'kind' },
+--           },
+--         },
+--       },
+--       documentation = {
+--         auto_show = true,
+--         auto_show_delay_ms = 200,
+--         window = {
+--           border = 'rounded',
+--           winhighlight = 'Normal:BlinkCmpDoc,FloatBorder:BlinkCmpDocBorder,CursorLine:BlinkCmpDocCursorLine,Search:None',
 --         },
 --       },
 --     },
---
---     signature = { enabled = true },
+--     sources = {
+--       default = { 'lsp', 'path', 'snippets', 'buffer' },
+--     },
 --   },
---   opts_extend = { "sources.default" },
+--   opts_extend = { 'sources.default' },
+--   config = function(_, opts)
+--     require('blink.cmp').setup(opts)
+--     -- Set the custom highlight groups to pure black (#000000)
+--     vim.api.nvim_set_hl(0, 'BlinkCmpMenu', { bg = '#000000' })
+--     vim.api.nvim_set_hl(0, 'BlinkCmpMenuBorder', { bg = '#000000', fg = '#444444' })
+--     vim.api.nvim_set_hl(0, 'BlinkCmpDoc', { bg = '#000000' })
+--     vim.api.nvim_set_hl(0, 'BlinkCmpDocBorder', { bg = '#000000', fg = '#444444' })
+--   end,
 -- }
 return {}

@@ -73,7 +73,7 @@ vim.opt.incsearch = true
 vim.g.loaded_ruby_provider = 0
 vim.g.loaded_perl_provider = 0
 vim.g.loaded_node_provider = 0
-
+vim.opt.pumheight = 20
 
 -- Configure diagnostics to display virtual text inline next to errors
 -- vim.api.nvim_create_autocmd("LspAttach", {
@@ -125,3 +125,27 @@ vim.g.loaded_node_provider = 0
 --     end
 --   end,
 -- })
+vim.diagnostic.config({
+  virtual_text = {
+    prefix = '●',
+    spacing = 2,
+  },
+  virtual_lines = false,
+  signs = true,
+  underline = true,
+  severity_sort = true,
+  float = { border = 'rounded', source = true },
+})
+vim.filetype.add({
+  filename = {
+    ['docker-compose.yml'] = 'yaml.docker-compose',
+    ['docker-compose.yaml'] = 'yaml.docker-compose',
+    ['compose.yml'] = 'yaml.docker-compose',
+    ['compose.yaml'] = 'yaml.docker-compose',
+  },
+})
+vim.filetype.add({
+  pattern = {
+    ['docker%-compose%..*%.ya?ml'] = 'yaml.docker-compose',
+  },
+})

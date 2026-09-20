@@ -10,7 +10,8 @@
     },
     "coc.nvim": {
       "rev": "c2dc39cbf953e4e26651abc52f9b78291929a3c3",
-      "src": "https://github.com/neoclide/coc.nvim"
+      "src": "https://github.com/neoclide/coc.nvim",
+      "version": "'release'"
     },
     "codeium.vim": {
       "rev": "3c0a4f8a7be75113a6e19be13b7cc37210d6e26a",
@@ -27,6 +28,10 @@
     "csvview.nvim": {
       "rev": "2466bdda54047f525d4faca53040fe657c9c33db",
       "src": "https://github.com/hat0uma/csvview.nvim"
+    },
+    "fff.nvim": {
+      "rev": "6b46693c8c6442877a3ee078955d0c36eaff4625",
+      "src": "https://github.com/dmtrKovalenko/fff.nvim"
     },
     "fidget.nvim": {
       "rev": "9e0201673e08e997e7cf52afca5565c70bd117f3",
@@ -74,7 +79,8 @@
     },
     "mini.tabline": {
       "rev": "7e8584a06b86902c64227e4abd0c39ae74061101",
-      "src": "https://github.com/echasnovski/mini.tabline"
+      "src": "https://github.com/echasnovski/mini.tabline",
+      "version": "'*'"
     },
     "noice.nvim": {
       "rev": "7bfd942445fb63089b59f97ca487d605e715f155",
@@ -94,7 +100,8 @@
     },
     "nvim-treesitter": {
       "rev": "cf12346a3414fa1b06af75c79faebe7f76df080a",
-      "src": "https://github.com/nvim-treesitter/nvim-treesitter"
+      "src": "https://github.com/nvim-treesitter/nvim-treesitter",
+      "version": "'master'"
     },
     "nvim-web-devicons": {
       "rev": "5f032a85be210cd1c6ac98861eb3b187ff3bd5eb",
@@ -127,6 +134,11 @@
     "spring-tools.nvim": {
       "rev": "5249891106235cc206864b9c57e1142686ab3a61",
       "src": "https://github.com/DevDad-Main/spring-tools.nvim"
+    },
+    "telescope.nvim": {
+      "rev": "e69b434b968a33815e2f02a5c7bd7b8dd4c7d4b2",
+      "src": "https://github.com/nvim-telescope/telescope.nvim",
+      "version": "'v0.2.0'"
     },
     "tiny-term.nvim": {
       "rev": "51224ee32fe0e88be1d5dd21afa8874ee7568180",
