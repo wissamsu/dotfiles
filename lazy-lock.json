@@ -1,7 +1,7 @@
 {
   "Comment.nvim": { "branch": "master", "commit": "e30b7f2008e52442154b66f7c519bfd2f1e32acb" },
   "android-nvim": { "branch": "main", "commit": "54ca11bc00df0bd913083bdd6ec9f9754950311d" },
-  "coc.nvim": { "branch": "release", "commit": "90b55f067595e7f9dd920c957d6345f434f32dd2" },
+  "coc.nvim": { "branch": "release", "commit": "85709b90d7d3fa6962609b6adadac9f7b2067819" },
   "codeium.vim": { "branch": "main", "commit": "3c0a4f8a7be75113a6e19be13b7cc37210d6e26a" },
   "codex.nvim": { "branch": "main", "commit": "4317788afc091d5e913109c55d5a04f32be4e14a" },
   "crates.nvim": { "branch": "main", "commit": "7039bc1d130e424232a7aa64ceddb170a154ff5b" },

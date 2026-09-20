@@ -4,6 +4,7 @@ end
 
 vim.g.maplocalleader = "\\"
 
+require("lsp")
 require("options")
 require("mappings")
 vim.opt.undofile = true
