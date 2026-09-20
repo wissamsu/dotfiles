@@ -184,6 +184,42 @@
           "telemetry": true
         }
       }
-    }
+    },
+    "docker-language-server": {
+      "command": "docker-language-server",
+      "args": [
+        "start",
+        "--stdio"
+      ],
+      "filetypes": [
+        "dockerfile",
+        "yaml.docker-compose",
+        "yaml"
+      ],
+      "rootPatterns": [
+        "docker-compose.yml",
+        "docker-compose.yaml",
+        "compose.yml",
+        "compose.yaml",
+        "Dockerfile",
+        "docker-bake.hcl"
+      ]
+    },
+    "microsoft-compose-service": {
+      "command": "docker-compose-langserver",
+      "args": [
+        "--stdio"
+      ],
+      "filetypes": [
+        "yaml.docker-compose",
+        "yaml"
+      ],
+      "rootPatterns": [
+        "docker-compose.yml",
+        "docker-compose.yaml",
+        "compose.yml",
+        "compose.yaml"
+      ]
+    },
   }
 }

@@ -1,6 +1,6 @@
 -- return {
 --   "saghen/blink.cmp",
---   ft = { "kotlin", "kotlinscript" },
+--   ft = {  },
 --   dependencies = { "rafamadriz/friendly-snippets" },
 --
 --   -- Use a release tag to download pre-built Rust binaries
