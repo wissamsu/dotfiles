@@ -21,7 +21,6 @@
   */
   "git.blameUseRealTime": true,
   "git.addGBlameToVirtualText": true,
-  "suggest.detailField": "abbr",
   "java.debug.vimspector.substitution.projectName": "${workspaceFolderName}",
   "cmake.lsp.serverPath": "cmake-language-server",
   "yaml.schemas": {
@@ -50,7 +49,6 @@
   "coc.preferences.willSaveHandlerTimeout": 500,
   "suggest.autoTrigger": "always",
   "suggest.timeout": 3000,
-  "suggest.triggerAfterInsertEnter": true,
   "suggest.maxCompleteItemCount": 20,
   "suggest.virtualText": false,
   "coc.source.buffer.enable": true,

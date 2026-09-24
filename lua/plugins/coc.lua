@@ -119,7 +119,7 @@ return {
       return vim.api.nvim_replace_termcodes(str, true, true, true)
     end
 
-    map("i", "<C-h>", "coc#refresh()", { silent = true, expr = true })
+    map("i", "<C-Space>", "coc#refresh()", { silent = true, expr = true })
     map("n", "<leader>i", "<Plug>(coc-fix-current)", { silent = true, desc = "Coc Organize Imports / Auto-Import" })
 
     map("i", "<CR>", function()
