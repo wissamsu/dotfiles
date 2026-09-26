@@ -113,30 +113,102 @@ return {
       })
     end,
   },
+  -- ~/.config/nvim/lua/plugins/dap.lua
   {
-    "puremourning/vimspector",
-    cmd = { "VimspectorInstall", "VimspectorUpdate" },
+    "mfussenegger/nvim-dap",
+    dependencies = {
+      "rcarriga/nvim-dap-ui",
+      "nvim-neotest/nvim-nio",
+      "theHamsta/nvim-dap-virtual-text",
+    },
     keys = {
-      { "<leader>vsj", ":CocCommand java.debug.vimspector.start<CR>", desc = "Start Java Debugging" },
-      { "<leader>db",  "<cmd>call vimspector#ToggleBreakpoint()<cr>", desc = "Toggle Breakpoint" },
-      { "<leader>vc",  "<cmd>VimspectorReset<CR>",                    desc = "Reset Vimspector" },
-      { "<leader>dc",  "<cmd>call vimspector#Continue()<cr>",         desc = "Continue Debugging" },
-      { "<leader>di",  "<cmd>call vimspector#StepInto()<cr>",         desc = "Step Into" },
-      { "<leader>do",  "<cmd>call vimspector#StepOver()<cr>",         desc = "Step Over" },
-      { "<leader>dq",  "<cmd>call vimspector#Reset()<cr>",            desc = "Quit/Reset Debugging" },
-      { "<leader>dX",  "<cmd>call vimspector#ClearBreakpoints()<cr>", desc = "Clear Breakpoints" },
+      { "<F5>",       function() require("dap").continue() end,                                             desc = "DAP Continue" },
+      { "<F10>",      function() require("dap").step_over() end,                                            desc = "DAP Step Over" },
+      { "<F11>",      function() require("dap").step_into() end,                                            desc = "DAP Step Into" },
+      { "<F12>",      function() require("dap").step_out() end,                                             desc = "DAP Step Out" },
+      { "<leader>b",  function() require("dap").toggle_breakpoint() end,                                    desc = "DAP Toggle Breakpoint" },
+      { "<leader>B",  function() require("dap").set_breakpoint(vim.fn.input("Breakpoint condition: ")) end, desc = "DAP Conditional Breakpoint" },
+      { "<leader>du", function() require("dapui").toggle() end,                                             desc = "DAP UI Toggle" },
     },
     config = function()
-      vim.g.vimspector_enable_mappings = 'HUMAN'
-      vim.api.nvim_set_hl(0, 'VimspectorBreakpointGreen', { fg = '#9ece6a', bold = true })
-      vim.api.nvim_set_hl(0, 'VimspectorBreakpointRed', { fg = '#f7768e', bold = true })
-      vim.api.nvim_set_hl(0, 'VimspectorPCBreakpointRed', { fg = '#f7768e', bg = '#3b4252', bold = true })
+      local dap = require("dap")
+      local dapui = require("dapui")
 
-      vim.fn.sign_define('vimspectorBP', { text = '', texthl = 'VimspectorBreakpointGreen' })
-      vim.fn.sign_define('vimspectorBPDisabled', { text = '', texthl = 'Comment' })
-      vim.fn.sign_define('vimspectorPCBP', { text = '', texthl = 'VimspectorPCBreakpointRed', linehl = 'CursorLine' })
+      -- Setup UI and Virtual Text
+      dapui.setup()
+      require("nvim-dap-virtual-text").setup()
+
+      -- Automatically open/close DAP UI on session events
+      dap.listeners.after.event_initialized["dapui_config"] = function()
+        dapui.open()
+      end
+      dap.listeners.before.event_terminated["dapui_config"] = function()
+        dapui.close()
+      end
+      dap.listeners.before.event_exited["dapui_config"] = function()
+        dapui.close()
+      end
+
+      -- -------------------------------------------------------------
+      -- coc-java Debug Adapter Handler (Non-blocking via CocActionAsync)
+      -- -------------------------------------------------------------
+      dap.adapters.java = function(callback, config)
+        local success, port = pcall(vim.fn["coc#rpc#request"], "executeCommand", { "vscode.java.startDebugSession" })
+        if not success or not port then
+          vim.notify("coc-java DAP Error: Could not start debug session", vim.log.levels.ERROR)
+          return
+        end
+
+        callback({
+          type = "server",
+          host = "127.0.0.1",
+          port = port,
+        })
+      end
+
+      -- Java DAP Configurations
+      dap.configurations.java = {
+        {
+          type = "java",
+          request = "launch",
+          name = "Debug (coc-java)",
+          mainClass = "${file}",
+          projectName = "${workspaceFolderBasename}",
+        },
+        {
+          type = "java",
+          request = "attach",
+          name = "Attach Remote JVM (Port 5005)",
+          hostName = "127.0.0.1",
+          port = 5005,
+        },
+      }
     end,
   },
+  -- {
+  --   "puremourning/vimspector",
+  --   cmd = { "VimspectorInstall", "VimspectorUpdate" },
+  --   keys = {
+  --     { "<leader>vsj", ":CocCommand java.debug.vimspector.start<CR>", desc = "Start Java Debugging" },
+  --     { "<leader>db",  "<cmd>call vimspector#ToggleBreakpoint()<cr>", desc = "Toggle Breakpoint" },
+  --     { "<leader>vc",  "<cmd>VimspectorReset<CR>",                    desc = "Reset Vimspector" },
+  --     { "<leader>dc",  "<cmd>call vimspector#Continue()<cr>",         desc = "Continue Debugging" },
+  --     { "<leader>di",  "<cmd>call vimspector#StepInto()<cr>",         desc = "Step Into" },
+  --     { "<leader>do",  "<cmd>call vimspector#StepOver()<cr>",         desc = "Step Over" },
+  --     { "<leader>dq",  "<cmd>call vimspector#Reset()<cr>",            desc = "Quit/Reset Debugging" },
+  --     { "<leader>dX",  "<cmd>call vimspector#ClearBreakpoints()<cr>", desc = "Clear Breakpoints" },
+  --   },
+  --   config = function()
+  --     vim.g.vimspector_enable_mappings = 'HUMAN'
+  --     vim.api.nvim_set_hl(0, 'VimspectorBreakpointGreen', { fg = '#9ece6a', bold = true })
+  --     vim.api.nvim_set_hl(0, 'VimspectorBreakpointRed', { fg = '#f7768e', bold = true })
+  --     vim.api.nvim_set_hl(0, 'VimspectorPCBreakpointRed', { fg = '#f7768e', bg = '#3b4252', bold = true })
+  --
+  --     vim.fn.sign_define('vimspectorBP', { text = '', texthl = 'VimspectorBreakpointGreen' })
+  --     vim.fn.sign_define('vimspectorBPDisabled', { text = '', texthl = 'Comment' })
+  --     vim.fn.sign_define('vimspectorPCBP', { text = '', texthl = 'VimspectorPCBreakpointRed', linehl = 'CursorLine' })
+  --   end,
+  -- },
   {
     "williamboman/mason.nvim",
     lazy = true,

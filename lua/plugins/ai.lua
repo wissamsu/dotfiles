@@ -72,7 +72,11 @@ return {
     dependencies = {
       "nvim-lua/plenary.nvim",
     },
-    event = "InsertEnter",
+    init = function()
+      vim.defer_fn(function()
+        require("lazy").load({ plugins = { "codeium.vim" } })
+      end, 4000)
+    end,
     config = function()
       vim.g.codeium_no_map_tab = 1
 

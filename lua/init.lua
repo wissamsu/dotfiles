@@ -122,3 +122,7 @@ end, { desc = "Toggle Undotree" })
 --     end
 --   end,
 -- })
+-- Toggle tmux floating popup directly from Neovim
+vim.keymap.set({ "n", "t" }, "<leader>ft", function()
+  vim.fn.system("tmux display-popup -w 80% -h 80% -E 'tmux attach-session -t scratch || tmux new-session -s scratch'")
+end, { desc = "Toggle tmux floating terminal" })

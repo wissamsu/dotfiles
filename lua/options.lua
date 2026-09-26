@@ -2,6 +2,7 @@ vim.cmd("colorscheme ex-modus")
 vim.opt.title = true
 vim.opt.titlestring = "%F"
 vim.g.mapleader = " "
+vim.opt.cmdheight = 0
 vim.opt.number = true
 vim.opt.tabstop = 2
 vim.opt.softtabstop = 2
@@ -25,6 +26,16 @@ vim.opt.relativenumber = true
 vim.o.autoindent = true
 vim.cmd("set whichwrap+=<,>,[,]")
 
+vim.opt.list = true
+vim.opt.listchars = {
+  tab = "> ",
+  trail = "-",
+  extends = ">",
+  precedes = "<",
+  nbsp = "+",
+  leadmultispace = "│ ", -- repeating pattern shown across leading whitespace
+}
+vim.api.nvim_set_hl(0, "Whitespace", { fg = "#45475a" }) -- dim guide color
 vim.api.nvim_create_autocmd("FileType", {
   pattern = { "qf" },
   callback = function()
@@ -147,7 +158,6 @@ vim.opt.tabpagemax = 50
 vim.opt.sessionoptions:remove("options")
 vim.opt.viewoptions:remove("options")
 vim.opt.formatoptions:append("j")
-vim.opt.listchars = { tab = "> ", trail = "-", extends = ">", precedes = "<", nbsp = "+" }
 
 vim.keymap.set("n", "<C-L>", function()
   vim.cmd("nohlsearch")

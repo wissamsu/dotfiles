@@ -16,7 +16,6 @@ map("n", "<leader>df", ":lua add_notebook_cell()<CR>", { noremap = true, silent 
 map("n", "<C-c>", function()
   local line_count = vim.api.nvim_buf_line_count(0)
   vim.cmd("%y+")
-  print("Yanked " .. line_count .. " lines")
 end, { desc = "Copy entire file with line count" })
 map("n", "<C-n>", ":Oil<CR>", { desc = "Toggle Tree", silent = true })
 
