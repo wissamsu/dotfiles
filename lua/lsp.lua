@@ -11,7 +11,7 @@ vim.lsp.config('lua_ls', {
       workspace = {
         checkThirdParty = false,
         library = {
-          vim.env.VIMRUNTIME,
+          vim.env.VIMRUNTIME, -- Indexes only Neovim's builtin runtime, not third-party plugins
         },
       },
       telemetry = { enable = false },
@@ -101,6 +101,7 @@ end
 -- server jar is an Eclipse/OSGi bundle that must run *inside* jdtls; the DAP
 -- session is then hosted by jdtls (see the nvim-dap adapter in
 -- plugins/lsphelptools.lua). Loading it here via init_options.bundles.
+-- Java (jdtls)
 local function java_debug_plugin_jar()
   local jars = vim.fn.split(
     vim.fn.glob(
@@ -117,17 +118,58 @@ if dbg_jar then
   jdtls_bundles[#jdtls_bundles + 1] = dbg_jar
 end
 
+-- Resolve project root directory
+-- Resolve project root directory
+local root_markers = {
+  'gradlew', 'build.gradle', 'build.gradle.kts',
+  'mvnw', 'pom.xml',
+  'settings.gradle', 'settings.gradle.kts',
+  '.git',
+}
+local root_dir = vim.fs.root(0, root_markers) or vim.fn.getcwd()
+
+-- Unique workspace folder for jdtls cache
+local project_name = vim.fn.fnamemodify(root_dir, ':p:h:t')
+local workspace_dir = vim.fn.stdpath('cache') .. '/jdtls/workspace/' .. project_name
+
 vim.lsp.config('jdtls', {
-  cmd = { mason_bin .. 'jdtls' },
-  filetypes = { 'java' },
-  root_markers = {
-    'gradlew', 'build.gradle', 'build.gradle.kts',
-    'mvnw', 'pom.xml',
-    'settings.gradle', 'settings.gradle.kts',
-    '.git',
+  cmd = {
+    mason_bin .. 'jdtls',
+    '-data', workspace_dir,
   },
+  root_dir = root_dir,
+  filetypes = { 'java' },
+  root_markers = root_markers,
+  capabilities = vim.lsp.protocol.make_client_capabilities(),
   init_options = {
     bundles = jdtls_bundles,
+    extendedClientCapabilities = {
+      classFileContentsSupport = true,
+    },
+  },
+  settings = {
+    java = {
+      eclipse = {
+        downloadSources = true,
+      },
+      maven = {
+        downloadSources = true,
+      },
+      implementationsCodeLens = {
+        enabled = true,
+      },
+      referencesCodeLens = {
+        enabled = true,
+      },
+      references = {
+        includeDecompiledSources = true,
+      },
+      inlayHints = {
+        parameterNames = {
+          enabled = 'all',
+        },
+      },
+    },
   },
 })
 
@@ -140,5 +182,57 @@ vim.keymap.set('i', '<CR>', function()
   return vim.fn.pumvisible() == 1 and '<C-y>' or '<CR>'
 end, { expr = true, desc = 'Accept completion with Enter' })
 
+-- Handle jdt:// URIs for Go To Definition into Java dependencies and class files
+-- Handle jdt:// URIs for Go To Definition into Java dependencies and class files
+local function jdt_aware_definition()
+  local params = vim.lsp.util.make_position_params(0, 'utf-8')
+  vim.lsp.buf_request_all(0, 'textDocument/definition', params, function(results)
+    -- results is a table keyed by client_id, each with { err = ..., result = ... }
+    local result
+    for _, res in pairs(results) do
+      if res.result and not vim.tbl_isempty(res.result) then
+        result = res.result
+        break
+      end
+    end
+
+    if not result then
+      vim.notify('No definition found', vim.log.levels.INFO)
+      return
+    end
+
+    local res = vim.islist(result) and result[1] or result
+    local uri = res.uri or res.targetUri
+
+    if uri and uri:sub(1, 6) == 'jdt://' then
+      -- need a client to send the classFileContents request; grab any jdtls client on this buffer
+      local clients = vim.lsp.get_clients({ bufnr = 0, name = 'jdtls' })
+      local client = clients[1]
+      if client then
+        client:request('java/classFileContents', { uri = uri }, function(content_err, content_result)
+          if content_err or not content_result then return end
+          local buf = vim.api.nvim_create_buf(true, true)
+          vim.api.nvim_buf_set_name(buf, uri)
+          vim.bo[buf].filetype = 'java'
+          vim.bo[buf].buftype = 'nofile'
+          local lines = vim.split(content_result, '\n')
+          vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+          vim.bo[buf].modifiable = false
+          vim.api.nvim_set_current_buf(buf)
+          local range = res.range or res.targetSelectionRange
+          if range then
+            local line = math.min(range.start.line + 1, #lines)
+            pcall(vim.api.nvim_win_set_cursor, 0, { line, range.start.character })
+          end
+        end, 0)
+      end
+      return
+    end
+
+    vim.lsp.util.show_document(res, 'utf-8')
+  end)
+end
+
+vim.keymap.set('n', 'gd', jdt_aware_definition, { desc = 'Go to definition (jdt:// aware)' })
 
 vim.lsp.enable({ 'lua_ls', 'dockerls', 'docker_compose_ls', 'terraformls', 'kotlin_language_server', 'jdtls' })

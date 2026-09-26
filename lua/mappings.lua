@@ -68,6 +68,12 @@ map("n", "<leader>co", ":CodexToggle<CR>", { noremap = true, silent = true })
 vim.keymap.set('i', '<C-h>', function()
   vim.lsp.completion.get()
 end, { desc = 'Trigger LSP completion' })
-vim.keymap.set('n', 'gd', vim.lsp.buf.definition)
 vim.keymap.set("n", "gi", vim.lsp.buf.implementation)
 vim.keymap.set("n", "gra", vim.lsp.buf.code_action)
+vim.keymap.set('n', 'K', function()
+  vim.lsp.buf.hover({
+    border = 'rounded',
+    max_width = 80,
+    max_height = 20,
+  })
+end, { desc = 'Hover' })

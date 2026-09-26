@@ -1,20 +1,23 @@
 return {
   "nvim-treesitter/nvim-treesitter",
   branch = "master",
-  ft = { "go", "lua", "javascript", "python", "java", "typescript", "tsx", "html", "css", "cmake", "properties", "jproperties", "yml", "yaml" },
   build = ":TSUpdate",
   config = function()
+    -- Register filetype mapping
     vim.treesitter.language.register("yaml", "spring-boot-properties-yaml")
-    require('nvim-treesitter.configs').setup {
+
+    -- Install parser languages
+    require("nvim-treesitter").setup({
       ensure_installed = { "go", "lua", "javascript", "python", "java", "typescript", "tsx", "html", "css", "cmake" },
       sync_install = false,
       auto_install = true,
+    })
 
-      highlight = {
-        enable = true,
-        additional_vim_regex_highlighting = false,
-      },
-      indent = { enable = false }, -- disable to save CPU
-    }
-  end
+    -- Enable Treesitter highlighting via native Neovim autocmd
+    vim.api.nvim_create_autocmd("FileType", {
+      callback = function()
+        pcall(vim.treesitter.start)
+      end,
+    })
+  end,
 }
