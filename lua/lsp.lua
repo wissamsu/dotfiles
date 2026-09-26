@@ -10,7 +10,9 @@ vim.lsp.config('lua_ls', {
       diagnostics = { globals = { 'vim' } },
       workspace = {
         checkThirdParty = false,
-        library = vim.api.nvim_get_runtime_file('', true),
+        library = {
+          vim.env.VIMRUNTIME,
+        },
       },
       telemetry = { enable = false },
     },
@@ -102,7 +104,8 @@ end
 local function java_debug_plugin_jar()
   local jars = vim.fn.split(
     vim.fn.glob(
-      vim.fn.stdpath('data') .. '/mason/packages/java-debug-adapter/extension/server/com.microsoft.java.debug.plugin-*.jar'
+      vim.fn.stdpath('data') ..
+      '/mason/packages/java-debug-adapter/extension/server/com.microsoft.java.debug.plugin-*.jar'
     ), "\n"
   )
   return jars[#jars]
@@ -131,26 +134,6 @@ vim.lsp.config('jdtls', {
 -- menu: no "noselect" means the first item is always selected;
 -- "noinsert" stops it from inserting text until you accept
 vim.opt.completeopt = { 'menu', 'menuone', 'noinsert', 'fuzzy' }
-
-vim.api.nvim_create_autocmd('LspAttach', {
-  group = vim.api.nvim_create_augroup('LspNativeCompletion', { clear = true }),
-  callback = function(args)
-    local client = vim.lsp.get_client_by_id(args.data.client_id)
-    if not client or not client:supports_method('textDocument/completion') then
-      return
-    end
-
-    -- Trigger on every typed character, not just the server's trigger chars
-    local chars = {}
-    for i = 32, 126 do
-      table.insert(chars, string.char(i))
-    end
-    client.server_capabilities.completionProvider.triggerCharacters = chars
-
-    vim.lsp.completion.enable(true, client.id, args.buf, { autotrigger = true })
-  end,
-})
-
 
 -- Enter accepts the selected item, otherwise acts as a normal Enter
 vim.keymap.set('i', '<CR>', function()

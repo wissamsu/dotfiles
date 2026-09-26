@@ -1,93 +1,131 @@
 return {
-  {
-    "NickvanDyke/opencode.nvim",
-    keys = {
-      { "<C-o>", function() require("opencode").ask("@this: ", { submit = true }) end, mode = { "n", "x" }, desc = "Ask opencode…" },
-      { "<C-x>", function() require("opencode").select() end, mode = { "n", "x" }, desc = "Execute opencode action…" },
-      { "<C-.>", function() require("opencode").toggle() end, mode = { "n", "t" }, desc = "Toggle opencode" },
-      { "go", function() return require("opencode").operator("@this ") end, mode = { "n", "x" }, expr = true, desc = "Add range to opencode" },
-      { "goo", function() return require("opencode").operator("@this ") .. "_" end, mode = "n", expr = true, desc = "Add line to opencode" },
+  'saghen/blink.cmp',
+  version = '*',
+  dependencies = { 'rafamadriz/friendly-snippets' },
+
+  init = function()
+    -- Bright cyan/teal for typed character matches
+    vim.api.nvim_set_hl(0, 'BlinkCmpLabelMatch', { fg = '#56b6c2', bold = true })
+
+    -- Visually distinct source tags ([LS], [S], [A])
+    vim.api.nvim_set_hl(0, 'BlinkCmpSource', { fg = '#828997' })
+
+    -- Grey highlight for selected item (CoC style)
+    vim.api.nvim_set_hl(0, 'BlinkCmpMenuSelection', { bg = '#3e4451', fg = '#ffffff' })
+  end,
+
+  ---@module 'blink.cmp'
+  ---@type blink.cmp.Config
+  opts = {
+    keymap = {
+      preset = 'none',
+      ['<CR>'] = { 'accept', 'fallback' },
+      ['<Tab>'] = { 'select_next', 'fallback' },
+      ['<S-Tab>'] = { 'select_prev', 'fallback' },
+      ['<Up>'] = { 'select_prev', 'fallback' },
+      ['<Down>'] = { 'select_next', 'fallback' },
+      ['<C-e>'] = { 'hide' },
     },
-    dependencies = {
-      ---@module 'snacks' <- Loads `snacks.nvim` types for configuration intellisense.
-      { "folke/snacks.nvim", opts = { input = {}, picker = {}, terminal = {} } },
+
+    appearance = {
+      nerd_font_variant = 'mono',
     },
-    config = function()
-      vim.g.opencode_opts = {
-      }
 
-      vim.o.autoread = true
+    completion = {
+      keyword = { range = 'full' },
 
-      -- Recommended/example keymaps.
-      vim.keymap.set({ "n", "x" }, "<C-o>", function() require("opencode").ask("@this: ", { submit = true }) end,
-        { desc = "Ask opencode…" })
-      vim.keymap.set({ "n", "x" }, "<C-x>", function() require("opencode").select() end,
-        { desc = "Execute opencode action…" })
-      vim.keymap.set({ "n", "t" }, "<C-.>", function() require("opencode").toggle() end,
-        { desc = "Toggle opencode" })
+      list = {
+        selection = {
+          preselect = true,
+          auto_insert = false,
+        },
+      },
 
-      vim.keymap.set({ "n", "x" }, "go", function() return require("opencode").operator("@this ") end,
-        { desc = "Add range to opencode", expr = true })
-      vim.keymap.set("n", "goo", function() return require("opencode").operator("@this ") .. "_" end,
-        { desc = "Add line to opencode", expr = true })
+      documentation = {
+        auto_show = true,
+        auto_show_delay_ms = 150,
+      },
 
-      vim.keymap.set("n", "<S-C-u>", function() require("opencode").command("session.half.page.up") end,
-        { desc = "Scroll opencode up" })
-      vim.keymap.set("n", "<S-C-d>", function() require("opencode").command("session.half.page.down") end,
-        { desc = "Scroll opencode down" })
+      ghost_text = {
+        enabled = true,
+      },
 
-      vim.keymap.set("n", "+", "<C-a>", { desc = "Increment under cursor", noremap = true })
-      vim.keymap.set("n", "-", "<C-x>", { desc = "Decrement under cursor", noremap = true })
-    end,
-  },
-  {
-    'kkrampis/codex.nvim',
-    lazy = true,
-    cmd = { 'Codex', 'CodexToggle' },
-    keys = {
-      {
-        '<leader>cc',
-        function() require('codex').toggle() end,
-        desc = 'Toggle Codex popup or side-panel',
-        mode = { 'n', 't' }
+      menu = {
+        treesitter_highlighting = false,
+        draw = {
+          -- Disabled treesitter rendering to avoid the 'range' nil method error
+          treesitter = {},
+          columns = {
+            { "label",      "label_description", gap = 1 },
+            { "kind_icon" },
+            { "source_name" },
+          },
+          components = {
+            kind_icon = {
+              text = function(ctx)
+                local kinds = {
+                  Function = 'f',
+                  Method = 'm',
+                  Variable = 'v',
+                  Field = 'm',
+                  Property = 'p',
+                  Class = 'c',
+                  Interface = 'i',
+                  Module = 'M',
+                  Unit = 'u',
+                  Value = 'v',
+                  Enum = 'e',
+                  Keyword = 'k',
+                  Snippet = 's',
+                  Color = 'c',
+                  File = 'F',
+                  Reference = 'r',
+                  Folder = 'D',
+                  EnumMember = 'm',
+                  Constant = 'c',
+                  Struct = 's',
+                  Event = 'e',
+                  Operator = 'o',
+                  TypeParameter = 't',
+                }
+                return kinds[ctx.kind] or ctx.kind:sub(1, 1):lower()
+              end,
+              highlight = function(ctx)
+                return ctx.kind_hl
+              end,
+            },
+
+            source_name = {
+              text = function(ctx)
+                local names = {
+                  lsp = '[LS]',
+                  buffer = '[A]',
+                  snippets = '[S]',
+                  path = '[P]',
+                }
+                return names[ctx.source_id] or ('[' .. ctx.source_id:sub(1, 2):upper() .. ']')
+              end,
+              highlight = 'BlinkCmpSource',
+            },
+          },
+        },
       },
     },
-    opts = {
-      keymaps     = {
-        toggle = nil,
-        quit = '<C-q>',
+
+    signature = {
+      enabled = true,
+      window = {
+        direction_priority = { 'n', 's' },
       },
-      border      = 'rounded',
-      width       = 0.8,
-      height      = 0.8,
-      model       = nil,
-      autoinstall = true,
-      panel       = false,
-      use_buffer  = false,
+    },
+
+    sources = {
+      default = { 'lsp', 'path', 'snippets', 'buffer' },
+      providers = {
+        buffer = {
+          min_keyword_length = 3,
+        },
+      },
     },
   },
-  {
-    "Exafunction/codeium.vim",
-    lazy = true,
-    dependencies = {
-      "nvim-lua/plenary.nvim",
-    },
-    event = "InsertEnter",
-    config = function()
-      vim.g.codeium_no_map_tab = 1
-
-      vim.keymap.set("i", "<C-g>", function()
-        return vim.fn["codeium#Accept"]()
-      end, { expr = true, silent = true })
-
-      vim.api.nvim_create_autocmd("VimLeavePre", {
-        callback = function()
-          pcall(function() vim.fn["codeium#Clear"]() end)
-          os.execute("pkill -f codeium_language_server")
-        end,
-      })
-    end,
-  },
-
-
 }
