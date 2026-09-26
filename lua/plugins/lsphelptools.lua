@@ -114,101 +114,234 @@ return {
     end,
   },
   -- ~/.config/nvim/lua/plugins/dap.lua
+  -- {
+  --   {
+  --     "mfussenegger/nvim-dap",
+  --     dependencies = {
+  --       "rcarriga/nvim-dap-ui",
+  --       "nvim-neotest/nvim-nio",
+  --     },
+  --     config = function()
+  --       local dap = require("dap")
+  --       local dapui = require("dapui")
+  --
+  --       local jdwp_port = 5005
+  --       local job_id = nil
+  --
+  --       dapui.setup({
+  --         layouts = {
+  --           {
+  --             elements = {
+  --               { id = "scopes",      size = 0.35 },
+  --               { id = "breakpoints", size = 0.20 },
+  --               { id = "stacks",      size = 0.20 },
+  --               { id = "watches",     size = 0.25 },
+  --             },
+  --             size = 45,
+  --             position = "left",
+  --           },
+  --           {
+  --             elements = {
+  --               { id = "repl",    size = 0.6 },
+  --               { id = "console", size = 0.4 },
+  --             },
+  --             size = 12,
+  --             position = "bottom",
+  --           },
+  --         },
+  --       })
+  --
+  --       -- Same breakpoint sign colors/symbols as the old Vimspector setup, just
+  --       -- pointed at nvim-dap's native sign names instead of Vimspector's.
+  --       vim.api.nvim_set_hl(0, "VimspectorBreakpointGreen", { fg = "#9ece6a", bold = true })
+  --       vim.api.nvim_set_hl(0, "VimspectorBreakpointRed", { fg = "#f7768e", bold = true })
+  --       vim.api.nvim_set_hl(0, "VimspectorPCBreakpointRed", { fg = "#f7768e", bg = "#3b4252", bold = true })
+  --
+  --       -- NOTE: swap these for your real Nerd Font glyphs if you have specific
+  --       -- ones in mind — these are plain-unicode placeholders that render in
+  --       -- any font.
+  --       vim.opt.signcolumn = "yes"
+  --       vim.fn.sign_define("DapBreakpoint", { text = "●", texthl = "VimspectorBreakpointGreen" })
+  --       vim.fn.sign_define("DapBreakpointRejected", { text = "○", texthl = "Comment" })
+  --       vim.fn.sign_define("DapStopped", { text = "▶", texthl = "VimspectorPCBreakpointRed", linehl = "CursorLine" })
+  --
+  --       dap.listeners.after.event_initialized["dapui_config"] = function() dapui.open() end
+  --       dap.listeners.before.event_terminated["dapui_config"] = function() dapui.close() end
+  --       dap.listeners.before.event_exited["dapui_config"] = function() dapui.close() end
+  --
+  --       -- One-shot TCP check for whether the JVM's JDWP agent is listening yet.
+  --       local function is_port_open(port, cb)
+  --         local sock = vim.loop.new_tcp()
+  --         -- sock:connect's callback fires in libuv's fast event context, where
+  --         -- calling vimscript functions (like CocActionAsync, further down the
+  --         -- chain) is not allowed. vim.schedule_wrap defers it to the main loop.
+  --         sock:connect(
+  --           "127.0.0.1",
+  --           port,
+  --           vim.schedule_wrap(function(err)
+  --             sock:close()
+  --             cb(err == nil)
+  --           end)
+  --         )
+  --       end
+  --
+  --       local function wait_for_port(port, timeout_ms, cb)
+  --         local waited = 0
+  --         local interval = 400
+  --         local timer = vim.loop.new_timer()
+  --         timer:start(
+  --           0,
+  --           interval,
+  --           vim.schedule_wrap(function()
+  --             is_port_open(port, function(open)
+  --               if open then
+  --                 timer:stop()
+  --                 timer:close()
+  --                 cb(true)
+  --               elseif waited >= timeout_ms then
+  --                 timer:stop()
+  --                 timer:close()
+  --                 cb(false)
+  --               end
+  --               waited = waited + interval
+  --             end)
+  --           end)
+  --         )
+  --       end
+  --
+  --       -- Launches the Spring Boot app (if not already running) with the JDWP
+  --       -- agent enabled, then waits until the debug port is actually open
+  --       -- before calling `cb`, so we never attach before the JVM is ready.
+  --       local function ensure_spring_boot_running(cb)
+  --         if job_id ~= nil then
+  --           cb()
+  --           return
+  --         end
+  --
+  --         vim.notify("Starting Spring Boot app...", vim.log.levels.INFO)
+  --         job_id = vim.fn.jobstart(
+  --           string.format(
+  --             [[mvn spring-boot:run -Dspring-boot.run.jvmArguments="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=%d"]],
+  --             jdwp_port
+  --           ),
+  --           {
+  --             on_exit = function()
+  --               job_id = nil
+  --             end,
+  --             on_stderr = function(_, data)
+  --               -- surface build/startup errors in :messages instead of swallowing them
+  --               for _, line in ipairs(data) do
+  --                 if line ~= "" then
+  --                   vim.schedule(function() print("[spring-boot] " .. line) end)
+  --                 end
+  --               end
+  --             end,
+  --           }
+  --         )
+  --
+  --         wait_for_port(jdwp_port, 60000, function(ok)
+  --           if not ok then
+  --             vim.notify("Timed out waiting for Spring Boot JDWP port " .. jdwp_port, vim.log.levels.ERROR)
+  --           end
+  --           cb()
+  --         end)
+  --       end
+  --
+  --       -- Kill the app when the debug session ends via a DAP event, so
+  --       -- re-running DapContinue starts a clean instance instead of erroring
+  --       -- on a port already in use.
+  --       dap.listeners.before.event_terminated["springboot_kill"] = function()
+  --         if job_id then
+  --           vim.fn.jobstop(job_id)
+  --           job_id = nil
+  --         end
+  --       end
+  --       dap.listeners.before.event_exited["springboot_kill"] = function()
+  --         if job_id then
+  --           vim.fn.jobstop(job_id)
+  --           job_id = nil
+  --         end
+  --       end
+  --
+  --       -- Directly tears everything down instead of relying solely on the DAP
+  --       -- adapter to send a clean "terminated"/"exited" event — attach-style
+  --       -- sessions through coc-java's debug server don't always send one.
+  --       local function stop_debugging()
+  --         pcall(function() dap.terminate() end)
+  --         dapui.close()
+  --         if job_id then
+  --           vim.fn.jobstop(job_id)
+  --           job_id = nil
+  --         end
+  --       end
+  --
+  --       dap.adapters.java = function(callback)
+  --         ensure_spring_boot_running(function()
+  --           vim.fn.CocActionAsync("runCommand", "vscode.java.startDebugSession", function(err, port)
+  --             -- coc.nvim reports "no error" as vim.NIL, not Lua nil, so guard for both.
+  --             if err ~= nil and err ~= vim.NIL then
+  --               vim.notify("Java debug session failed: " .. vim.inspect(err), vim.log.levels.ERROR)
+  --               return
+  --             end
+  --             if port == nil or port == vim.NIL then
+  --               vim.notify("Java debug session returned no port", vim.log.levels.ERROR)
+  --               return
+  --             end
+  --             callback({ type = "server", host = "127.0.0.1", port = tonumber(port) })
+  --           end)
+  --         end)
+  --       end
+  --
+  --       dap.configurations.java = {
+  --         {
+  --           type = "java",
+  --           request = "attach",
+  --           name = "Debug Spring Boot (auto-start)",
+  --           hostName = "127.0.0.1",
+  --           port = jdwp_port,
+  --         },
+  --       }
+  --
+  --       -- Keymaps live here (instead of lazy.nvim's `keys` field) so they can
+  --       -- close over job_id/stop_debugging, which are local to this config().
+  --       vim.keymap.set("n", "<leader>db", dap.toggle_breakpoint, { desc = "Toggle Breakpoint" })
+  --       vim.keymap.set("n", "<leader>vc", dap.restart, { desc = "Restart Debugging" })
+  --       vim.keymap.set("n", "<leader>dc", dap.continue, { desc = "Continue Debugging" })
+  --       vim.keymap.set("n", "<leader>di", dap.step_into, { desc = "Step Into" })
+  --       vim.keymap.set("n", "<leader>do", dap.step_over, { desc = "Step Over" })
+  --       vim.keymap.set("n", "<leader>dq", dap.disconnect, { desc = "Quit/Disconnect Debugging" })
+  --       vim.keymap.set("n", "<leader>dX", dap.clear_breakpoints, { desc = "Clear Breakpoints" })
+  --       -- The only mapping that fully terminates the session (kills the
+  --       -- Spring Boot job) AND closes the dapui windows.
+  --       vim.keymap.set("n", "<leader>dt", stop_debugging, { desc = "Terminate & Close UI" })
+  --     end,
+  --   },
+  -- }
+  -- ,
   {
-    "mfussenegger/nvim-dap",
-    dependencies = {
-      "rcarriga/nvim-dap-ui",
-      "nvim-neotest/nvim-nio",
-      "theHamsta/nvim-dap-virtual-text",
-    },
+    "puremourning/vimspector",
+    cmd = { "VimspectorInstall", "VimspectorUpdate" },
     keys = {
-      { "<F5>",       function() require("dap").continue() end,                                             desc = "DAP Continue" },
-      { "<F10>",      function() require("dap").step_over() end,                                            desc = "DAP Step Over" },
-      { "<F11>",      function() require("dap").step_into() end,                                            desc = "DAP Step Into" },
-      { "<F12>",      function() require("dap").step_out() end,                                             desc = "DAP Step Out" },
-      { "<leader>b",  function() require("dap").toggle_breakpoint() end,                                    desc = "DAP Toggle Breakpoint" },
-      { "<leader>B",  function() require("dap").set_breakpoint(vim.fn.input("Breakpoint condition: ")) end, desc = "DAP Conditional Breakpoint" },
-      { "<leader>du", function() require("dapui").toggle() end,                                             desc = "DAP UI Toggle" },
+      { "<leader>vsj", ":CocCommand java.debug.vimspector.start<CR>", desc = "Start Java Debugging" },
+      { "<leader>db",  "<cmd>call vimspector#ToggleBreakpoint()<cr>", desc = "Toggle Breakpoint" },
+      { "<leader>vc",  "<cmd>VimspectorReset<CR>",                    desc = "Reset Vimspector" },
+      { "<leader>dc",  "<cmd>call vimspector#Continue()<cr>",         desc = "Continue Debugging" },
+      { "<leader>di",  "<cmd>call vimspector#StepInto()<cr>",         desc = "Step Into" },
+      { "<leader>do",  "<cmd>call vimspector#StepOver()<cr>",         desc = "Step Over" },
+      { "<leader>dq",  "<cmd>call vimspector#Reset()<cr>",            desc = "Quit/Reset Debugging" },
+      { "<leader>dX",  "<cmd>call vimspector#ClearBreakpoints()<cr>", desc = "Clear Breakpoints" },
     },
     config = function()
-      local dap = require("dap")
-      local dapui = require("dapui")
+      vim.g.vimspector_enable_mappings = 'HUMAN'
+      vim.api.nvim_set_hl(0, 'VimspectorBreakpointGreen', { fg = '#9ece6a', bold = true })
+      vim.api.nvim_set_hl(0, 'VimspectorBreakpointRed', { fg = '#f7768e', bold = true })
+      vim.api.nvim_set_hl(0, 'VimspectorPCBreakpointRed', { fg = '#f7768e', bg = '#3b4252', bold = true })
 
-      -- Setup UI and Virtual Text
-      dapui.setup()
-      require("nvim-dap-virtual-text").setup()
-
-      -- Automatically open/close DAP UI on session events
-      dap.listeners.after.event_initialized["dapui_config"] = function()
-        dapui.open()
-      end
-      dap.listeners.before.event_terminated["dapui_config"] = function()
-        dapui.close()
-      end
-      dap.listeners.before.event_exited["dapui_config"] = function()
-        dapui.close()
-      end
-
-      -- -------------------------------------------------------------
-      -- coc-java Debug Adapter Handler (Non-blocking via CocActionAsync)
-      -- -------------------------------------------------------------
-      dap.adapters.java = function(callback, config)
-        local success, port = pcall(vim.fn["coc#rpc#request"], "executeCommand", { "vscode.java.startDebugSession" })
-        if not success or not port then
-          vim.notify("coc-java DAP Error: Could not start debug session", vim.log.levels.ERROR)
-          return
-        end
-
-        callback({
-          type = "server",
-          host = "127.0.0.1",
-          port = port,
-        })
-      end
-
-      -- Java DAP Configurations
-      dap.configurations.java = {
-        {
-          type = "java",
-          request = "launch",
-          name = "Debug (coc-java)",
-          mainClass = "${file}",
-          projectName = "${workspaceFolderBasename}",
-        },
-        {
-          type = "java",
-          request = "attach",
-          name = "Attach Remote JVM (Port 5005)",
-          hostName = "127.0.0.1",
-          port = 5005,
-        },
-      }
+      vim.fn.sign_define('vimspectorBP', { text = '', texthl = 'VimspectorBreakpointGreen' })
+      vim.fn.sign_define('vimspectorBPDisabled', { text = '', texthl = 'Comment' })
+      vim.fn.sign_define('vimspectorPCBP', { text = '', texthl = 'VimspectorPCBreakpointRed', linehl = 'CursorLine' })
     end,
   },
-  -- {
-  --   "puremourning/vimspector",
-  --   cmd = { "VimspectorInstall", "VimspectorUpdate" },
-  --   keys = {
-  --     { "<leader>vsj", ":CocCommand java.debug.vimspector.start<CR>", desc = "Start Java Debugging" },
-  --     { "<leader>db",  "<cmd>call vimspector#ToggleBreakpoint()<cr>", desc = "Toggle Breakpoint" },
-  --     { "<leader>vc",  "<cmd>VimspectorReset<CR>",                    desc = "Reset Vimspector" },
-  --     { "<leader>dc",  "<cmd>call vimspector#Continue()<cr>",         desc = "Continue Debugging" },
-  --     { "<leader>di",  "<cmd>call vimspector#StepInto()<cr>",         desc = "Step Into" },
-  --     { "<leader>do",  "<cmd>call vimspector#StepOver()<cr>",         desc = "Step Over" },
-  --     { "<leader>dq",  "<cmd>call vimspector#Reset()<cr>",            desc = "Quit/Reset Debugging" },
-  --     { "<leader>dX",  "<cmd>call vimspector#ClearBreakpoints()<cr>", desc = "Clear Breakpoints" },
-  --   },
-  --   config = function()
-  --     vim.g.vimspector_enable_mappings = 'HUMAN'
-  --     vim.api.nvim_set_hl(0, 'VimspectorBreakpointGreen', { fg = '#9ece6a', bold = true })
-  --     vim.api.nvim_set_hl(0, 'VimspectorBreakpointRed', { fg = '#f7768e', bold = true })
-  --     vim.api.nvim_set_hl(0, 'VimspectorPCBreakpointRed', { fg = '#f7768e', bg = '#3b4252', bold = true })
-  --
-  --     vim.fn.sign_define('vimspectorBP', { text = '', texthl = 'VimspectorBreakpointGreen' })
-  --     vim.fn.sign_define('vimspectorBPDisabled', { text = '', texthl = 'Comment' })
-  --     vim.fn.sign_define('vimspectorPCBP', { text = '', texthl = 'VimspectorPCBreakpointRed', linehl = 'CursorLine' })
-  --   end,
-  -- },
   {
     "williamboman/mason.nvim",
     lazy = true,
