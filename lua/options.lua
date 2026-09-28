@@ -291,7 +291,6 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 --tabline
-local ok, devicons = pcall(require, "nvim-web-devicons")
 local icon_hl_cache = {}
 
 -- highlight group with the icon's color but the tab's background
@@ -313,6 +312,9 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 function _G.buftabline()
   local s = {}
   local current = vim.api.nvim_get_current_buf()
+  -- options.lua is loaded before lazy.nvim adds plugins to the runtime path.
+  -- Resolve devicons when the tabline is rendered instead of only at startup.
+  local has_devicons, devicons = pcall(require, "nvim-web-devicons")
 
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     if vim.bo[buf].buflisted then
@@ -322,7 +324,7 @@ function _G.buftabline()
       local hl = selected and "%#TabLineSel#" or "%#TabLine#"
 
       local icon_part = ""
-      if ok and name ~= "" then
+      if has_devicons and name ~= "" then
         local icon, color = devicons.get_icon_color(name, vim.fn.fnamemodify(name, ":e"), { default = true })
         if icon then
           icon_part = color and ("%#" .. icon_hl(color, selected) .. "#" .. icon .. hl .. " ") or (icon .. " ")
