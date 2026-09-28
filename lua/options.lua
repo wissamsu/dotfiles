@@ -485,6 +485,9 @@ end
 vim.api.nvim_create_autocmd("BufWipeout", {
   callback = function(args) tabline_cache[args.buf] = nil end,
 })
+vim.api.nvim_create_autocmd({ "BufModifiedSet", "BufWritePost" }, {
+  callback = function() vim.cmd.redrawtabline() end,
+})
 
 function _G.buftabline()
   local s = {}
@@ -501,7 +504,7 @@ function _G.buftabline()
 
       local name = info.name
       name = name:gsub("%%", "%%%%")
-      if vim.bo[buf].modified then name = name .. " +" end
+      if vim.bo[buf].modified then name = name .. " ●" end
 
       -- %<buf>@v:lua.fn@ makes the label clickable
       s[#s + 1] = string.format("%s%%%d@v:lua.buftab_click@ %s%s %%X", hl, buf, icon_part, name)

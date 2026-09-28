@@ -36,6 +36,49 @@ local function resolve_command(mason_name, system_names)
   -- launch error if the server is not installed yet.
   return mason_path
 end
+-- C / C++ (clangd)
+vim.lsp.config('clangd', {
+  cmd = {
+    resolve_command('clangd'),
+    '--background-index',
+    '--clang-tidy',
+    '--header-insertion=iwyu',
+    '--completion-style=detailed',
+    '--function-arg-placeholders=false',
+  },
+  filetypes = { 'c', 'cpp', 'objc', 'objcpp', 'cuda' },
+  root_markers = {
+    '.clangd',
+    '.clang-tidy',
+    '.clang-format',
+    'compile_commands.json',
+    'compile_flags.txt',
+    'configure.ac',
+    'CMakeLists.txt',
+    'Makefile',
+    '.git',
+  },
+  capabilities = vim.tbl_deep_extend(
+    'force',
+    vim.lsp.protocol.make_client_capabilities(),
+    { offsetEncoding = { 'utf-16' } }
+  ),
+})
+-- CMake (neocmakelsp)
+vim.lsp.config('neocmakelsp', {
+  cmd = { resolve_command('neocmakelsp'), 'stdio' },
+  filetypes = { 'cmake' },
+  root_markers = {
+    'CMakePresets.json',
+    'CMakeLists.txt',
+    '.git',
+  },
+  init_options = {
+    format = { enable = true },
+    lint = { enable = true },
+    scan_cmake_in_package = true, -- also scan cmake files from installed packages for completion
+  },
+})
 
 -- Dockerfile
 vim.lsp.config('dockerls', {
@@ -78,14 +121,31 @@ vim.api.nvim_create_autocmd('LspAttach', {
       return
     end
 
-    -- Clear any previous autocmd for this buffer, then add a fresh one
-    local group = vim.api.nvim_create_augroup('LspFormat' .. args.buf, { clear = true })
-    vim.api.nvim_create_autocmd('BufWritePre', {
+    local bufnr = args.buf
+    local group = vim.api.nvim_create_augroup('LspFormat' .. bufnr, { clear = true })
+
+    vim.api.nvim_create_autocmd('BufWritePost', {
       group = group,
-      buffer = args.buf,
+      buffer = bufnr,
       callback = function()
-        -- Do not block the save path while a language server formats.
-        vim.lsp.buf.format({ bufnr = args.buf, id = client.id, async = true })
+        local tick = vim.api.nvim_buf_get_changedtick(bufnr)
+
+        local params = vim.lsp.util.make_formatting_params({})
+        params.textDocument = vim.lsp.util.make_text_document_params(bufnr)
+
+        client:request('textDocument/formatting', params, function(err, edits)
+          if err or not edits or #edits == 0 then return end
+          if not vim.api.nvim_buf_is_valid(bufnr) then return end
+          -- you kept typing while the formatter ran, so the edits are stale
+          if vim.api.nvim_buf_get_changedtick(bufnr) ~= tick then return end
+
+          vim.api.nvim_buf_call(bufnr, function()
+            local view = vim.fn.winsaveview()
+            vim.lsp.util.apply_text_edits(edits, bufnr, client.offset_encoding)
+            vim.fn.winrestview(view)
+            vim.cmd('silent noautocmd write')
+          end)
+        end, bufnr)
       end,
     })
   end,
@@ -556,4 +616,6 @@ vim.lsp.enable({
   'kotlin_language_server',
   'jdtls',
   'springls',
+  'clangd',
+  'neocmakelsp',
 })
