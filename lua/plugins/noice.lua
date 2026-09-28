@@ -1,13 +1,11 @@
 return {
   "rachartier/tiny-cmdline.nvim",
-  init = function()
-    require("vim._core.ui2").enable({
-      msg = { target = "msg", timeout = 4000 },
-    })
-  end,
+  event = "VeryLazy",
   config = function()
     require("tiny-cmdline").setup({
       width = { value = "28%" },
+      -- Render `/` and `?` searches in the tiny floating cmdline too.
+      native_types = {},
       on_reposition = require("tiny-cmdline").adapters.blink,
     })
 

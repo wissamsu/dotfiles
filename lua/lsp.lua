@@ -21,9 +21,25 @@ vim.lsp.config('lua_ls', {
 
 local mason_bin = vim.fn.stdpath('data') .. '/mason/bin/'
 
+local function resolve_command(mason_name, system_names)
+  local mason_path = mason_bin .. mason_name
+  if vim.fn.executable(mason_path) == 1 then
+    return mason_path
+  end
+
+  for _, name in ipairs(system_names or { mason_name }) do
+    local path = vim.fn.exepath(name)
+    if path ~= '' then return path end
+  end
+
+  -- Keep the expected command name in the config so Neovim reports a useful
+  -- launch error if the server is not installed yet.
+  return mason_path
+end
+
 -- Dockerfile
 vim.lsp.config('dockerls', {
-  cmd = { mason_bin .. 'docker-langserver', '--stdio' },
+  cmd = { resolve_command('docker-langserver'), '--stdio' },
   filetypes = { 'dockerfile' },
   root_markers = { 'Dockerfile', '.git' },
 })
@@ -31,16 +47,28 @@ vim.lsp.config('dockerls', {
 
 -- docker-compose.yml / compose.yaml
 vim.lsp.config('docker_compose_ls', {
-  cmd = { mason_bin .. 'docker-compose-langserver', '--stdio' },
+  cmd = { resolve_command('docker-compose-langserver'), '--stdio' },
   filetypes = { 'yaml.docker-compose' },
   root_markers = { 'docker-compose.yaml', 'docker-compose.yml', 'compose.yaml', 'compose.yml', '.git' },
 })
 
 vim.lsp.config('terraformls', {
-  cmd = { mason_bin .. 'terraform-ls', 'serve' },
-  filetypes = { 'terraform', 'terraform-vars' },
+  cmd = { resolve_command('terraform-ls'), 'serve' },
+  filetypes = { 'terraform', 'terraform-vars', 'tf', 'tfvars' },
+  get_language_id = function(_, filetype)
+    if filetype == 'tf' then return 'terraform' end
+    if filetype == 'tfvars' then return 'terraform-vars' end
+    return filetype
+  end,
   root_markers = { '.terraform', '.git' },
 })
+
+local kotlin_cmd = resolve_command('kotlin-language-server', {
+  'kotlin-language-server',
+  'kotlin-lsp',
+  'kmp-lsp',
+})
+local kotlin_args = vim.fs.basename(kotlin_cmd) == 'kotlin-lsp' and { '--stdio' } or {}
 
 vim.api.nvim_create_autocmd('LspAttach', {
   group = vim.api.nvim_create_augroup('LspFormatOnSave', { clear = true }),
@@ -56,14 +84,15 @@ vim.api.nvim_create_autocmd('LspAttach', {
       group = group,
       buffer = args.buf,
       callback = function()
-        vim.lsp.buf.format({ bufnr = args.buf, id = client.id, timeout_ms = 2000 })
+        -- Do not block the save path while a language server formats.
+        vim.lsp.buf.format({ bufnr = args.buf, id = client.id, async = true })
       end,
     })
   end,
 })
 
 vim.lsp.config('kotlin_language_server', {
-  cmd = { mason_bin .. 'kotlin-language-server' },
+  cmd = vim.list_extend({ kotlin_cmd }, kotlin_args),
   filetypes = { 'kotlin' },
   root_markers = {
     'settings.gradle', 'settings.gradle.kts',
@@ -182,27 +211,145 @@ vim.lsp.config('jdtls', {
   settings = {
     java = {
       eclipse = {
-        downloadSources = true,
+        downloadSources = false,
       },
       maven = {
-        downloadSources = true,
+        downloadSources = false,
       },
       implementationsCodeLens = {
-        enabled = true,
+        enabled = false,
       },
       referencesCodeLens = {
-        enabled = true,
+        enabled = false,
       },
       references = {
         includeDecompiledSources = true,
       },
       inlayHints = {
         parameterNames = {
-          enabled = 'all',
+          enabled = 'none',
         },
       },
     },
   },
+})
+
+-- Organize imports after saving instead of using JDTLS's synchronous
+-- `willSaveWaitUntil` save action. The edit is written back automatically,
+-- while the initial `:w` returns immediately.
+local function organize_jdtls_imports_async(client, bufnr)
+  if not vim.api.nvim_buf_is_valid(bufnr) or vim.b[bufnr].jdtls_organize_imports_pending then
+    return
+  end
+
+  vim.b[bufnr].jdtls_organize_imports_pending = true
+  local saved_tick = vim.api.nvim_buf_get_changedtick(bufnr)
+
+  local function finish()
+    if vim.api.nvim_buf_is_valid(bufnr) then
+      vim.b[bufnr].jdtls_organize_imports_pending = false
+    end
+  end
+
+  local function save_edit()
+    if not vim.api.nvim_buf_is_valid(bufnr) then
+      finish()
+      return
+    end
+
+    if vim.bo[bufnr].modified then
+      vim.api.nvim_buf_call(bufnr, function()
+        vim.cmd('silent noautocmd update')
+      end)
+    end
+    finish()
+  end
+
+  local function apply_action(action)
+    if not vim.api.nvim_buf_is_valid(bufnr)
+        or vim.api.nvim_buf_get_changedtick(bufnr) ~= saved_tick
+        or action.disabled then
+      finish()
+      return
+    end
+
+    if action.edit then
+      vim.lsp.util.apply_workspace_edit(action.edit, client.offset_encoding)
+    end
+
+    if action.command then
+      local command = type(action.command) == 'table' and action.command or action
+      client:exec_cmd(command, { bufnr = bufnr }, function()
+        vim.schedule(save_edit)
+      end)
+    else
+      save_edit()
+    end
+  end
+
+  local params = vim.lsp.util.make_range_params(0, client.offset_encoding)
+  params.context = {
+    only = { 'source.organizeImports' },
+    diagnostics = {},
+  }
+
+  client:request('textDocument/codeAction', params, function(err, actions)
+    vim.schedule(function()
+      if err or not actions then
+        finish()
+        return
+      end
+
+      local action
+      for _, candidate in ipairs(actions) do
+        local kind = candidate.kind or ''
+        if not candidate.disabled
+            and (kind == 'source.organizeImports'
+              or vim.startswith(kind, 'source.organizeImports.')) then
+          action = candidate
+          break
+        end
+      end
+
+      if not action then
+        finish()
+        return
+      end
+
+      if not action.edit and not action.command and client:supports_method('codeAction/resolve') then
+        client:request('codeAction/resolve', action, function(resolve_err, resolved)
+          vim.schedule(function()
+            if resolve_err or not resolved then
+              finish()
+            else
+              apply_action(resolved)
+            end
+          end)
+        end, bufnr)
+      else
+        apply_action(action)
+      end
+    end)
+  end, bufnr)
+end
+
+vim.api.nvim_create_autocmd('LspAttach', {
+  group = vim.api.nvim_create_augroup('JdtlsOrganizeImportsOnSave', { clear = true }),
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if not client or client.name ~= 'jdtls' then
+      return
+    end
+
+    local group = vim.api.nvim_create_augroup('JdtlsOrganizeImports' .. args.buf, { clear = true })
+    vim.api.nvim_create_autocmd('BufWritePost', {
+      group = group,
+      buffer = args.buf,
+      callback = function()
+        organize_jdtls_imports_async(client, args.buf)
+      end,
+    })
+  end,
 })
 
 -- menu: no "noselect" means the first item is always selected;
@@ -347,7 +494,14 @@ if spring_ls_jar then
       '-jar',
       spring_ls_jar,
     },
-    root_markers = root_markers,
+    -- Do not start Spring LS for arbitrary YAML/properties files in any Git
+    -- repository. A build marker is required so this is limited to Java/Spring
+    -- projects.
+    root_markers = {
+      'gradlew', 'build.gradle', 'build.gradle.kts',
+      'mvnw', 'pom.xml',
+      'settings.gradle', 'settings.gradle.kts',
+    },
     -- Neovim detects application*.properties as `jproperties`; include both
     -- that and the generic name. Some setups expose .yml as `yml` as well.
     filetypes = { 'java', 'properties', 'jproperties', 'yaml', 'yml' },

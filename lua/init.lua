@@ -80,9 +80,9 @@ require("lazy").setup("plugins", {
 --   -- Executes the fold toggle command
 --   vim.cmd("normal! za")
 -- end, { noremap = true, silent = true, desc = "Toggle fold with origami" })
--- 1. Enable native folding and set it to use Treesitter (falls back gracefully)
-vim.opt.foldmethod = "expr"
-vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+-- Folding and Treesitter are enabled locally for supported, reasonably sized
+-- code buffers in options.lua. Keep special and large buffers lightweight.
+vim.opt.foldmethod = "manual"
 vim.opt.foldenable = true
 vim.opt.foldlevel = 99 -- Keeps files open by default so you can choose what to fold
 

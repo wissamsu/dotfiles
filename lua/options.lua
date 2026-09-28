@@ -76,27 +76,47 @@ end
 setup_hl()
 vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_hl })
 
-_G.statusline_diagnostics = function()
-  local counts = vim.diagnostic.count(0)
-  local err    = counts[vim.diagnostic.severity.ERROR] or 0
-  local warn   = counts[vim.diagnostic.severity.WARN] or 0
-  local info   = counts[vim.diagnostic.severity.INFO] or 0
-  local hint   = counts[vim.diagnostic.severity.HINT] or 0
+local diagnostic_cache = {}
+local lsp_cache = {}
 
-  local parts  = {}
-  if err > 0 then
-    table.insert(parts, string.format("%%#StatusLineDiagError#● %d%%*", err))
+local function refresh_diagnostic_cache(buf)
+  local counts = vim.diagnostic.count(buf)
+  local parts = {}
+  local entries = {
+    { vim.diagnostic.severity.ERROR, "StatusLineDiagError", "●" },
+    { vim.diagnostic.severity.WARN, "StatusLineDiagWarn", "●" },
+    { vim.diagnostic.severity.INFO, "StatusLineDiagInfo", "●" },
+    { vim.diagnostic.severity.HINT, "StatusLineDiagHint", "●" },
+  }
+
+  for _, entry in ipairs(entries) do
+    local count = counts[entry[1]] or 0
+    if count > 0 then
+      parts[#parts + 1] = string.format("%%#%s#%s %d%%*", entry[2], entry[3], count)
+    end
   end
-  if warn > 0 then
-    table.insert(parts, string.format("%%#StatusLineDiagWarn#● %d%%*", warn))
+
+  diagnostic_cache[buf] = table.concat(parts, " ")
+end
+
+local function refresh_lsp_cache(buf)
+  local clients = vim.lsp.get_clients({ bufnr = buf })
+  if #clients == 0 then
+    lsp_cache[buf] = "%#StatusLineMuted#󰅛 No LSP%*"
+    return
   end
-  if info > 0 then
-    table.insert(parts, string.format("%%#StatusLineDiagInfo#● %d%%*", info))
+
+  local names = {}
+  for _, client in ipairs(clients) do
+    names[#names + 1] = client.name
   end
-  if hint > 0 then
-    table.insert(parts, string.format("%%#StatusLineDiagHint#● %d%%*", hint))
-  end
-  return table.concat(parts, " ")
+  lsp_cache[buf] = string.format("%%#StatusLineAccent#󰒋 %s%%*", table.concat(names, ", "))
+end
+
+_G.statusline_diagnostics = function()
+  local buf = vim.api.nvim_get_current_buf()
+  if diagnostic_cache[buf] == nil then refresh_diagnostic_cache(buf) end
+  return diagnostic_cache[buf]
 end
 -- Helper functions
 _G.statusline_mode = function()
@@ -107,22 +127,39 @@ end
 
 -- Get attached native LSP client names for active buffer
 _G.statusline_lsp = function()
-  local clients = vim.lsp.get_clients({ bufnr = 0 })
-  if #clients == 0 then
-    return "%#StatusLineMuted#󰅛 No LSP%*"
-  end
-
-  local names = {}
-  for _, client in ipairs(clients) do
-    table.insert(names, client.name)
-  end
-
-  return string.format("%%#StatusLineAccent#󰒋 %s%%*", table.concat(names, ", "))
+  local buf = vim.api.nvim_get_current_buf()
+  if lsp_cache[buf] == nil then refresh_lsp_cache(buf) end
+  return lsp_cache[buf]
 end
 
-vim.api.nvim_create_autocmd("DiagnosticChanged", {
-  callback = function()
+vim.api.nvim_create_autocmd({ "BufEnter", "DiagnosticChanged" }, {
+  callback = function(args)
+    refresh_diagnostic_cache(args.buf)
     vim.cmd("redrawstatus")
+  end,
+})
+
+vim.api.nvim_create_autocmd({ "BufEnter", "LspAttach", "LspDetach" }, {
+  callback = function(args)
+    local buf = args.buf
+    local refresh = function()
+      if vim.api.nvim_buf_is_valid(buf) then
+        refresh_lsp_cache(buf)
+        vim.cmd("redrawstatus")
+      end
+    end
+    if args.event == "LspDetach" then
+      vim.schedule(refresh)
+    else
+      refresh()
+    end
+  end,
+})
+
+vim.api.nvim_create_autocmd("BufWipeout", {
+  callback = function(args)
+    diagnostic_cache[args.buf] = nil
+    lsp_cache[args.buf] = nil
   end,
 })
 
@@ -229,17 +266,29 @@ vim.g.loaded_node_provider = 0
 -- })
 vim.diagnostic.config({
   virtual_text = true,
+  update_in_insert = false,
 })
 --gitsigns
 local ns, base = vim.api.nvim_create_namespace("gitdiff"), {}
+local render_timers = {}
+local max_diff_lines = 5000
+local max_diff_bytes = 512 * 1024
+
 for g, c in pairs({ GitDiffAdd = "#a6e3a1", GitDiffChange = "#f9e2af", GitDiffDelete = "#f38ba8" }) do
   vim.api.nvim_set_hl(0, g, { fg = c })
 end
 
 local function render(buf)
+  if not vim.api.nvim_buf_is_valid(buf) then return end
   vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
   if not base[buf] then return end
+
+  local line_count = vim.api.nvim_buf_line_count(buf)
+  if line_count > max_diff_lines then return end
+
   local cur = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n") .. "\n"
+  if #cur > max_diff_bytes then return end
+
   for _, h in ipairs(vim.diff(base[buf], cur, { result_type = "indices" })) do
     local ca, sb, cb = h[2], h[3], h[4]
     for l = sb, math.max(sb, sb + cb - 1) do
@@ -251,21 +300,67 @@ local function render(buf)
   end
 end
 
+local function schedule_render(buf)
+  if render_timers[buf] or not base[buf] then return end
+  render_timers[buf] = vim.defer_fn(function()
+    render_timers[buf] = nil
+    render(buf)
+  end, 200)
+end
+
+local function update_git_base(buf)
+  if not vim.api.nvim_buf_is_valid(buf) or vim.bo[buf].buftype ~= "" then return end
+
+  local f = vim.api.nvim_buf_get_name(buf)
+  if f == "" then return end
+  if vim.api.nvim_buf_line_count(buf) > max_diff_lines then
+    base[buf] = nil
+    vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+    return
+  end
+
+  local dir = vim.fs.dirname(f)
+  local basename = vim.fs.basename(f)
+  local git_file = ":./" .. basename
+
+  vim.system({ "git", "-C", dir, "show", git_file }, { text = true }, function(result)
+    vim.schedule(function()
+      if not vim.api.nvim_buf_is_valid(buf) or vim.api.nvim_buf_get_name(buf) ~= f then return end
+
+      if result.code == 0 and #(result.stdout or "") <= max_diff_bytes then
+        base[buf] = result.stdout or ""
+        render(buf)
+        return
+      end
+
+      vim.system({ "git", "-C", dir, "rev-parse", "--is-inside-work-tree" }, { text = true }, function(repo)
+        vim.schedule(function()
+          if not vim.api.nvim_buf_is_valid(buf) or vim.api.nvim_buf_get_name(buf) ~= f then return end
+          base[buf] = repo.code == 0 and "" or nil
+          render(buf)
+        end)
+      end)
+    end)
+  end)
+end
+
 vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "FocusGained" }, {
   callback = function(a)
-    local f = vim.api.nvim_buf_get_name(a.buf)
-    if f == "" or vim.bo[a.buf].buftype ~= "" then return end
-    local dir, out = vim.fs.dirname(f), nil
-    out = vim.fn.system({ "git", "-C", dir, "show", ":./" .. vim.fs.basename(f) })
-    if vim.v.shell_error ~= 0 then -- untracked if inside a repo, otherwise no signs
-      vim.fn.system({ "git", "-C", dir, "rev-parse", "--is-inside-work-tree" })
-      out = vim.v.shell_error == 0 and "" or nil
-    end
-    base[a.buf] = out
-    render(a.buf)
+    update_git_base(a.buf)
   end,
 })
-vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, { callback = function(a) render(a.buf) end })
+vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
+  callback = function(a) schedule_render(a.buf) end,
+})
+vim.api.nvim_create_autocmd("BufWipeout", {
+  callback = function(a)
+    if render_timers[a.buf] then
+      render_timers[a.buf]:stop()
+      render_timers[a.buf] = nil
+    end
+    base[a.buf] = nil
+  end,
+})
 --notifications
 local ok, ui = pcall(require, "vim._core.ui2")
 if not ok then ok, ui = pcall(require, "vim._extui") end
@@ -285,9 +380,30 @@ vim.opt.listchars = {
   tab = "│ ",
 }
 --treesitter
+local treesitter_filetypes = {
+  "c", "cpp", "css", "cmake", "go", "html", "java", "javascript",
+  "javascriptreact", "json", "lua", "python", "scss", "tsx", "typescript",
+  "typescriptreact", "xml", "yaml", "yml",
+}
+local max_treesitter_lines = 10000
+
 vim.api.nvim_create_autocmd("FileType", {
+  pattern = treesitter_filetypes,
   callback = function(args)
-    pcall(vim.treesitter.start, args.buf)
+    if vim.bo[args.buf].buftype ~= "" or vim.api.nvim_buf_line_count(args.buf) > max_treesitter_lines then
+      vim.opt_local.foldmethod = "manual"
+      return
+    end
+
+    local ok = pcall(vim.treesitter.start, args.buf)
+    if ok then
+      vim.opt_local.foldmethod = "expr"
+      vim.opt_local.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+      vim.opt_local.foldenable = true
+      vim.opt_local.foldlevel = 99
+    else
+      vim.opt_local.foldmethod = "manual"
+    end
   end,
 })
 --tabline
@@ -347,24 +463,43 @@ vim.api.nvim_create_autocmd("ColorScheme", {
   callback = function() icon_hl_cache = {} end,
 })
 
+local tabline_cache = {}
+
+local function tabline_info(buf)
+  local path = vim.api.nvim_buf_get_name(buf)
+  local cached = tabline_cache[buf]
+  if cached and cached.path == path then return cached end
+
+  local name = vim.fn.fnamemodify(path, ":t")
+  local info = {
+    path = path,
+    name = name == "" and "[No Name]" or name,
+    icon = file_icons[name:lower()]
+        or file_icons[vim.fn.fnamemodify(name, ":e"):lower()]
+        or file_icons.default,
+  }
+  tabline_cache[buf] = info
+  return info
+end
+
+vim.api.nvim_create_autocmd("BufWipeout", {
+  callback = function(args) tabline_cache[args.buf] = nil end,
+})
+
 function _G.buftabline()
   local s = {}
   local current = vim.api.nvim_get_current_buf()
 
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     if vim.bo[buf].buflisted then
-      local path = vim.api.nvim_buf_get_name(buf)
-      local name = vim.fn.fnamemodify(path, ":t")
+      local info = tabline_info(buf)
       local selected = buf == current
       local hl = selected and "%#TabLineSel#" or "%#TabLine#"
 
-      local icon_info = file_icons[name:lower()]
-        or file_icons[vim.fn.fnamemodify(name, ":e"):lower()]
-        or file_icons.default
-      local icon_part = "%#" .. icon_hl(icon_info.color, selected) .. "#"
-        .. icon_info.icon .. hl .. " "
+      local icon_part = "%#" .. icon_hl(info.icon.color, selected) .. "#"
+          .. info.icon.icon .. hl .. " "
 
-      if name == "" then name = "[No Name]" end
+      local name = info.name
       name = name:gsub("%%", "%%%%")
       if vim.bo[buf].modified then name = name .. " +" end
 
