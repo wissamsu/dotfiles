@@ -90,12 +90,7 @@ return {
 
     config = function()
       vim.g.codeium_no_map_tab = 1
-
-      local function set_hl()
-        vim.api.nvim_set_hl(0, "CodeiumSuggestion", { fg = "#89b4fa", italic = true })
-      end
-      set_hl()
-      vim.api.nvim_create_autocmd("ColorScheme", { callback = set_hl })
+      vim.g.codeium_render = true
 
       vim.keymap.set("i", "<C-g>", function()
         return vim.fn["codeium#Accept"]()
@@ -108,10 +103,17 @@ return {
         end,
       })
 
-      -- if you're still in insert mode when it loads, start suggesting right away
-      if vim.fn.mode() == "i" then
-        vim.cmd("silent! call codeium#Complete()")
-      end
+      -- Codeium loads after BufEnter, so start its server explicitly. Without
+      -- this, the first completion request has no server port to connect to.
+      pcall(vim.fn["codeium#command#StartLanguageServer"])
+
+      -- Give the server time to publish its local port, then request the first
+      -- suggestion if the buffer is still in insert mode.
+      vim.defer_fn(function()
+        if vim.fn.mode():sub(1, 1) == "i" then
+          pcall(vim.fn["codeium#Complete"])
+        end
+      end, 3000)
     end,
   },
 

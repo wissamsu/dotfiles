@@ -290,3 +290,64 @@ vim.api.nvim_create_autocmd("FileType", {
     pcall(vim.treesitter.start, args.buf)
   end,
 })
+--tabline
+local ok, devicons = pcall(require, "nvim-web-devicons")
+local icon_hl_cache = {}
+
+-- highlight group with the icon's color but the tab's background
+local function icon_hl(color, selected)
+  local group = "BufTabIcon" .. (selected and "Sel" or "Norm") .. color:gsub("#", "")
+  if not icon_hl_cache[group] then
+    local base = vim.api.nvim_get_hl(0, { name = selected and "TabLineSel" or "TabLine", link = false })
+    vim.api.nvim_set_hl(0, group, { fg = color, bg = base.bg })
+    icon_hl_cache[group] = true
+  end
+  return group
+end
+
+-- colorschemes wipe highlight groups, so rebuild them lazily
+vim.api.nvim_create_autocmd("ColorScheme", {
+  callback = function() icon_hl_cache = {} end,
+})
+
+function _G.buftabline()
+  local s = {}
+  local current = vim.api.nvim_get_current_buf()
+
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.bo[buf].buflisted then
+      local path = vim.api.nvim_buf_get_name(buf)
+      local name = vim.fn.fnamemodify(path, ":t")
+      local selected = buf == current
+      local hl = selected and "%#TabLineSel#" or "%#TabLine#"
+
+      local icon_part = ""
+      if ok and name ~= "" then
+        local icon, color = devicons.get_icon_color(name, vim.fn.fnamemodify(name, ":e"), { default = true })
+        if icon then
+          icon_part = color and ("%#" .. icon_hl(color, selected) .. "#" .. icon .. hl .. " ") or (icon .. " ")
+        end
+      end
+
+      if name == "" then name = "[No Name]" end
+      name = name:gsub("%%", "%%%%")
+      if vim.bo[buf].modified then name = name .. " +" end
+
+      -- %<buf>@v:lua.fn@ makes the label clickable
+      s[#s + 1] = string.format("%s%%%d@v:lua.buftab_click@ %s%s %%X", hl, buf, icon_part, name)
+    end
+  end
+
+  return table.concat(s) .. "%#TabLineFill#"
+end
+
+function _G.buftab_click(buf)
+  vim.api.nvim_set_current_buf(buf)
+end
+
+vim.o.showtabline = 2 -- always show; use 1 to show only with 2+ buffers
+vim.o.tabline = "%!v:lua.buftabline()"
+
+vim.keymap.set("n", "<Tab>", "<cmd>bnext<cr>", { desc = "Next buffer" })
+vim.keymap.set("n", "<S-Tab>", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
+vim.keymap.set("n", "<leader>x", "<cmd>bdelete<cr>", { desc = "Close buffer" })

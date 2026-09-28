@@ -100,7 +100,7 @@ return {
       },
 
       ghost_text = {
-        enabled = false,
+        enabled = true,
       },
     },
 
