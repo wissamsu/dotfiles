@@ -122,3 +122,16 @@ end, { desc = "Toggle Undotree" })
 --     end
 --   end,
 -- })
+vim.keymap.set({ "n", "t" }, "<leader>ft", function()
+  local cwd = vim.fn.getcwd()
+  local q = vim.fn.shellescape(cwd)
+
+  -- If the scratch session already exists, cd its shell into the current dir first
+  vim.fn.system("tmux has-session -t scratch 2>/dev/null && tmux send-keys -t scratch: 'cd " ..
+  cwd:gsub("'", "'\\''") .. " && clear' C-m")
+
+  vim.fn.system(
+    "tmux display-popup -w 80% -h 80% -d " .. q ..
+    " -E 'tmux attach-session -t scratch || tmux new-session -s scratch -c " .. q .. "'"
+  )
+end, { desc = "Toggle tmux floating terminal" })

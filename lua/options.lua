@@ -524,3 +524,67 @@ vim.o.tabline = "%!v:lua.buftabline()"
 vim.keymap.set("n", "<Tab>", "<cmd>bnext<cr>", { desc = "Next buffer" })
 vim.keymap.set("n", "<S-Tab>", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
 vim.keymap.set("n", "<leader>x", "<cmd>bdelete<cr>", { desc = "Close buffer" })
+--codeaction
+-- Custom native floating window handler for vim.ui.select
+vim.ui.select = function(items, opts, on_choice)
+  opts = opts or {}
+  if #items == 0 then return end
+
+  -- Format items (e.g. converting LSP action objects into display strings)
+  local format_item = opts.format_item or tostring
+  local lines = {}
+  for i, item in ipairs(items) do
+    table.insert(lines, string.format(" %d. %s ", i, format_item(item)))
+  end
+
+  -- Calculate window dimensions
+  local max_width = 0
+  for _, line in ipairs(lines) do
+    if #line > max_width then max_width = #line end
+  end
+  local width = math.max(max_width + 2, 30)
+  local height = #lines
+
+  -- Create scratch buffer
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+
+  -- Open floating window in the center
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative = 'editor',
+    row = math.floor((vim.o.lines - height) / 2),
+    col = math.floor((vim.o.columns - width) / 2),
+    width = width,
+    height = height,
+    style = 'minimal',
+    border = 'rounded',
+    title = opts.prompt or ' Select ',
+    title_pos = 'center',
+  })
+
+  -- Keybindings for selection inside the float
+  local close = function(choice_index)
+    if vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_close(win, true)
+    end
+    if choice_index then
+      on_choice(items[choice_index], choice_index)
+    else
+      on_choice(nil, nil)
+    end
+  end
+
+  -- Press <CR> to select line under cursor
+  vim.keymap.set('n', '<CR>', function()
+    close(vim.api.nvim_win_get_cursor(win)[1])
+  end, { buffer = buf, silent = true })
+
+  -- Press <Esc> or 'q' to cancel
+  vim.keymap.set('n', 'q', function() close(nil) end, { buffer = buf, silent = true })
+  vim.keymap.set('n', '<Esc>', function() close(nil) end, { buffer = buf, silent = true })
+
+  -- Press number key (1-9) to execute action immediately
+  for i = 1, math.min(#items, 9) do
+    vim.keymap.set('n', tostring(i), function() close(i) end, { buffer = buf, silent = true })
+  end
+end
