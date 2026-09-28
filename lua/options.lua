@@ -291,20 +291,58 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 --tabline
+-- Static icons are quicker than resolving icons through a plugin every redraw.
+-- These glyphs require a Nerd Font in your terminal.
+local file_icons = {
+  lua = { icon = "", color = "#51A0CF" },
+  vim = { icon = "", color = "#019833" },
+  py = { icon = "", color = "#FFBC03" },
+  js = { icon = "", color = "#CBCB41" },
+  ts = { icon = "", color = "#519ABA" },
+  jsx = { icon = "", color = "#20C2E3" },
+  tsx = { icon = "", color = "#1354BF" },
+  html = { icon = "", color = "#E44D26" },
+  css = { icon = "", color = "#663399" },
+  scss = { icon = "", color = "#F55385" },
+  json = { icon = "", color = "#CBCB41" },
+  md = { icon = "", color = "#DDDDDD" },
+  markdown = { icon = "", color = "#DDDDDD" },
+  txt = { icon = "󰈙", color = "#89E051" },
+  java = { icon = "", color = "#CC3E44" },
+  kt = { icon = "", color = "#7F52FF" },
+  go = { icon = "", color = "#00ADD8" },
+  rs = { icon = "", color = "#DEA584" },
+  c = { icon = "", color = "#599EFF" },
+  h = { icon = "", color = "#A074C4" },
+  cpp = { icon = "", color = "#519ABA" },
+  sh = { icon = "", color = "#4D5A5E" },
+  bash = { icon = "", color = "#89E051" },
+  zsh = { icon = "", color = "#89E051" },
+  yaml = { icon = "", color = "#D70000" },
+  yml = { icon = "", color = "#D70000" },
+  sql = { icon = "", color = "#DAD8D8" },
+  dockerfile = { icon = "󰡨", color = "#458EE6" },
+  makefile = { icon = "", color = "#6D8086" },
+  default = { icon = "", color = "#6D8086" },
+}
+
 local icon_hl_cache = {}
 
--- highlight group with the icon's color but the tab's background
 local function icon_hl(color, selected)
   local group = "BufTabIcon" .. (selected and "Sel" or "Norm") .. color:gsub("#", "")
   if not icon_hl_cache[group] then
-    local base = vim.api.nvim_get_hl(0, { name = selected and "TabLineSel" or "TabLine", link = false })
-    vim.api.nvim_set_hl(0, group, { fg = color, bg = base.bg })
+    local base = vim.api.nvim_get_hl(0, {
+      name = selected and "TabLineSel" or "TabLine",
+      link = false,
+    })
+    local highlight = { fg = color }
+    if base.bg then highlight.bg = base.bg end
+    vim.api.nvim_set_hl(0, group, highlight)
     icon_hl_cache[group] = true
   end
   return group
 end
 
--- colorschemes wipe highlight groups, so rebuild them lazily
 vim.api.nvim_create_autocmd("ColorScheme", {
   callback = function() icon_hl_cache = {} end,
 })
@@ -312,9 +350,6 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 function _G.buftabline()
   local s = {}
   local current = vim.api.nvim_get_current_buf()
-  -- options.lua is loaded before lazy.nvim adds plugins to the runtime path.
-  -- Resolve devicons when the tabline is rendered instead of only at startup.
-  local has_devicons, devicons = pcall(require, "nvim-web-devicons")
 
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     if vim.bo[buf].buflisted then
@@ -323,13 +358,11 @@ function _G.buftabline()
       local selected = buf == current
       local hl = selected and "%#TabLineSel#" or "%#TabLine#"
 
-      local icon_part = ""
-      if has_devicons and name ~= "" then
-        local icon, color = devicons.get_icon_color(name, vim.fn.fnamemodify(name, ":e"), { default = true })
-        if icon then
-          icon_part = color and ("%#" .. icon_hl(color, selected) .. "#" .. icon .. hl .. " ") or (icon .. " ")
-        end
-      end
+      local icon_info = file_icons[name:lower()]
+        or file_icons[vim.fn.fnamemodify(name, ":e"):lower()]
+        or file_icons.default
+      local icon_part = "%#" .. icon_hl(icon_info.color, selected) .. "#"
+        .. icon_info.icon .. hl .. " "
 
       if name == "" then name = "[No Name]" end
       name = name:gsub("%%", "%%%%")
