@@ -18,7 +18,7 @@ if vim.fn.isdirectory(undodir) == 0 then
 end
 
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-local nvim_lazypath = os.getenv("HOME") .. "/.local/share/nvim2/lazy/lazy.nvim"
+local nvim_lazypath = os.getenv("HOME") .. "/.local/share/nvim/lazy/lazy.nvim"
 if not vim.loop.fs_stat(lazypath) and vim.loop.fs_stat(nvim_lazypath) then
   lazypath = nvim_lazypath
 end
@@ -122,7 +122,3 @@ end, { desc = "Toggle Undotree" })
 --     end
 --   end,
 -- })
--- Toggle tmux floating popup directly from Neovim
-vim.keymap.set({ "n", "t" }, "<leader>ft", function()
-  vim.fn.system("tmux display-popup -w 80% -h 80% -E 'tmux attach-session -t scratch || tmux new-session -s scratch'")
-end, { desc = "Toggle tmux floating terminal" })

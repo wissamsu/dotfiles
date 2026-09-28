@@ -1,20 +1,13 @@
-return {
-  "nvim-treesitter/nvim-treesitter",
-  branch = "master",
-  ft = { "go", "lua", "javascript", "python", "java", "typescript", "tsx", "html", "css", "cmake", "properties", "jproperties", "yml", "yaml" },
-  build = ":TSUpdate",
-  config = function()
-    vim.treesitter.language.register("yaml", "spring-boot-properties-yaml")
-    require('nvim-treesitter.configs').setup {
-      ensure_installed = { "go", "lua", "javascript", "python", "java", "typescript", "tsx", "html", "css", "cmake" },
-      sync_install = false,
-      auto_install = true,
-
-      highlight = {
-        enable = true,
-        additional_vim_regex_highlighting = false,
-      },
-      indent = { enable = false }, -- disable to save CPU
-    }
-  end
-}
+-- return {
+--   'nvim-treesitter/nvim-treesitter',
+--   ft = { "go", "lua", "javascript", "python", "java", "typescript", "tsx", "html", "css", "cmake", "properties", "jproperties", "yml", "yaml" },
+--
+--   build = ':TSUpdate',
+--   opts = {
+--     ensure_installed = { 'lua', 'vim', 'vimdoc' },
+--     highlight = { enable = true },
+--     sync_install = false,
+--     indent = { enable = true, additional_vim_regex_highlighting = false, },
+--   },
+-- }
+return {}

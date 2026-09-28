@@ -8,10 +8,6 @@ return {
       { "go", function() return require("opencode").operator("@this ") end, mode = { "n", "x" }, expr = true, desc = "Add range to opencode" },
       { "goo", function() return require("opencode").operator("@this ") .. "_" end, mode = "n", expr = true, desc = "Add line to opencode" },
     },
-    dependencies = {
-      ---@module 'snacks' <- Loads `snacks.nvim` types for configuration intellisense.
-      -- { "folke/snacks.nvim", opts = { input = {}, picker = {}, terminal = {} } },
-    },
     config = function()
       vim.g.opencode_opts = {
       }
@@ -68,17 +64,38 @@ return {
   },
   {
     "Exafunction/codeium.vim",
-    lazy = true,
-    dependencies = {
-      "nvim-lua/plenary.nvim",
-    },
+    dependencies = { "nvim-lua/plenary.nvim" },
+
+    -- custom event, fired 4 seconds after the first insert in a real file
+    event = "User CodeiumLoad",
+
     init = function()
-      vim.defer_fn(function()
-        require("lazy").load({ plugins = { "codeium.vim" } })
-      end, 4000)
+      vim.api.nvim_create_autocmd("InsertEnter", {
+        callback = function(a)
+          if vim.bo[a.buf].buftype == "" and not vim.bo[a.buf].filetype:match("^fff") then
+            vim.defer_fn(function()
+              vim.api.nvim_exec_autocmds("User", { pattern = "CodeiumLoad" })
+            end, 4000)
+            return true -- remove this autocmd, the timer is already scheduled
+          end
+        end,
+      })
+
+      -- if codeium is already loaded, keep it quiet in fff buffers
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = "fff*",
+        callback = function() vim.b.codeium_enabled = false end,
+      })
     end,
+
     config = function()
       vim.g.codeium_no_map_tab = 1
+
+      local function set_hl()
+        vim.api.nvim_set_hl(0, "CodeiumSuggestion", { fg = "#89b4fa", italic = true })
+      end
+      set_hl()
+      vim.api.nvim_create_autocmd("ColorScheme", { callback = set_hl })
 
       vim.keymap.set("i", "<C-g>", function()
         return vim.fn["codeium#Accept"]()
@@ -90,6 +107,11 @@ return {
           os.execute("pkill -f codeium_language_server")
         end,
       })
+
+      -- if you're still in insert mode when it loads, start suggesting right away
+      if vim.fn.mode() == "i" then
+        vim.cmd("silent! call codeium#Complete()")
+      end
     end,
   },
 

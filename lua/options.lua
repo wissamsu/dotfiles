@@ -67,80 +67,73 @@ local function setup_hl()
   set_hl(0, 'StatusLineModeReplace', { fg = '#1e1e2e', bg = '#f38ba8', bold = true })
   set_hl(0, 'StatusLineMuted', { fg = '#cdd6f4', bg = 'NONE' })
   set_hl(0, 'StatusLineAccent', { fg = '#89b4fa', bg = 'NONE' })
+  set_hl(0, 'StatusLineDiagError', { fg = '#f38ba8', bg = 'NONE', bold = true })
+  set_hl(0, 'StatusLineDiagWarn', { fg = '#fab387', bg = 'NONE', bold = true })
+  set_hl(0, 'StatusLineDiagInfo', { fg = '#89b4fa', bg = 'NONE', bold = true })
+  set_hl(0, 'StatusLineDiagHint', { fg = '#94e2d5', bg = 'NONE', bold = true })
 end
 
 setup_hl()
 vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_hl })
 
+_G.statusline_diagnostics = function()
+  local counts = vim.diagnostic.count(0)
+  local err    = counts[vim.diagnostic.severity.ERROR] or 0
+  local warn   = counts[vim.diagnostic.severity.WARN] or 0
+  local info   = counts[vim.diagnostic.severity.INFO] or 0
+  local hint   = counts[vim.diagnostic.severity.HINT] or 0
+
+  local parts  = {}
+  if err > 0 then
+    table.insert(parts, string.format("%%#StatusLineDiagError#● %d%%*", err))
+  end
+  if warn > 0 then
+    table.insert(parts, string.format("%%#StatusLineDiagWarn#● %d%%*", warn))
+  end
+  if info > 0 then
+    table.insert(parts, string.format("%%#StatusLineDiagInfo#● %d%%*", info))
+  end
+  if hint > 0 then
+    table.insert(parts, string.format("%%#StatusLineDiagHint#● %d%%*", hint))
+  end
+  return table.concat(parts, " ")
+end
 -- Helper functions
 _G.statusline_mode = function()
   local m = vim.api.nvim_get_mode().mode
   local mode_info = mode_map[m] or { m:upper(), 'StatusLineModeNormal' }
-  -- %#Group# sets the highlight group for text that follows
   return string.format("%%#%s# %s %%*", mode_info[2], mode_info[1])
 end
 
-_G.coc_active_services = ""
-local coc_notified_services = {}
-
-local function refresh_coc_services()
-  if vim.g.coc_service_initialized ~= 1 then
-    _G.coc_active_services = ""
-    return
-  end
-  local ok, services = pcall(vim.fn.CocAction, 'services')
-  if not ok or type(services) ~= 'table' then return end
-
-  local ft = vim.bo.filetype
-  local names = {}
-  for _, s in ipairs(services) do
-    if s.state == 'running' then
-      local matches_ft = true
-      if type(s.languageIds) == 'table' and #s.languageIds > 0 then
-        matches_ft = vim.tbl_contains(s.languageIds, ft)
-      end
-      if matches_ft then
-        table.insert(names, s.id)
-        if not coc_notified_services[s.id] then
-          coc_notified_services[s.id] = true
-          vim.notify("LSP started: " .. s.id, vim.log.levels.INFO, { title = "coc.nvim" })
-        end
-      end
-    end
-  end
-  _G.coc_active_services = table.concat(names, ", ")
-end
-
-local function refresh_coc_services_and_redraw()
-  refresh_coc_services()
-  vim.cmd("redrawstatus")
-end
-
-vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "CursorHoldI", "InsertLeave" }, {
-  callback = refresh_coc_services_and_redraw,
-})
-vim.api.nvim_create_autocmd("User", {
-  pattern = { "CocNvimInit", "CocStatusChange" },
-  callback = refresh_coc_services_and_redraw,
-})
-
+-- Get attached native LSP client names for active buffer
 _G.statusline_lsp = function()
-  if vim.g.coc_service_initialized ~= 1 then
+  local clients = vim.lsp.get_clients({ bufnr = 0 })
+  if #clients == 0 then
     return "%#StatusLineMuted#󰅛 No LSP%*"
   end
-  if _G.coc_active_services ~= "" then
-    return string.format("%%#StatusLineAccent#󰒋 %s%%*", _G.coc_active_services)
+
+  local names = {}
+  for _, client in ipairs(clients) do
+    table.insert(names, client.name)
   end
-  return "%#StatusLineMuted#󰅛 No LSP%*"
+
+  return string.format("%%#StatusLineAccent#󰒋 %s%%*", table.concat(names, ", "))
 end
 
+vim.api.nvim_create_autocmd("DiagnosticChanged", {
+  callback = function()
+    vim.cmd("redrawstatus")
+  end,
+})
+
 -- Assemble the styled statusline
--- %#StatusLineMuted# applies subtle colors; %* resets highlights
 vim.opt.statusline =
-    "%{%v:lua.statusline_mode()%}" .. -- Colored mode badge
-    " %#StatusLineMuted#%F%* %m%r" .. -- Full file path + modified state
-    "%=" ..                           -- Align rest to right side
-    "%{%v:lua.statusline_lsp()%}" ..  -- Active LSP names with icon
+    "%{%v:lua.statusline_mode()%}" ..
+    " %#StatusLineMuted#%F%* %m%r" ..
+    "%=" ..
+    "%{%v:lua.statusline_diagnostics()%}" ..
+    "   " .. -- extra spacing here
+    "%{%v:lua.statusline_lsp()%}" ..
     " %#StatusLineMuted#│ %y │ %l:%c [%p%%]%*"
 
 --replacement for vim sensible plugin
@@ -234,3 +227,66 @@ vim.g.loaded_node_provider = 0
 --     end
 --   end,
 -- })
+vim.diagnostic.config({
+  virtual_text = true,
+})
+--gitsigns
+local ns, base = vim.api.nvim_create_namespace("gitdiff"), {}
+for g, c in pairs({ GitDiffAdd = "#a6e3a1", GitDiffChange = "#f9e2af", GitDiffDelete = "#f38ba8" }) do
+  vim.api.nvim_set_hl(0, g, { fg = c })
+end
+
+local function render(buf)
+  vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+  if not base[buf] then return end
+  local cur = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n") .. "\n"
+  for _, h in ipairs(vim.diff(base[buf], cur, { result_type = "indices" })) do
+    local ca, sb, cb = h[2], h[3], h[4]
+    for l = sb, math.max(sb, sb + cb - 1) do
+      local s = cb == 0 and { "-", "GitDiffDelete" } or
+          (l - sb < ca and { "~", "GitDiffChange" } or { "+", "GitDiffAdd" })
+      vim.api.nvim_buf_set_extmark(buf, ns, math.max(l, 1) - 1, 0,
+        { sign_text = s[1], sign_hl_group = s[2], priority = 5 })
+    end
+  end
+end
+
+vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "FocusGained" }, {
+  callback = function(a)
+    local f = vim.api.nvim_buf_get_name(a.buf)
+    if f == "" or vim.bo[a.buf].buftype ~= "" then return end
+    local dir, out = vim.fs.dirname(f), nil
+    out = vim.fn.system({ "git", "-C", dir, "show", ":./" .. vim.fs.basename(f) })
+    if vim.v.shell_error ~= 0 then -- untracked if inside a repo, otherwise no signs
+      vim.fn.system({ "git", "-C", dir, "rev-parse", "--is-inside-work-tree" })
+      out = vim.v.shell_error == 0 and "" or nil
+    end
+    base[a.buf] = out
+    render(a.buf)
+  end,
+})
+vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, { callback = function(a) render(a.buf) end })
+--notifications
+local ok, ui = pcall(require, "vim._core.ui2")
+if not ok then ok, ui = pcall(require, "vim._extui") end
+if ok then
+  ui.enable({
+    enable = true,
+    msg = {
+      targets = "msg", -- floating messages instead of the cmdline area
+      timeout = 4000,
+    },
+  })
+end
+--indentblankline
+vim.opt.list = true
+vim.opt.listchars = {
+  leadmultispace = "│ ", -- "│" + 1 space = 2-wide indent
+  tab = "│ ",
+}
+--treesitter
+vim.api.nvim_create_autocmd("FileType", {
+  callback = function(args)
+    pcall(vim.treesitter.start, args.buf)
+  end,
+})
