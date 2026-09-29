@@ -604,7 +604,10 @@ return {
   {
     "mfussenegger/nvim-dap",
     cmd = { "DapContinue", "DapToggleBreakpoint" },
-    dependencies = { "rcarriga/nvim-dap-ui", "nvim-neotest/nvim-nio" },
+    dependencies = { "rcarriga/nvim-dap-ui",
+      "nvim-neotest/nvim-nio",
+      "theHamsta/nvim-dap-virtual-text",
+    },
     keys = {
       {
         "<leader>dc",
@@ -661,6 +664,26 @@ return {
       end
       require('dap').listeners.after.event_terminated['java-dap-ui'] = close_dap_ui
       require('dap').listeners.after.event_exited['java-dap-ui'] = close_dap_ui
+      require('nvim-dap-virtual-text').setup({
+        enabled = true,
+        commented = true,                   -- prefix with comment string, e.g. "// x = 5"
+        only_first_definition = true,       -- show value only at the first definition
+        all_references = false,             -- true = show at every reference, not just definition
+        highlight_changed_variables = true, -- highlight values that changed since last step
+        virt_text_pos = vim.fn.has('nvim-0.10') == 1 and 'inline' or 'eol',
+        display_callback = function(variable, _buf, _stackframe, _node, options)
+          -- truncate long values (big DTOs, collections, etc.) so lines stay readable
+          local value = variable.value:gsub('%s+', ' ')
+          if #value > 50 then
+            value = value:sub(1, 47) .. '...'
+          end
+          if options.virt_text_pos == 'inline' then
+            return ' = ' .. value
+          else
+            return variable.name .. ' = ' .. value
+          end
+        end,
+      })
       require('dapui').setup({
         auto_open = true,
         auto_close = false,
@@ -671,6 +694,36 @@ return {
       vim.fn.sign_define('DapBreakpointRejected', { text = '●', texthl = 'DiagnosticError' })
       vim.fn.sign_define('DapLogPoint', { text = '●', texthl = 'DiagnosticOk' })
       vim.fn.sign_define('DapStopped', { text = '➜', texthl = 'DiagnosticError' })
+    end,
+  },
+  {
+    "nvim-neotest/neotest",
+    dependencies = {
+      "nvim-neotest/nvim-nio",
+      "nvim-lua/plenary.nvim",
+      "antoinemadec/FixCursorHold.nvim",
+      "rcasia/neotest-java",
+    },
+    cmd = { "Neotest" },
+    keys = {
+      { "<leader>tt", function() require("neotest").run.run() end,                     desc = "Test: nearest" },
+      { "<leader>tf", function() require("neotest").run.run(vim.fn.expand("%")) end,   desc = "Test: file" },
+      { "<leader>tl", function() require("neotest").run.run_last() end,                desc = "Test: last" },
+      { "<leader>td", function() require("neotest").run.run({ strategy = "dap" }) end, desc = "Test: debug nearest" },
+      { "<leader>ts", function() require("neotest").summary.toggle() end,              desc = "Test: summary" },
+      { "<leader>to", function() require("neotest").output.open({ enter = true }) end, desc = "Test: output" },
+      { "<leader>tO", function() require("neotest").output_panel.toggle() end,         desc = "Test: output panel" },
+      { "<leader>tx", function() require("neotest").run.stop() end,                    desc = "Test: stop" },
+    },
+    config = function()
+      require("neotest").setup({
+        adapters = {
+          require("neotest-java")({
+            -- see the neotest-java README for the current option names
+            -- incremental_build = true,
+          }),
+        },
+      })
     end,
   },
   {
@@ -831,13 +884,17 @@ return {
   },
   {
     "folke/which-key.nvim",
-    opts = {},
+    event = "VeryLazy",
+    opts = {
+      -- your configuration comes here
+      -- or leave it empty to use the default settings
+      -- refer to the configuration section below
+    },
     keys = {
-      { "<leader>", mode = { "n", "v" } },
       {
         "<leader>?",
         function()
-          require("which-key").show { global = false }
+          require("which-key").show({ global = false })
         end,
         desc = "Buffer Local Keymaps (which-key)",
       },
