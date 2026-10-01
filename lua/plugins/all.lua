@@ -125,7 +125,7 @@ return {
   {
     'saghen/blink.cmp',
     version = '*',
-    dependencies = { 'rafamadriz/friendly-snippets' },
+    dependencies = { 'rafamadriz/friendly-snippets', { 'Mestane/blink-cmp-deps' } },
 
     event = 'User BlinkLoad',
 
@@ -247,8 +247,13 @@ return {
       },
 
       sources = {
-        default = { 'lsp', 'path', 'snippets', 'buffer' },
+        default = { 'lsp', 'path', 'snippets', 'buffer', 'deps' },
         providers = {
+          deps = {
+            name = "Dependencies",
+            module = "blink_deps",
+            async = true,
+          },
           buffer = {
             min_keyword_length = 3,
           },
@@ -843,6 +848,32 @@ return {
     lazy = true,
     tag = "v0.2.0",
     dependencies = { "nvim-lua/plenary.nvim" },
+  },
+  {
+    "Iamnotagenius/mvnsearch.nvim",
+    cmd = "MvnSearch",
+    dependencies = {
+      "nvim-telescope/telescope.nvim",
+      "nvim-lua/plenary.nvim",
+    },
+    keys = {
+      { "<leader>mv", ":MvnSearch ", desc = "Maven search" },
+    },
+    init = function()
+      -- make the luarocks-installed xml2lua visible to Neovim (LuaJIT = Lua 5.1)
+      package.path = package.path
+          .. ";" .. vim.fn.expand("~/.luarocks/share/lua/5.1/?.lua")
+          .. ";" .. vim.fn.expand("~/.luarocks/share/lua/5.1/?/init.lua")
+    end,
+    config = function()
+      local telescope = require("telescope")
+      telescope.setup({
+        extensions = {
+          mvnsearch = { yank_register = "d", rows = 30 },
+        },
+      })
+      telescope.load_extension("mvnsearch")
+    end,
   },
   {
     "kristijanhusak/vim-dadbod-ui",
