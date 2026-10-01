@@ -125,7 +125,7 @@ return {
   {
     'saghen/blink.cmp',
     version = '*',
-    dependencies = { 'rafamadriz/friendly-snippets', { 'Mestane/blink-cmp-deps' } },
+    dependencies = { 'rafamadriz/friendly-snippets' },
 
     event = 'User BlinkLoad',
 
@@ -247,13 +247,8 @@ return {
       },
 
       sources = {
-        default = { 'lsp', 'path', 'snippets', 'buffer', 'deps' },
+        default = { 'lsp', 'path', 'snippets', 'buffer' },
         providers = {
-          deps = {
-            name = "Dependencies",
-            module = "blink_deps",
-            async = true,
-          },
           buffer = {
             min_keyword_length = 3,
           },
