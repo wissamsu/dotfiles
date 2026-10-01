@@ -1,0 +1,125 @@
+--- Startup times for process: Primary (or UI client) ---
+
+times in msec
+ clock   self+sourced   self:  sourced script
+ clock   elapsed:              other lines
+
+000.001  000.001: --- NVIM STARTING ---
+000.530  000.529: event init
+000.791  000.261: early init
+000.929  000.138: locale set
+001.060  000.131: init first window
+002.347  001.287: inits 1
+002.385  000.038: window checked
+002.590  000.205: parsing arguments
+004.481  000.201  000.201: require('vim._core.shared')
+004.807  000.011  000.011: require('string.buffer')
+004.907  000.198  000.187: require('vim.inspect')
+005.161  000.224  000.224: require('vim._core.options')
+005.169  000.676  000.254: require('vim._core.editor')
+005.299  000.126  000.126: require('vim._core.system')
+005.303  001.131  000.128: require('vim._init_packages')
+005.308  001.587: init lua interpreter
+008.821  003.512: nvim_ui_attach
+010.343  001.523: nvim_set_client_info
+010.353  000.010: --- NVIM STARTED ---
+
+--- Startup times for process: Embedded ---
+
+times in msec
+ clock   self+sourced   self:  sourced script
+ clock   elapsed:              other lines
+
+000.001  000.001: --- NVIM STARTING ---
+000.548  000.547: event init
+000.913  000.365: early init
+001.059  000.146: locale set
+001.190  000.131: init first window
+002.512  001.322: inits 1
+002.580  000.068: window checked
+002.776  000.196: parsing arguments
+004.893  000.211  000.211: require('vim._core.shared')
+005.240  000.036  000.036: require('string.buffer')
+005.361  000.244  000.208: require('vim.inspect')
+005.564  000.172  000.172: require('vim._core.options')
+005.571  000.666  000.250: require('vim._core.editor')
+005.690  000.116  000.116: require('vim._core.system')
+005.695  001.118  000.125: require('vim._init_packages')
+005.700  001.806: init lua interpreter
+005.910  000.210: expanding arguments
+006.030  000.121: inits 2
+007.432  001.401: init highlight
+007.442  000.010: waiting for UI
+008.022  000.581: done waiting for UI
+008.073  000.050: clear screen
+008.608  000.036  000.036: require('vim.keymap')
+011.500  000.526  000.526: sourcing nvim_exec2()
+011.606  000.030  000.030: require('vim._core.log')
+014.348  006.266  005.674: require('vim._core.defaults')
+014.360  000.021: init default mappings & autocommands
+016.367  000.163  000.163: sourcing /usr/share/nvim/runtime/ftplugin.vim
+016.616  000.084  000.084: sourcing /usr/share/nvim/runtime/indent.vim
+016.960  000.162  000.162: sourcing /usr/share/nvim/archlinux.lua
+016.977  000.266  000.104: sourcing /etc/xdg/nvim/sysinit.vim
+017.683  000.091  000.091: require('vim.fs')
+019.844  002.146  002.146: require('vim.uri')
+019.912  002.449  000.213: require('vim.loader')
+025.802  001.459  001.459: sourcing /home/wiss/.config/nvim/colors/ex-modus.lua
+025.830  001.748  000.289: sourcing nvim_exec2() called at /home/wiss/.config/nvim/init.lua:0
+026.663  000.019  000.019: sourcing nvim_exec2() called at /home/wiss/.config/nvim/init.lua:0
+030.327  001.960  001.960: require('vim.ui')
+030.883  010.922  007.195: require('options')
+033.352  002.458  002.458: require('mappings')
+037.742  003.653  003.653: require('lazy')
+037.840  000.050  000.050: require('ffi')
+038.141  000.282  000.282: require('lazy.stats')
+038.489  000.289  000.289: require('lazy.core.util')
+038.856  000.358  000.358: require('lazy.core.config')
+039.496  000.335  000.335: require('lazy.core.handler')
+040.862  000.417  000.417: require('lazy.pkg')
+040.881  000.843  000.426: require('lazy.core.meta')
+040.901  001.395  000.552: require('lazy.core.plugin')
+040.922  002.057  000.326: require('lazy.core.loader')
+043.046  000.301  000.301: require('lazy.core.fragments')
+051.879  000.547  000.547: require('lazy.core.handler.event')
+051.894  001.270  000.723: require('lazy.core.handler.ft')
+052.418  000.502  000.502: require('lazy.core.handler.keys')
+052.956  000.505  000.505: require('lazy.core.handler.cmd')
+058.095  000.017  000.017: sourcing nvim_exec2() called at /home/wiss/.config/nvim/init.lua:0
+058.146  000.006  000.006: sourcing nvim_exec2() called at /home/wiss/.config/nvim/init.lua:0
+060.930  000.020  000.020: sourcing nvim_exec2() called at /home/wiss/.config/nvim/init.lua:0
+061.000  000.007  000.007: sourcing nvim_exec2() called at /home/wiss/.config/nvim/init.lua:0
+061.080  000.005  000.005: sourcing nvim_exec2() called at /home/wiss/.config/nvim/init.lua:0
+061.110  000.003  000.003: sourcing nvim_exec2() called at /home/wiss/.config/nvim/init.lua:0
+062.383  000.595  000.595: sourcing nvim_exec2() called at /usr/share/nvim/runtime/filetype.lua:0
+062.397  001.131  000.536: sourcing /usr/share/nvim/runtime/filetype.lua
+062.419  001.273  000.142: sourcing nvim_exec2() called at /home/wiss/.config/nvim/init.lua:0
+063.553  000.277  000.277: sourcing /usr/share/nvim/runtime/plugin/shada.lua
+063.572  000.413  000.136: sourcing nvim_exec2() called at /home/wiss/.config/nvim/init.lua:0
+064.496  047.406  020.567: sourcing /home/wiss/.config/nvim/init.lua
+064.527  002.249: sourcing vimrc file(s)
+064.823  000.125  000.125: sourcing /usr/share/nvim/runtime/filetype.lua
+065.559  000.223  000.223: sourcing /usr/share/nvim/runtime/syntax/synload.vim
+065.825  000.838  000.615: sourcing /usr/share/nvim/runtime/syntax/syntax.vim
+065.866  000.376: inits 3
+068.773  002.907: reading ShaDa
+076.049  006.541  006.541: require('vim.filetype')
+079.066  000.289  000.289: sourcing /usr/share/nvim/runtime/ftplugin/lua.vim
+081.439  000.393  000.393: require('vim.treesitter.language')
+081.707  000.251  000.251: require('vim.func')
+082.089  000.373  000.373: require('vim.treesitter._range')
+082.359  000.250  000.250: require('vim.func._memoize')
+082.482  002.172  000.905: require('vim.treesitter.query')
+082.555  002.800  000.629: require('vim.treesitter.languagetree')
+082.580  003.157  000.356: require('vim.treesitter')
+082.843  000.023  000.023: require('vim.F')
+100.974  000.642  000.642: require('vim.treesitter.highlighter')
+110.351  031.195  027.373: sourcing /usr/share/nvim/runtime/ftplugin/lua.lua
+111.462  000.109  000.109: sourcing /usr/share/nvim/runtime/indent/lua.vim
+111.595  004.688: opening buffers
+112.436  000.813  000.813: sourcing nvim_exec2() called at BufEnter Autocommands for "*":0
+112.745  000.273  000.273: sourcing nvim_exec2() called at BufEnter Autocommands for "*":0
+116.526  003.846: BufEnter autocommands
+116.556  000.030: editing files in windows
+116.584  000.028: --- NVIM STARTED ---
+

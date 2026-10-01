@@ -4,7 +4,9 @@ end
 
 vim.g.maplocalleader = "\\"
 
-require("lsp")
+vim.schedule(function()
+  require("lsp")
+end)
 require("options")
 require("mappings")
 vim.opt.undofile = true
@@ -128,7 +130,7 @@ vim.keymap.set({ "n", "t" }, "<leader>ft", function()
 
   -- If the scratch session already exists, cd its shell into the current dir first
   vim.fn.system("tmux has-session -t scratch 2>/dev/null && tmux send-keys -t scratch: 'cd " ..
-  cwd:gsub("'", "'\\''") .. " && clear' C-m")
+    cwd:gsub("'", "'\\''") .. " && clear' C-m")
 
   vim.fn.system(
     "tmux display-popup -w 80% -h 80% -d " .. q ..

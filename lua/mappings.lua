@@ -63,7 +63,7 @@ map("n", "<leader>gi", ":GradleInit<CR>", { noremap = true, silent = true })
 
 
 map("n", "<leader>co", ":CodexToggle<CR>", { noremap = true, silent = true })
-vim.keymap.set('n', 'gd', vim.lsp.buf.definition, { desc = 'Go to definition' })
+vim.keymap.set('n', 'gd', function() vim.lsp.buf.definition() end, { desc = 'Go to definition' })
 -- 1. Map <leader>ds to open all workspace diagnostics in quickfix
 vim.keymap.set('n', '<leader>ds', function()
   vim.diagnostic.setqflist()
@@ -80,3 +80,6 @@ vim.api.nvim_create_autocmd('FileType', {
     })
   end,
 })
+vim.keymap.set('i', '<CR>', function()
+  return vim.fn.pumvisible() == 1 and '<C-y>' or '<CR>'
+end, { expr = true, desc = 'Accept completion with Enter' })

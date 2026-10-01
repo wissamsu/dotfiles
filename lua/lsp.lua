@@ -36,6 +36,24 @@ local function resolve_command(mason_name, system_names)
   -- launch error if the server is not installed yet.
   return mason_path
 end
+-- XML (lemminx)
+vim.lsp.config('lemminx', {
+  cmd = { resolve_command('lemminx') },
+  filetypes = { 'xml', 'xsd', 'xsl', 'xslt', 'svg' },
+  root_markers = { '.git' },
+  settings = {
+    xml = {
+      format = {
+        enabled = true,
+        splitAttributes = 'preserve', -- don't rewrap attributes onto separate lines
+        maxLineWidth = 120,
+      },
+      validation = { enabled = true },
+      -- downloading remote XSD/DTD schemas for validation; set false to stay offline
+      server = { workDir = vim.fn.stdpath('cache') .. '/lemminx' },
+    },
+  },
+})
 -- C / C++ (clangd)
 vim.lsp.config('clangd', {
   cmd = {
@@ -116,11 +134,6 @@ local kotlin_args = vim.fs.basename(kotlin_cmd) == 'kotlin-lsp' and { '--stdio' 
 vim.api.nvim_create_autocmd('LspAttach', {
   group = vim.api.nvim_create_augroup('LspFormatOnSave', { clear = true }),
   callback = function(args)
-    local client = vim.lsp.get_client_by_id(args.data.client_id)
-    if not client or not client:supports_method('textDocument/formatting') then
-      return
-    end
-
     local bufnr = args.buf
     local group = vim.api.nvim_create_augroup('LspFormat' .. bufnr, { clear = true })
 
@@ -128,6 +141,11 @@ vim.api.nvim_create_autocmd('LspAttach', {
       group = group,
       buffer = bufnr,
       callback = function()
+        local client = vim.lsp.get_clients({
+          bufnr = bufnr,
+          method = 'textDocument/formatting',
+        })[1]
+        if not client then return end
         local tick = vim.api.nvim_buf_get_changedtick(bufnr)
 
         local params = vim.lsp.util.make_formatting_params({})
@@ -277,10 +295,10 @@ vim.lsp.config('jdtls', {
         downloadSources = false,
       },
       implementationsCodeLens = {
-        enabled = false,
+        enabled = true,
       },
       referencesCodeLens = {
-        enabled = false,
+        enabled = true,
       },
       references = {
         includeDecompiledSources = true,
@@ -411,15 +429,47 @@ vim.api.nvim_create_autocmd('LspAttach', {
     })
   end,
 })
+local function rename_file_to_public_type(bufnr)
+  if not vim.api.nvim_buf_is_valid(bufnr) or vim.bo[bufnr].buftype ~= '' then
+    return
+  end
 
--- menu: no "noselect" means the first item is always selected;
--- "noinsert" stops it from inserting text until you accept
-vim.opt.completeopt = { 'menu', 'menuone', 'noinsert', 'fuzzy' }
+  local old = vim.api.nvim_buf_get_name(bufnr)
+  if old == '' then return end
 
--- Enter accepts the selected item, otherwise acts as a normal Enter
-vim.keymap.set('i', '<CR>', function()
-  return vim.fn.pumvisible() == 1 and '<C-y>' or '<CR>'
-end, { expr = true, desc = 'Accept completion with Enter' })
+  local type_name
+  for _, line in ipairs(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)) do
+    -- column 0 only, so nested types are ignored
+    if line:match('^public%s') then
+      for _, kw in ipairs({ 'class', 'interface', 'enum', 'record', '@interface' }) do
+        type_name = line:match('^public%s+[%w%s]-' .. kw .. '%s+([%w_$]+)')
+        if type_name then break end
+      end
+      if type_name then break end
+    end
+  end
+  if not type_name then return end
+
+  local new = vim.fs.dirname(old) .. '/' .. type_name .. '.java'
+  if new == old then return end
+
+  if vim.uv.fs_stat(new) then
+    vim.notify(new .. ' already exists, not renaming', vim.log.levels.WARN)
+    return
+  end
+
+  vim.lsp.util.rename(old, new)
+end
+
+vim.api.nvim_create_autocmd('BufWritePost', {
+  group = vim.api.nvim_create_augroup('JavaRenameFileToClass', { clear = true }),
+  pattern = '*.java',
+  callback = function(args)
+    vim.schedule(function()
+      rename_file_to_public_type(args.buf)
+    end)
+  end,
+})
 
 -- Handle jdt:// URIs for Go To Definition into Java dependencies and class files
 local function jdtls_for_buffer()
@@ -608,6 +658,77 @@ vim.api.nvim_create_autocmd('LspAttach', {
   end,
 })
 
+vim.filetype.add({
+  filename = {
+    ['compose.yaml'] = 'yaml.docker-compose',
+    ['compose.yml'] = 'yaml.docker-compose',
+    ['docker-compose.yaml'] = 'yaml.docker-compose',
+    ['docker-compose.yml'] = 'yaml.docker-compose',
+  },
+})
+
+local function render_codelens(bufnr)
+  if not vim.api.nvim_buf_is_valid(bufnr) then return end
+  local tick = vim.api.nvim_buf_get_changedtick(bufnr)
+
+  for _, client in ipairs(vim.lsp.get_clients({ bufnr = bufnr, method = 'textDocument/codeLens' })) do
+    local ns = vim.api.nvim_create_namespace('eol_codelens_' .. client.id)
+    local params = { textDocument = vim.lsp.util.make_text_document_params(bufnr) }
+
+    client:request('textDocument/codeLens', params, function(err, lenses)
+      if err or not lenses then return end
+
+      local resolved, pending = {}, #lenses
+      local function draw()
+        if not vim.api.nvim_buf_is_valid(bufnr)
+            or vim.api.nvim_buf_get_changedtick(bufnr) ~= tick then
+          return
+        end
+        vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+
+        local by_line = {}
+        for _, lens in ipairs(resolved) do
+          local title = lens.command and lens.command.title
+          if title and title ~= '' then
+            local l = lens.range.start.line
+            by_line[l] = by_line[l] or {}
+            table.insert(by_line[l], title)
+          end
+        end
+        for line, titles in pairs(by_line) do
+          pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, line, 0, {
+            virt_text = { { '  ' .. table.concat(titles, ' | '), 'LspCodeLens' } },
+            virt_text_pos = 'eol',
+            hl_mode = 'combine',
+          })
+        end
+      end
+
+      if pending == 0 then return draw() end
+
+      for _, lens in ipairs(lenses) do
+        local function done(l)
+          table.insert(resolved, l or lens)
+          pending = pending - 1
+          if pending == 0 then vim.schedule(draw) end
+        end
+        if lens.command or not client:supports_method('codeLens/resolve') then
+          done(lens)
+        else
+          client:request('codeLens/resolve', lens, function(rerr, res)
+            done(not rerr and res or lens)
+          end, bufnr)
+        end
+      end
+    end, bufnr)
+  end
+end
+
+vim.api.nvim_create_autocmd({ 'LspAttach', 'BufEnter', 'BufWritePost', 'InsertLeave' }, {
+  group = vim.api.nvim_create_augroup('EolCodeLens', { clear = true }),
+  callback = function(args) render_codelens(args.buf) end,
+})
+
 vim.lsp.enable({
   'lua_ls',
   'dockerls',
@@ -618,4 +739,5 @@ vim.lsp.enable({
   'springls',
   'clangd',
   'neocmakelsp',
+  'lemminx',
 })

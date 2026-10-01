@@ -1,8 +1,5 @@
 return {
   {
-    "folke/lazy.nvim",
-  },
-  {
     "NickvanDyke/opencode.nvim",
     keys = {
       { "<C-o>", function() require("opencode").ask("@this: ", { submit = true }) end, mode = { "n", "x" }, desc = "Ask opencode…" },
@@ -67,7 +64,6 @@ return {
   },
   {
     "Exafunction/codeium.vim",
-    dependencies = { "nvim-lua/plenary.nvim" },
 
     -- custom event, fired 4 seconds after the first insert in a real file
     event = "User CodeiumLoad",
@@ -167,11 +163,23 @@ return {
           draw = {
             padding = 1,
             columns = {
-              { 'label', gap = 1 },
-              { 'kind',  'source_name', gap = 1 },
+              { 'label', 'label_description', gap = 1 },
+              { 'kind',  'source_name',       gap = 1 },
             },
             components = {
               -- single-letter kind like coc (m, f, v, ...)
+              label_description = {
+                width = { max = 40 },
+                text = function(ctx)
+                  local desc = ctx.label_description or ''
+                  local max = 40
+                  if vim.fn.strdisplaywidth(desc) > max then
+                    desc = '…' .. vim.fn.strcharpart(desc, vim.fn.strchars(desc) - (max - 1))
+                  end
+                  return desc
+                end,
+                highlight = 'BlinkCmpLabelDescription',
+              },
               kind = {
                 text = function(ctx)
                   local short = {
@@ -223,12 +231,11 @@ return {
         },
 
         documentation = {
-          auto_show = true,
-          auto_show_delay_ms = 150,
+          auto_show = false,
         },
 
         ghost_text = {
-          enabled = true,
+          enabled = false,
         },
       },
 
@@ -262,22 +269,12 @@ return {
         set(0, 'BlinkCmpKindFn', { fg = '#f38ba8' })     -- f (pink)
         set(0, 'BlinkCmpKindOther', { fg = '#00bfbf' })  -- m, v, ... (cyan)
         set(0, 'BlinkCmpSource', { fg = '#808080', italic = true, bold = true })
+        set(0, 'BlinkCmpLabelDescription', { fg = '#808080', italic = true })
       end
 
       hl()
       vim.api.nvim_create_autocmd('ColorScheme', { callback = hl })
     end,
-  },
-  {
-    'numToStr/Comment.nvim',
-    opts = {},
-    keys = {
-      -- Normal mode: Toggle current line
-      { "<leader>/", "gcc", remap = true, desc = "Toggle comment" },
-
-      -- Visual mode: Toggle selection
-      { "<leader>/", "gc",  mode = "v",   remap = true,           desc = "Toggle comment" },
-    },
   },
   {
     "hat0uma/csvview.nvim",
@@ -702,7 +699,7 @@ return {
       "nvim-neotest/nvim-nio",
       "nvim-lua/plenary.nvim",
       "antoinemadec/FixCursorHold.nvim",
-      "rcasia/neotest-java",
+      { "rcasia/neotest-java", build = ":NeotestJava setup", },
     },
     cmd = { "Neotest" },
     keys = {

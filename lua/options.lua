@@ -17,24 +17,16 @@ vim.opt.scrolloff = 8
 vim.opt.signcolumn = "yes"
 vim.opt.colorcolumn = "80"
 vim.opt.mouse = "a"
-vim.opt.clipboard = "unnamedplus"
+vim.schedule(function() vim.opt.clipboard = "unnamedplus" end)
 vim.opt.termguicolors = true
 vim.opt.wildignorecase = true
 vim.o.ignorecase = true
 vim.opt.cindent = true
 vim.opt.relativenumber = true
 vim.o.autoindent = true
+vim.o.shada = "!,'100,<50,s10,h"
 vim.cmd("set whichwrap+=<,>,[,]")
 
-vim.opt.list = true
-vim.opt.listchars = {
-  tab = "> ",
-  trail = "-",
-  extends = ">",
-  precedes = "<",
-  nbsp = "+",
-  leadmultispace = "│ ", -- repeating pattern shown across leading whitespace
-}
 vim.api.nvim_set_hl(0, "Whitespace", { fg = "#45475a" }) -- dim guide color
 vim.api.nvim_create_autocmd("FileType", {
   pattern = { "qf" },
@@ -80,6 +72,10 @@ local diagnostic_cache = {}
 local lsp_cache = {}
 
 local function refresh_diagnostic_cache(buf)
+  if not package.loaded["vim.diagnostic"] then
+    diagnostic_cache[buf] = ""
+    return
+  end
   local counts = vim.diagnostic.count(buf)
   local parts = {}
   local entries = {
@@ -100,6 +96,12 @@ local function refresh_diagnostic_cache(buf)
 end
 
 local function refresh_lsp_cache(buf)
+  -- don't force-load vim.lsp just to draw the statusline
+  if not package.loaded["vim.lsp"] then
+    lsp_cache[buf] = "%#StatusLineMuted#󰅛 No LSP%*"
+    return
+  end
+
   local clients = vim.lsp.get_clients({ bufnr = buf })
   if #clients == 0 then
     lsp_cache[buf] = "%#StatusLineMuted#󰅛 No LSP%*"
@@ -264,10 +266,12 @@ vim.g.loaded_node_provider = 0
 --     end
 --   end,
 -- })
-vim.diagnostic.config({
-  virtual_text = true,
-  update_in_insert = false,
-})
+vim.schedule(function()
+  vim.diagnostic.config({
+    virtual_text = true,
+    update_in_insert = false,
+  })
+end)
 --gitsigns
 local ns, base = vim.api.nvim_create_namespace("gitdiff"), {}
 local render_timers = {}
@@ -362,23 +366,131 @@ vim.api.nvim_create_autocmd("BufWipeout", {
   end,
 })
 --notifications
-local ok, ui = pcall(require, "vim._core.ui2")
-if not ok then ok, ui = pcall(require, "vim._extui") end
-if ok then
-  ui.enable({
-    enable = true,
-    msg = {
-      targets = "msg", -- floating messages instead of the cmdline area
-      timeout = 4000,
-    },
-  })
-end
+vim.schedule(function()
+  local ok, ui = pcall(require, "vim._core.ui2")
+  if not ok then ok, ui = pcall(require, "vim._extui") end
+  if ok then
+    ui.enable({
+      enable = true,
+      msg = {
+        targets = "msg",
+        timeout = 4000,
+      },
+    })
+  end
+end)
 --indentblankline
 vim.opt.list = true
 vim.opt.listchars = {
   leadmultispace = "│ ", -- "│" + 1 space = 2-wide indent
   tab = "│ ",
 }
+
+local ns = vim.api.nvim_create_namespace("scope_guide")
+
+local function set_hl()
+  vim.api.nvim_set_hl(0, "ScopeGuide", { fg = "#ffcc66" })
+end
+set_hl()
+vim.api.nvim_create_autocmd("ColorScheme", { callback = set_hl })
+
+-- returns indent width and whether the line is blank
+local function measure(line, ts)
+  local w = 0
+  for i = 1, #line do
+    local c = line:byte(i)
+    if c == 32 then
+      w = w + 1
+    elseif c == 9 then
+      w = w + ts - (w % ts)
+    else
+      return w, false
+    end
+  end
+  return w, true
+end
+
+local function is_closer(s) return s:match("^%s*[%]%)}]") ~= nil end
+local function opens(s) return s:match("[%[%({]%s*$") ~= nil end
+
+local st = { first = nil, last = nil, col = 0, blank = {} }
+
+vim.api.nvim_set_decoration_provider(ns, {
+  on_win = function(_, win, buf, top, bot)
+    st.first = nil
+    if win ~= vim.api.nvim_get_current_win() or vim.bo[buf].buftype ~= "" then
+      return false
+    end
+
+    local ts = vim.bo[buf].tabstop
+    local sw = vim.fn.shiftwidth()
+    local lines = vim.api.nvim_buf_get_lines(buf, top, bot + 1, false)
+    local n = #lines
+    if n == 0 then return false end
+
+    local cur = vim.api.nvim_win_get_cursor(win)[1] - top -- 1-based index into lines
+    if cur < 1 or cur > n then return false end
+
+    local ind, blank = {}, {}
+    for i = 1, n do
+      ind[i], blank[i] = measure(lines[i], ts)
+    end
+
+    local base = cur
+    while base > 1 and blank[base] do base = base - 1 end
+
+    if is_closer(lines[base]) then
+      -- on a closing bracket: use the block it closes
+      local p = base - 1
+      while p >= 1 and blank[p] do p = p - 1 end
+      if p >= 1 and ind[p] > ind[base] then base = p end
+    elseif opens(lines[base]) then
+      -- on an opening line (for ... {): use the block it opens
+      local nx = base + 1
+      while nx <= n and blank[nx] do nx = nx + 1 end
+      if nx <= n and ind[nx] > ind[base] then base = nx end
+    end
+
+    local indent = ind[base]
+    if indent < sw then return false end
+
+    local first, last = base, base
+    while first > 1 and (blank[first - 1] or ind[first - 1] >= indent) do first = first - 1 end
+    while last < n and (blank[last + 1] or ind[last + 1] >= indent) do last = last + 1 end
+
+    st.first, st.last = first + top - 1, last + top - 1 -- back to 0-based buffer rows
+    st.blank = {}
+    for i = first, last do st.blank[i + top - 1] = blank[i] end
+    st.col = indent - sw - vim.fn.winsaveview().leftcol
+    return st.col >= 0
+  end,
+
+  on_line = function(_, _, buf, row)
+    if st.first and row >= st.first and row <= st.last and not st.blank[row] then
+      vim.api.nvim_buf_set_extmark(buf, ns, row, 0, {
+        ephemeral = true,
+        virt_text = { { "│", "ScopeGuide" } },
+        virt_text_win_col = st.col,
+        virt_text_pos = "overlay",
+        hl_mode = "combine",
+      })
+    end
+  end,
+})
+
+-- Neovim doesn't repaint the whole window on a plain cursor move, so ask for it
+-- only when the cursor changes line
+local last_row = -1
+vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+  callback = function()
+    local row = vim.api.nvim_win_get_cursor(0)[1]
+    if row ~= last_row then
+      last_row = row
+      vim.api.nvim__redraw({ win = 0, valid = false })
+    end
+  end,
+})
+
 --treesitter
 local treesitter_filetypes = {
   "c", "cpp", "css", "cmake", "go", "html", "java", "javascript",
@@ -523,68 +635,131 @@ vim.o.tabline = "%!v:lua.buftabline()"
 
 vim.keymap.set("n", "<Tab>", "<cmd>bnext<cr>", { desc = "Next buffer" })
 vim.keymap.set("n", "<S-Tab>", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
-vim.keymap.set("n", "<leader>x", "<cmd>bdelete<cr>", { desc = "Close buffer" })
---codeaction
--- Custom native floating window handler for vim.ui.select
-vim.ui.select = function(items, opts, on_choice)
-  opts = opts or {}
-  if #items == 0 then return end
+local function close_buffer()
+  local cur = vim.api.nvim_get_current_buf()
 
-  -- Format items (e.g. converting LSP action objects into display strings)
-  local format_item = opts.format_item or tostring
-  local lines = {}
-  for i, item in ipairs(items) do
-    table.insert(lines, string.format(" %d. %s ", i, format_item(item)))
-  end
+  -- collect listed buffers in tabline order
+  local bufs = vim.tbl_filter(function(b)
+    return vim.bo[b].buflisted
+  end, vim.api.nvim_list_bufs())
 
-  -- Calculate window dimensions
-  local max_width = 0
-  for _, line in ipairs(lines) do
-    if #line > max_width then max_width = #line end
-  end
-  local width = math.max(max_width + 2, 30)
-  local height = #lines
-
-  -- Create scratch buffer
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-
-  -- Open floating window in the center
-  local win = vim.api.nvim_open_win(buf, true, {
-    relative = 'editor',
-    row = math.floor((vim.o.lines - height) / 2),
-    col = math.floor((vim.o.columns - width) / 2),
-    width = width,
-    height = height,
-    style = 'minimal',
-    border = 'rounded',
-    title = opts.prompt or ' Select ',
-    title_pos = 'center',
-  })
-
-  -- Keybindings for selection inside the float
-  local close = function(choice_index)
-    if vim.api.nvim_win_is_valid(win) then
-      vim.api.nvim_win_close(win, true)
+  if #bufs > 1 then
+    local idx
+    for i, b in ipairs(bufs) do
+      if b == cur then
+        idx = i
+        break
+      end
     end
-    if choice_index then
-      on_choice(items[choice_index], choice_index)
-    else
-      on_choice(nil, nil)
+    -- previous buffer in the tabline, or the next one if closing the first
+    local target = bufs[idx - 1] or bufs[idx + 1]
+
+    -- switch every window showing this buffer, so no window closes
+    for _, win in ipairs(vim.fn.win_findbuf(cur)) do
+      vim.api.nvim_win_set_buf(win, target)
     end
   end
 
-  -- Press <CR> to select line under cursor
-  vim.keymap.set('n', '<CR>', function()
-    close(vim.api.nvim_win_get_cursor(win)[1])
-  end, { buffer = buf, silent = true })
-
-  -- Press <Esc> or 'q' to cancel
-  vim.keymap.set('n', 'q', function() close(nil) end, { buffer = buf, silent = true })
-  vim.keymap.set('n', '<Esc>', function() close(nil) end, { buffer = buf, silent = true })
-
-  -- Press number key (1-9) to execute action immediately
-  for i = 1, math.min(#items, 9) do
-    vim.keymap.set('n', tostring(i), function() close(i) end, { buffer = buf, silent = true })
+  if vim.api.nvim_buf_is_valid(cur) then
+    local ok, err = pcall(vim.cmd.bdelete, cur)
+    if not ok then
+      vim.notify(err, vim.log.levels.WARN)
+    end
   end
 end
+
+vim.keymap.set("n", "<leader>x", close_buffer, { desc = "Close buffer" })
+--codeaction
+-- Custom native floating window handler for vim.ui.select
+vim.schedule(function()
+  vim.ui.select = function(items, opts, on_choice)
+    opts = opts or {}
+    if #items == 0 then return end
+
+    -- Format items (e.g. converting LSP action objects into display strings)
+    local format_item = opts.format_item or tostring
+    local lines = {}
+    for i, item in ipairs(items) do
+      table.insert(lines, string.format(" %d. %s ", i, format_item(item)))
+    end
+
+    -- Calculate window dimensions
+    local max_width = 0
+    for _, line in ipairs(lines) do
+      if #line > max_width then max_width = #line end
+    end
+    local width = math.max(max_width + 2, 30)
+    local height = #lines
+
+    -- Create scratch buffer
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+
+    -- Open floating window in the center
+    local win = vim.api.nvim_open_win(buf, true, {
+      relative = 'editor',
+      row = math.floor((vim.o.lines - height) / 2),
+      col = math.floor((vim.o.columns - width) / 2),
+      width = width,
+      height = height,
+      style = 'minimal',
+      border = 'rounded',
+      title = opts.prompt or ' Select ',
+      title_pos = 'center',
+    })
+
+    -- Keybindings for selection inside the float
+    local close = function(choice_index)
+      if vim.api.nvim_win_is_valid(win) then
+        vim.api.nvim_win_close(win, true)
+      end
+      if choice_index then
+        on_choice(items[choice_index], choice_index)
+      else
+        on_choice(nil, nil)
+      end
+    end
+
+    -- Press <CR> to select line under cursor
+    vim.keymap.set('n', '<CR>', function()
+      close(vim.api.nvim_win_get_cursor(win)[1])
+    end, { buffer = buf, silent = true })
+
+    -- Press <Esc> or 'q' to cancel
+    vim.keymap.set('n', 'q', function() close(nil) end, { buffer = buf, silent = true })
+    vim.keymap.set('n', '<Esc>', function() close(nil) end, { buffer = buf, silent = true })
+
+    -- Press number key (1-9) to execute action immediately
+    for i = 1, math.min(#items, 9) do
+      vim.keymap.set('n', tostring(i), function() close(i) end, { buffer = buf, silent = true })
+    end
+  end
+end)
+--search highlight
+local timer = vim.uv.new_timer()
+
+local function clear_later()
+  timer:stop()
+  timer:start(2000, 0, vim.schedule_wrap(function()
+    vim.cmd("nohlsearch")
+  end))
+end
+
+vim.api.nvim_create_autocmd("CmdlineLeave", {
+  pattern = { "/", "\\?" },
+  callback = function()
+    if not vim.v.event.abort then clear_later() end
+  end,
+})
+
+for _, key in ipairs({ "n", "N", "*", "#" }) do
+  vim.keymap.set("n", key, function()
+    vim.schedule(clear_later)
+    return key
+  end, { expr = true })
+end
+--comment
+vim.keymap.set("n", "<leader>/", "gcc", { remap = true, desc = "Toggle comment" })
+vim.keymap.set("x", "<leader>/", "gc", { remap = true, desc = "Toggle comment" })
+--lspstuff
+vim.opt.completeopt = { 'menu', 'menuone', 'noinsert', 'fuzzy' }
