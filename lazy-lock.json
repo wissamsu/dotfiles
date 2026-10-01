@@ -7,6 +7,7 @@
   "codex.nvim": { "branch": "main", "commit": "4317788afc091d5e913109c55d5a04f32be4e14a" },
   "crates.nvim": { "branch": "main", "commit": "7039bc1d130e424232a7aa64ceddb170a154ff5b" },
   "csvview.nvim": { "branch": "main", "commit": "2466bdda54047f525d4faca53040fe657c9c33db" },
+  "delombok.nvim": { "branch": "master", "commit": "31037d586f58c92c33d70eab60d4ff2931d43a01" },
   "fff.nvim": { "branch": "main", "commit": "e3f694a2e4f82bb755418e8d305dcff779c59c27" },
   "flash.nvim": { "branch": "main", "commit": "5f0f270fdc7c5b0c21d903ee85b9cb06f2ac636a" },
   "friendly-snippets": { "branch": "main", "commit": "b4d01b0fdf3c9a549961c2f9ffe8dc09be166219" },

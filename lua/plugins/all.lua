@@ -929,5 +929,19 @@ return {
     },
   },
 
+  {
+    'axonde/delombok.nvim',
+    keys = {
+      { '<leader>dl', desc = 'Delombok File/Selection' },
+    },
+    opts = {
+      split = 'vsplit',
+      keymaps = {
+        delombok_file = '<leader>dl',
+        delombok_range = '<leader>dl',
+      },
+    },
+  },
+
 
 }
