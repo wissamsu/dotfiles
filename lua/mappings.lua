@@ -11,7 +11,7 @@ local function map(mode, lhs, rhs, opts)
 end
 map("n", ";", ":", { desc = "Enter Command Mode" })
 
-map("n", "<leader>df", ":lua add_notebook_cell()<CR>", { noremap = true, silent = true })
+map("n", "<leader>nt", ":lua add_notebook_cell()<CR>", { noremap = true, silent = true })
 
 map("n", "<C-c>", function()
   vim.cmd("%y+")
@@ -64,10 +64,10 @@ map("n", "<leader>gi", ":GradleInit<CR>", { noremap = true, silent = true })
 
 map("n", "<leader>co", ":CodexToggle<CR>", { noremap = true, silent = true })
 vim.keymap.set('n', 'gd', function() vim.lsp.buf.definition() end, { desc = 'Go to definition' })
--- 1. Map <leader>ds to open all workspace diagnostics in quickfix
-vim.keymap.set('n', '<leader>ds', function()
-  vim.diagnostic.setqflist()
-end, { desc = 'Show workspace diagnostics' })
+-- -- 1. Map <leader>ds to open all workspace diagnostics in quickfix
+-- vim.keymap.set('n', '<leader>ds', function()
+--   vim.diagnostic.setqflist()
+-- end, { desc = 'Show workspace diagnostics' })
 
 -- 2. Automatically close the quickfix list when pressing <CR> on an entry
 vim.api.nvim_create_autocmd('FileType', {

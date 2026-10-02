@@ -1,5 +1,29 @@
 return {
   {
+    "folke/trouble.nvim",
+    cmd = "Trouble",
+    opts = {
+      modes = {
+        diagnostics = {
+          win = {
+            size = { height = 0.4 }, -- 40% of the editor height
+          },
+        },
+      },
+      keys = {
+        ["<cr>"] = "jump_close",
+        ["<2-leftmouse>"] = "jump_close",
+      },
+    },
+    keys = {
+      {
+        "<leader>ds",
+        "<cmd>Trouble diagnostics toggle focus=true<cr>",
+        desc = "Diagnostics (Trouble)",
+      },
+    },
+  },
+  {
     "NickvanDyke/opencode.nvim",
     keys = {
       { "<C-o>", function() require("opencode").ask("@this: ", { submit = true }) end, mode = { "n", "x" }, desc = "Ask opencode…" },
@@ -64,7 +88,6 @@ return {
   },
   {
     "Exafunction/codeium.vim",
-
     -- custom event, fired 4 seconds after the first insert in a real file
     event = "User CodeiumLoad",
 
@@ -298,24 +321,6 @@ return {
       },
     },
     cmd = { "CsvViewEnable", "CsvViewDisable", "CsvViewToggle" },
-  },
-  {
-    'dgrbrady/nvim-docker',
-    dependencies = {
-      'nvim-lua/plenary.nvim',
-      'MunifTanjim/nui.nvim',
-      'pvsfair/reactivex.nvim' -- Adds the missing reactivex library to Neovim's path
-    },
-    -- Defining keys here automatically lazy-loads the plugin on first press
-    keys = {
-      {
-        '<leader>doc',
-        function()
-          require('nvim-docker').containers.list_containers()
-        end,
-        desc = 'List Docker containers'
-      },
-    },
   },
   {
     "dmtrKovalenko/fff.nvim",
@@ -936,6 +941,35 @@ return {
         delombok_range = '<leader>dl',
       },
     },
+  },
+  -- lua/plugins/diffview.lua
+  {
+    "sindrets/diffview.nvim",
+    cmd = {
+      "DiffviewOpen",
+      "DiffviewClose",
+      "DiffviewToggleFiles",
+      "DiffviewFocusFiles",
+      "DiffviewRefresh",
+      "DiffviewFileHistory",
+    },
+    keys = {
+      {
+        "<leader>df",
+        function()
+          if next(require("diffview.lib").views) == nil then
+            vim.cmd("DiffviewOpen")
+          else
+            vim.cmd("DiffviewClose")
+          end
+        end,
+        desc = "Diffview: toggle",
+      },
+      { "<leader>dvf", "<cmd>DiffviewFileHistory %<cr>", desc = "Diffview: file history" },
+      { "<leader>dvb", "<cmd>DiffviewFileHistory<cr>",   desc = "Diffview: branch history" },
+    },
+    dependencies = { "nvim-lua/plenary.nvim" },
+    opts = {},
   },
 
 
