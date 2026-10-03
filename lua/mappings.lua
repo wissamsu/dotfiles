@@ -52,8 +52,7 @@ map("n", "<leader>cd2", ":Crates open_cratesio<CR>", { noremap = true, silent = 
 map("n", "<leader>cv", ":Crates show_versions_popup<CR>", { noremap = true, silent = true })
 map("n", "<leader>cf", ":Crates show_features_popup<CR>", { noremap = true, silent = true })
 
-map("n", "<leader>mv", ":Maven<CR>", { noremap = true, silent = true })
-map("n", "<leader>me", ":MavenExec<CR>", { noremap = true, silent = true })
+map("n", "<leader>me", ":Maven<CR>", { noremap = true, silent = true })
 map("n", "<leader>mi", ":MavenInit<CR>", { noremap = true, silent = true })
 
 map("n", "<leader>n", ":set number!<CR>", { noremap = true, silent = true })

@@ -1,28 +1,37 @@
+vim.o.shadafile = "NONE"
+vim.api.nvim_create_autocmd("UIEnter", {
+  once = true,
+  callback = function()
+    vim.o.shadafile = ""
+    vim.schedule(function() vim.cmd.rshada() end)
+  end,
+})
+
 vim.cmd("colorscheme ex-modus")
-vim.opt.title = true
-vim.opt.titlestring = "%F"
+vim.o.title = true
+vim.o.titlestring = "%F"
 vim.g.mapleader = " "
-vim.opt.cmdheight = 0
-vim.opt.number = true
-vim.opt.tabstop = 2
-vim.opt.softtabstop = 2
-vim.opt.shiftwidth = 2
-vim.opt.expandtab = true
-vim.opt.smartindent = true
-vim.opt.wrap = false
-vim.opt.swapfile = false
-vim.opt.backup = false
-vim.opt.writebackup = false
-vim.opt.scrolloff = 8
-vim.opt.signcolumn = "yes"
-vim.opt.colorcolumn = "80"
-vim.opt.mouse = "a"
-vim.schedule(function() vim.opt.clipboard = "unnamedplus" end)
-vim.opt.termguicolors = true
-vim.opt.wildignorecase = true
+vim.o.cmdheight = 0
+vim.o.number = true
+vim.o.tabstop = 2
+vim.o.softtabstop = 2
+vim.o.shiftwidth = 2
+vim.o.expandtab = true
+vim.o.smartindent = true
+vim.o.wrap = false
+vim.o.swapfile = false
+vim.o.backup = false
+vim.o.writebackup = false
+vim.o.scrolloff = 8
+vim.o.signcolumn = "yes"
+vim.o.colorcolumn = "80"
+vim.o.mouse = "a"
+vim.schedule(function() vim.o.clipboard = "unnamedplus" end)
+vim.o.termguicolors = true
+vim.o.wildignorecase = true
 vim.o.ignorecase = true
-vim.opt.cindent = true
-vim.opt.relativenumber = true
+vim.o.cindent = true
+vim.o.relativenumber = true
 vim.o.autoindent = true
 vim.o.shada = "!,'100,<50,s10,h"
 vim.cmd("set whichwrap+=<,>,[,]")
@@ -35,7 +44,7 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
-vim.opt.laststatus = 3
+vim.o.laststatus = 3
 
 -- Define mode names and custom highlight group mappings
 local mode_map = {
@@ -166,7 +175,7 @@ vim.api.nvim_create_autocmd("BufWipeout", {
 })
 
 -- Assemble the styled statusline
-vim.opt.statusline =
+vim.o.statusline =
     "%{%v:lua.statusline_mode()%}" ..
     " %#StatusLineMuted#%F%* %m%r" ..
     "%=" ..
@@ -178,15 +187,15 @@ vim.opt.statusline =
 --replacement for vim sensible plugin
 vim.opt.complete:remove("i")
 vim.opt.nrformats:remove("octal")
-vim.opt.wildmenu = true
+vim.o.wildmenu = true
 
 vim.opt.shortmess:append("W")
-vim.opt.sidescroll = 1
-vim.opt.sidescrolloff = 2
+vim.o.sidescroll = 1
+vim.o.sidescrolloff = 2
 vim.opt.display:append("lastline")
-vim.opt.autoread = true
-vim.opt.history = 1000
-vim.opt.tabpagemax = 50
+vim.o.autoread = true
+vim.o.history = 1000
+vim.o.tabpagemax = 50
 vim.opt.sessionoptions:remove("options")
 vim.opt.viewoptions:remove("options")
 vim.opt.formatoptions:append("j")
@@ -208,10 +217,11 @@ end, { desc = "Compare current buffer to the file on disk" })
 
 vim.g.is_posix = 1
 vim.opt.backspace = { "indent", "eol", "start" }
-vim.opt.smarttab = true
+vim.o.smarttab = true
 
-vim.opt.incsearch = true
+vim.o.incsearch = true
 vim.g.loaded_ruby_provider = 0
+vim.g.loaded_python3_provider = 0
 vim.g.loaded_perl_provider = 0
 vim.g.loaded_node_provider = 0
 
@@ -380,7 +390,7 @@ vim.schedule(function()
   end
 end)
 --indentblankline
-vim.opt.list = true
+vim.o.list = true
 vim.opt.listchars = {
   leadmultispace = "│ ", -- "│" + 1 space = 2-wide indent
   tab = "│ ",
