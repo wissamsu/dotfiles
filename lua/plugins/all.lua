@@ -859,13 +859,11 @@ return {
     keys = {
       { "<leader>mv", ":MvnSearch ", desc = "Maven search" },
     },
-    init = function()
-      -- make the luarocks-installed xml2lua visible to Neovim (LuaJIT = Lua 5.1)
-      package.path = package.path
-          .. ";" .. vim.fn.expand("~/.luarocks/share/lua/5.1/?.lua")
-          .. ";" .. vim.fn.expand("~/.luarocks/share/lua/5.1/?/init.lua")
-    end,
     config = function()
+      -- make the luarocks-installed xml2lua visible (LuaJIT = Lua 5.1)
+      local rocks = vim.uv.os_homedir() .. "/.luarocks/share/lua/5.1/"
+      package.path = package.path .. ";" .. rocks .. "?.lua;" .. rocks .. "?/init.lua"
+
       local telescope = require("telescope")
       telescope.setup({
         extensions = {
@@ -970,6 +968,43 @@ return {
     },
     dependencies = { "nvim-lua/plenary.nvim" },
     opts = {},
+  },
+  {
+    "3rd/image.nvim",
+    event = { "BufReadPre *.png,*.jpg,*.jpeg,*.webp,*.gif,*.svg" },
+    ft = { "markdown", "pandoc" },
+    build = false,
+    opts = {
+      processor = "magick_cli", -- or "magick_rock" if using luarocks
+      integrations = {
+        markdown = {
+          enabled = true,
+        },
+        -- ADD THIS: enables rendering when opening image files directly
+        sys_files = {
+          enabled = true,
+          buffer_sync = true,
+        },
+      },
+      max_width = 100,
+      max_height = 20,
+      max_height_window_percentage = 50,
+    },
+  },
+  {
+    "HakonHarnes/img-clip.nvim",
+    keys = {
+      -- The plugin lazy-loads automatically when this keybinding is pressed
+      { "<leader>p", "<cmd>PasteImage<cr>", desc = "Paste image from clipboard" },
+    },
+    opts = {
+      default = {
+        dir_path = "assets",
+        prompt_for_file_name = true,
+        file_type = "png",
+        template = "$FILE_PATH",
+      },
+    },
   },
 
 

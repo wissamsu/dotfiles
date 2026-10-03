@@ -42,8 +42,11 @@ require("lazy").setup("plugins", {
   -- Your other lazy.nvim settings...
   change_detection = {
     notify = false, -- Disables the notification message
+    enabled = false,
   },
   performance = {
+    cache = { enabled = true },
+    reset_packpath = true,
     rtp = {
       disabled_plugins = {
         "gzip",
