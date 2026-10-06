@@ -1,5 +1,10 @@
 return {
   {
+    'nvim-treesitter/nvim-treesitter',
+    build = ':TSUpdate | TSInstallSync all',
+    lazy = true,
+  },
+  {
     "folke/trouble.nvim",
     cmd = "Trouble",
     opts = {
