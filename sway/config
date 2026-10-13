@@ -56,7 +56,7 @@ bindsym $mod+Shift+k move up
 bindsym $mod+Shift+l move right
 
 # Split orientation
-bindsym $mod+b exec env -u DESKTOP_STARTUP_ID -u XDG_ACTIVATION_TOKEN GTK_THEME=Adwaita:dark luakit -U
+bindsym $mod+b exec firefox 
 bindsym $mod+Shift+v splitv
 
 # Fullscreen

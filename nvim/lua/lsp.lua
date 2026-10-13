@@ -596,7 +596,28 @@ if spring_ls_jar then
   spring_capabilities.workspace.didChangeWatchedFiles = spring_capabilities.workspace.didChangeWatchedFiles or {}
   spring_capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = true
 
+  local spring_root_markers = {
+    'gradlew', 'build.gradle', 'build.gradle.kts',
+    'mvnw', 'pom.xml',
+    'settings.gradle', 'settings.gradle.kts',
+  }
+
+  local function is_compose_file(name)
+    return name:match('^docker%-compose.*%.ya?ml$') ~= nil
+        or name:match('^compose[%.%-].*ya?ml$') ~= nil
+  end
+
   vim.lsp.config('springls', {
+    root_dir = function(bufnr, on_dir)
+      local name = vim.fs.basename(vim.api.nvim_buf_get_name(bufnr))
+      if is_compose_file(name) then
+        return
+      end
+      local root = vim.fs.root(bufnr, spring_root_markers)
+      if root then
+        on_dir(root)
+      end
+    end,
     cmd = {
       vim.fn.exepath('java') ~= '' and vim.fn.exepath('java') or 'java',
       '-Xmx1G',
@@ -607,11 +628,6 @@ if spring_ls_jar then
     -- Do not start Spring LS for arbitrary YAML/properties files in any Git
     -- repository. A build marker is required so this is limited to Java/Spring
     -- projects.
-    root_markers = {
-      'gradlew', 'build.gradle', 'build.gradle.kts',
-      'mvnw', 'pom.xml',
-      'settings.gradle', 'settings.gradle.kts',
-    },
     -- Neovim detects application*.properties as `jproperties`; include both
     -- that and the generic name. Some setups expose .yml as `yml` as well.
     filetypes = { 'java', 'properties', 'jproperties', 'yaml', 'yml' },
