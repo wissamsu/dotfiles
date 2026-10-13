@@ -1,0 +1,52 @@
+general {
+    colors = true
+    interval = 1
+    output_format = "i3bar"
+    color_good = "#a6e3a1"
+    color_degraded = "#f9e2af"
+    color_bad = "#f38ba8"
+}
+
+order += "cpu_usage"
+order += "memory"
+order += "disk /"
+order += "wireless _first_"
+order += "battery all"
+order += "tztime beckley"
+
+wireless _first_ {
+    format_up = "@W@%quality"
+    format_down = "@WOFF@"
+}
+
+cpu_usage {
+    format = " %usage"
+}
+
+memory {
+    format = "󰍛 %used/%total (%percentage_used)"
+    threshold_degraded = "10%"
+    threshold_critical = "5%"
+}
+
+disk "/" {
+    format = "%free (%percentage_free)"
+}
+
+battery all {
+    format = "%status %percentage"
+    format_down = "󰂎"
+    status_chr = "󰂄"
+    status_bat = "󰁹"
+    status_unk = "󰂃"
+    status_full = "󰂅"
+    path = "/sys/class/power_supply/BAT%d/uevent"
+    low_threshold = 20
+    threshold_type = "percentage"
+    last_full_capacity = true
+}
+
+tztime beckley {
+    format = "󰅐 %a %b %d %I:%M:%S %p"
+    timezone = "America/New_York"
+}

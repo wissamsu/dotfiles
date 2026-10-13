@@ -1,0 +1,1 @@
+/home/wiss/.config/nvim/lua/init.lua
