@@ -1,3 +1,5 @@
+local rocks = vim.uv.os_homedir() .. "/.luarocks/share/lua/5.1/"
+package.path = package.path .. ";" .. rocks .. "?.lua;" .. rocks .. "?/init.lua"
 return {
   {
     'nvim-treesitter/nvim-treesitter',
@@ -91,55 +93,46 @@ return {
     },
   },
   {
-    "Exafunction/codeium.vim",
+    "supermaven-inc/supermaven-nvim",
     -- custom event, fired 4 seconds after the first insert in a real file
-    event = "User CodeiumLoad",
+    event = "User SupermavenLoad",
 
     init = function()
       vim.api.nvim_create_autocmd("InsertEnter", {
         callback = function(a)
           if vim.bo[a.buf].buftype == "" and not vim.bo[a.buf].filetype:match("^fff") then
             vim.defer_fn(function()
-              vim.api.nvim_exec_autocmds("User", { pattern = "CodeiumLoad" })
+              vim.api.nvim_exec_autocmds("User", { pattern = "SupermavenLoad" })
             end, 4000)
             return true -- remove this autocmd, the timer is already scheduled
           end
         end,
       })
-
-      -- if codeium is already loaded, keep it quiet in fff buffers
-      vim.api.nvim_create_autocmd("FileType", {
-        pattern = "fff*",
-        callback = function() vim.b.codeium_enabled = false end,
-      })
     end,
 
     config = function()
-      vim.g.codeium_no_map_tab = 1
-      vim.g.codeium_render = true
-
-      vim.keymap.set("i", "<C-g>", function()
-        return vim.fn["codeium#Accept"]()
-      end, { expr = true, silent = true })
+      require("supermaven-nvim").setup({
+        -- same as codeium_no_map_tab + <C-g> accept
+        keymaps = {
+          accept_suggestion = "<C-g>",
+          clear_suggestion = "<C-]>",
+          accept_word = "<C-j>",
+        },
+        -- keep it quiet in fff buffers (replaces vim.b.codeium_enabled = false).
+        -- Returning true tells supermaven to stay off for the current buffer.
+        condition = function()
+          return vim.bo.filetype:match("^fff") ~= nil
+        end,
+        -- inline ghost text, equivalent to codeium_render
+        disable_inline_completion = false,
+      })
 
       vim.api.nvim_create_autocmd("VimLeavePre", {
         callback = function()
-          pcall(function() vim.fn["codeium#Clear"]() end)
-          os.execute("pkill -f codeium_language_server")
+          pcall(function() require("supermaven-nvim.api").stop() end)
+          os.execute("pkill -f sm-agent")
         end,
       })
-
-      -- Codeium loads after BufEnter, so start its server explicitly. Without
-      -- this, the first completion request has no server port to connect to.
-      pcall(vim.fn["codeium#command#StartLanguageServer"])
-
-      -- Give the server time to publish its local port, then request the first
-      -- suggestion if the buffer is still in insert mode.
-      vim.defer_fn(function()
-        if vim.fn.mode():sub(1, 1) == "i" then
-          pcall(vim.fn["codeium#Complete"])
-        end
-      end, 3000)
     end,
   },
   {
@@ -864,10 +857,6 @@ return {
       { "<leader>mv", ":MvnSearch ", desc = "Maven search" },
     },
     config = function()
-      -- make the luarocks-installed xml2lua visible (LuaJIT = Lua 5.1)
-      local rocks = vim.uv.os_homedir() .. "/.luarocks/share/lua/5.1/"
-      package.path = package.path .. ";" .. rocks .. "?.lua;" .. rocks .. "?/init.lua"
-
       local telescope = require("telescope")
       telescope.setup({
         extensions = {

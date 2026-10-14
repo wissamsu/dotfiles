@@ -129,10 +129,11 @@ input type:keyboard {
 }
 
 # Output
-output * bg #1e1e2e solid_color
+output * bg /home/wiss/Downloads/background.png fill
 
 # Gaps
 default_border pixel 2
 default_floating_border pixel 2
 gaps inner 5
 gaps outer 2
+exec sh -c 'sleep 10; sudo -n /usr/local/bin/dgpu-off'
