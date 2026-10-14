@@ -20,11 +20,11 @@ wireless _first_ {
 }
 
 cpu_usage {
-    format = " %usage"
+    format = "%usage"
 }
 
 memory {
-    format = "󰍛%used/%total"
+    format = "%used/%total"
     threshold_degraded = "10%"
     threshold_critical = "5%"
 }
