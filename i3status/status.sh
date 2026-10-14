@@ -13,6 +13,7 @@ BEGIN {
     W1 = "󰤟"; W2 = "󰤢"; W3 = "󰤥"; W4 = "󰤨"; WOFF = "󰖪"
 }
 {
+    gsub(/@W@ +/, "@W@")
     p = index($0, "@W@")
     if (p > 0) {
         rest = substr($0, p + 3)
@@ -21,7 +22,7 @@ BEGIN {
         $0 = substr($0, 1, p - 1) wifi(q) substr($0, p + 3)
     }
     gsub(/@WOFF@/, WOFF)
-    gsub(/iB/, "")
+    gsub(/ KiB/, "K"); gsub(/ MiB/, "M"); gsub(/ GiB/, "G"); gsub(/ TiB/, "T")
     print
     fflush()
 }'

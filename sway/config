@@ -109,7 +109,7 @@ bindsym $mod+Shift+0 move container to workspace number 10; workspace number 10
 bar {
     position top
     status_command /home/wiss/.config/i3status/status.sh
-    separator_symbol "┃"
+    separator_symbol "│"
     font pango:JetBrainsMono Nerd Font Mono, DejaVu Sans Mono 10
     colors {
         background #1e1e2e
