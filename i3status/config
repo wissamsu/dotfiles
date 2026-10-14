@@ -24,17 +24,17 @@ cpu_usage {
 }
 
 memory {
-    format = "󰍛 %used/%total (%percentage_used)"
+    format = "󰍛%used/%total(%percentage_used)"
     threshold_degraded = "10%"
     threshold_critical = "5%"
 }
 
 disk "/" {
-    format = "%free (%percentage_free)"
+    format = "%free(%percentage_free)"
 }
 
 battery all {
-    format = "%status %percentage"
+    format = "%status%percentage"
     format_down = "󰂎"
     status_chr = "󰂄"
     status_bat = "󰁹"
@@ -47,6 +47,6 @@ battery all {
 }
 
 tztime beckley {
-    format = "󰅐 %a %b %d %I:%M:%S %p"
+    format = "%a %b %d %I:%M:%S%p"
     timezone = "America/New_York"
 }
