@@ -616,7 +616,7 @@ function _G.buftabline()
   local current = vim.api.nvim_get_current_buf()
 
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.bo[buf].buflisted then
+    if vim.bo[buf].buflisted and vim.api.nvim_buf_get_name(buf) ~= "" then
       local info = tabline_info(buf)
       local selected = buf == current
       local hl = selected and "%#TabLineSel#" or "%#TabLine#"
@@ -643,8 +643,37 @@ end
 vim.o.showtabline = 2 -- always show; use 1 to show only with 2+ buffers
 vim.o.tabline = "%!v:lua.buftabline()"
 
-vim.keymap.set("n", "<Tab>", "<cmd>bnext<cr>", { desc = "Next buffer" })
-vim.keymap.set("n", "<S-Tab>", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
+local function cycle_buffer(dir)
+  return function()
+    local cur = vim.api.nvim_get_current_buf()
+    local bufs = vim.tbl_filter(function(b)
+      return vim.bo[b].buflisted and vim.api.nvim_buf_get_name(b) ~= ""
+    end, vim.api.nvim_list_bufs())
+
+    if #bufs == 0 then return end
+
+    local idx
+    for i, b in ipairs(bufs) do
+      if b == cur then
+        idx = i
+        break
+      end
+    end
+
+    -- if currently on a hidden [No Name] buffer, jump to the first/last visible one
+    local target
+    if not idx then
+      target = dir > 0 and bufs[1] or bufs[#bufs]
+    else
+      target = bufs[((idx - 1 + dir) % #bufs) + 1]
+    end
+
+    vim.api.nvim_set_current_buf(target)
+  end
+end
+
+vim.keymap.set("n", "<Tab>", cycle_buffer(1), { desc = "Next buffer" })
+vim.keymap.set("n", "<S-Tab>", cycle_buffer(-1), { desc = "Prev buffer" })
 local function close_buffer()
   local cur = vim.api.nvim_get_current_buf()
 
