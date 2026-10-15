@@ -133,6 +133,27 @@ end
 function M.setup()
   local dap = require('dap')
   dap.configurations.java = {}
+
+  -- Lazily ask jdtls for a debug server port whenever any session starts
+  -- (neotest, <leader>dc, attach configs, ...).
+  dap.adapters.java = function(callback)
+    local c = vim.lsp.get_clients({ name = 'jdtls' })[1]
+    if not c then
+      vim.notify('jdtls is not running; open a Java file first', vim.log.levels.ERROR)
+      return
+    end
+    c:request('workspace/executeCommand', {
+      command = 'vscode.java.startDebugSession',
+      arguments = {},
+    }, function(err, port)
+      if err or type(port) ~= 'number' then
+        vim.notify('Could not start the Java debug adapter: ' .. tostring(err and err.message or 'no port'),
+          vim.log.levels.ERROR)
+        return
+      end
+      callback({ type = 'server', host = '127.0.0.1', port = port })
+    end)
+  end
 end
 
 ---Stop and discard the integrated-terminal buffer used by a DAP session.
@@ -222,8 +243,6 @@ function M.launch()
     vim.notify('Could not start the Java debug adapter: ' .. tostring(port_err or 'no port'), vim.log.levels.ERROR)
     return
   end
-
-  dap.adapters.java = { type = 'server', host = '127.0.0.1', port = port }
 
   local config = {
     type = 'java',
