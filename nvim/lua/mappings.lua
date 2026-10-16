@@ -16,7 +16,7 @@ map("n", "<leader>nt", ":lua add_notebook_cell()<CR>", { noremap = true, silent 
 map("n", "<C-c>", function()
   vim.cmd("%y+")
 end, { desc = "Copy entire file with line count" })
-map("n", "<C-n>", ":Oil<CR>", { desc = "Toggle Tree", silent = true })
+map("n", "<C-n>", ":Fyler<CR>", { desc = "Toggle Tree", silent = true })
 
 map("n", "<leader>tn", ":tabnew<CR>", { silent = true, desc = "New Tab" })
 map("n", "<leader>tc", ":tabclose<CR>", { silent = true, desc = "Close Tab" })

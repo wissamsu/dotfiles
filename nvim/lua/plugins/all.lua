@@ -27,6 +27,34 @@ return {
         "<cmd>Trouble diagnostics toggle focus=true<cr>",
         desc = "Diagnostics (Trouble)",
       },
+      {
+        "<leader>dn",
+        function() vim.diagnostic.jump({ count = 1, float = true }) end,
+        desc = "Next diagnostic",
+      },
+      {
+        "<leader>dp",
+        function() vim.diagnostic.jump({ count = -1, float = true }) end,
+        desc = "Prev diagnostic",
+      },
+      {
+        "<leader>cs",
+        function()
+          require("trouble").toggle({
+            mode = "symbols",
+            focus = true,
+            win = {
+              position = "bottom",
+              size = { height = 0.4 },
+              keys = {
+                ["<cr>"] = "jump_close",
+                ["<2-leftmouse>"] = "jump_close",
+              },
+            },
+          })
+        end,
+        desc = "Symbols (Trouble)",
+      },
     },
   },
   {
@@ -423,7 +451,7 @@ return {
         function()
           require('fff').live_grep({
             grep = {
-              modes = { 'fuzzy', 'plain' }
+              modes = { 'plain' }
             }
           })
         end,
@@ -807,21 +835,31 @@ return {
     lazy = true, -- lazy.nvim will load it automatically whenever another plugin requires it
   },
   {
-    'stevearc/oil.nvim',
-    ---@module 'oil'
-    ---@type oil.SetupOpts
+    "FylerOrg/fyler.nvim",
     dependencies = { "nvim-tree/nvim-web-devicons" },
-    cmd = { "Oil" },
+    cmd = { "Fyler" },
     opts = {
-      skip_confirm_for_simple_edits = true,
-      confirmation_strategy = "yes",
-      keymaps = {
-        ["q"] = "actions.close",
+      integrations = { icon = "nvim_web_devicons" },
+      extensions = { trash = { enabled = true } }, -- deletes go to trash
+      mappings = {
+        n = {
+          ["q"] = { action = "close", desc = "Close finder" },
+        },
       },
-      view_options = {
-        show_hidden = true
+      ui = {
+        hidden_items = {
+          switches = {}, -- don't hide dotfiles (show hidden)
+        },
       },
     },
+    config = function(_, opts)
+      require("fyler").setup(opts)
+
+      -- Skip the "Want to continue?" popup: auto-confirm every mutation.
+      require("fyler.input").get_confirmation = function(_, _, callback)
+        callback(true)
+      end
+    end,
   },
   {
     "DevDad-Main/spring-tools.nvim",
