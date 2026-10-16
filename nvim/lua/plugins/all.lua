@@ -6,6 +6,13 @@ return {
     cmd = { "TSUpdate", "TSInsall" },
   },
   {
+    "AlexandrosAlexiou/intellij-server.nvim",
+    lazy = false,
+    dependencies = { "mfussenegger/nvim-dap" }, -- optional
+    build = ":IntellijServerInstall",
+    opts = {},
+  },
+  {
     "folke/trouble.nvim",
     cmd = "Trouble",
     opts = {
@@ -880,29 +887,11 @@ return {
   {
     "nvim-telescope/telescope.nvim",
     cmd = "Telescope",
-    lazy = true,
+    keys = {
+      { "<leader>mv", function() require("mvn_search").search() end, desc = "Maven search" },
+    },
     tag = "v0.2.0",
     dependencies = { "nvim-lua/plenary.nvim" },
-  },
-  {
-    "Iamnotagenius/mvnsearch.nvim",
-    cmd = "MvnSearch",
-    dependencies = {
-      "nvim-telescope/telescope.nvim",
-      "nvim-lua/plenary.nvim",
-    },
-    keys = {
-      { "<leader>mv", ":MvnSearch ", desc = "Maven search" },
-    },
-    config = function()
-      local telescope = require("telescope")
-      telescope.setup({
-        extensions = {
-          mvnsearch = { yank_register = "d", rows = 30 },
-        },
-      })
-      telescope.load_extension("mvnsearch")
-    end,
   },
   {
     "kristijanhusak/vim-dadbod-ui",
