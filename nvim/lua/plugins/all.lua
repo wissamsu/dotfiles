@@ -6,13 +6,6 @@ return {
     cmd = { "TSUpdate", "TSInsall" },
   },
   {
-    "AlexandrosAlexiou/intellij-server.nvim",
-    lazy = false,
-    dependencies = { "mfussenegger/nvim-dap" }, -- optional
-    build = ":IntellijServerInstall",
-    opts = {},
-  },
-  {
     "folke/trouble.nvim",
     cmd = "Trouble",
     opts = {
