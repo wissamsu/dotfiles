@@ -273,9 +273,16 @@ vim.g.loaded_node_provider = 0
 vim.schedule(function()
   vim.diagnostic.config({
     virtual_text = true,
-    update_in_insert = false,
+    -- Show diagnostics while still typing. With the default (false) Neovim
+    -- holds pushed diagnostics back until InsertLeave, which reads as "the
+    -- error shows up late" on slow Java builds.
+    update_in_insert = true,
   })
 end)
+
+-- Faster CursorHold: default is 4000ms, which delays hover/diagnostic
+-- actions that key off CursorHold.
+vim.o.updatetime = 300
 --gitsigns
 local ns, base = vim.api.nvim_create_namespace("gitdiff"), {}
 local render_timers = {}

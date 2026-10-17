@@ -124,9 +124,9 @@ vim.lsp.config('terraformls', {
   root_markers = { '.terraform', '.git' },
 })
 
-local kotlin_cmd = resolve_command('kotlin-language-server', {
-  'kotlin-language-server',
+local kotlin_cmd = resolve_command('kotlin-lsp', {
   'kotlin-lsp',
+  'kotlin-language-server',
   'kmp-lsp',
 })
 local kotlin_args = vim.fs.basename(kotlin_cmd) == 'kotlin-lsp' and { '--stdio' } or {}
@@ -169,7 +169,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
   end,
 })
 
-vim.lsp.config('kotlin_language_server', {
+vim.lsp.config('kotlin_lsp', {
   cmd = vim.list_extend({ kotlin_cmd }, kotlin_args),
   filetypes = { 'kotlin' },
   root_markers = {
@@ -259,6 +259,21 @@ end
 -- visible to the Java language server.
 local jdtls_lombok = vim.fn.stdpath('data') .. '/mason/packages/jdtls/lombok.jar'
 
+-- The mason launcher starts the JVM with -Xms1G and no explicit cap, and uses
+-- the default GC. On big Spring projects the Eclipse compiler that produces
+-- diagnostics is then GC-bound. ParallelGC trades pause latency for
+-- throughput, which is what a batch compiler wants, and the explicit heap cap
+-- keeps it from thrashing while swapping with the Spring LS JVM.
+local jdtls_jvm_args = {
+  '-Xmx4G',
+  '-XX:+UseParallelGC',
+  '-XX:GCTimeRatio=4',
+  '-XX:AdaptiveSizePolicyWeight=90',
+  '-Dsun.zip.disableMemoryMapping=true',
+  '-Djava.awt.headless=true',
+  '-Xlog:disable',
+}
+
 local function start_jdtls(dispatchers, config)
   local root = config.root_dir or vim.fn.getcwd()
   local workspace = jdtls_workspace(root)
@@ -267,6 +282,10 @@ local function start_jdtls(dispatchers, config)
 
   if vim.fn.filereadable(jdtls_lombok) == 1 then
     cmd[#cmd + 1] = '--jvm-arg=-javaagent:' .. jdtls_lombok
+  end
+
+  for _, arg in ipairs(jdtls_jvm_args) do
+    cmd[#cmd + 1] = '--jvm-arg=' .. arg
   end
 
   cmd[#cmd + 1] = '-data'
@@ -293,6 +312,18 @@ vim.lsp.config('jdtls', {
       },
       maven = {
         downloadSources = false,
+      },
+      -- Rebuild changed projects in the background as soon as they change, so
+      -- the Eclipse compiler publishes diagnostics promptly after an edit.
+      autobuild = {
+        enabled = true,
+      },
+      -- Allow up to two project builds at once (multi-module repos) instead of
+      -- serializing every build behind the first.
+      maxConcurrentBuilds = 2,
+      import = {
+        -- keep .project/.classpath/.factorypath/.settings out of the repo
+        generatesMetadataFilesAtProjectRoot = false,
       },
       implementationsCodeLens = {
         enabled = true,
@@ -620,7 +651,13 @@ if spring_ls_jar then
     end,
     cmd = {
       vim.fn.exepath('java') ~= '' and vim.fn.exepath('java') or 'java',
-      '-Xmx1G',
+      '-Xms256m',
+      '-Xmx2G',
+      '-XX:+UseParallelGC',
+      '-XX:GCTimeRatio=4',
+      '-XX:AdaptiveSizePolicyWeight=90',
+      '-Djava.awt.headless=true',
+      '-Xlog:disable',
       '-Dsts.lsp.client=vscode',
       '-jar',
       spring_ls_jar,
@@ -740,9 +777,39 @@ local function render_codelens(bufnr)
   end
 end
 
+-- Refresh end-of-line code lenses, coalescing bursts: InsertLeave/BufEnter/
+-- BufWritePost can all fire within milliseconds, and each one used to send a
+-- fresh codeLens + codeLens/resolve round trip to jdtls, which competes with
+-- the background build that produces diagnostics.
+local codelens_timers = {}
+
+local function schedule_codelens(bufnr)
+  local timer = codelens_timers[bufnr]
+  if timer then
+    timer:stop()
+  end
+  codelens_timers[bufnr] = vim.defer_fn(function()
+    codelens_timers[bufnr] = nil
+    if vim.api.nvim_buf_is_valid(bufnr) then
+      render_codelens(bufnr)
+    end
+  end, 250)
+end
+
 vim.api.nvim_create_autocmd({ 'LspAttach', 'BufEnter', 'BufWritePost', 'InsertLeave' }, {
   group = vim.api.nvim_create_augroup('EolCodeLens', { clear = true }),
-  callback = function(args) render_codelens(args.buf) end,
+  callback = function(args) schedule_codelens(args.buf) end,
+})
+
+vim.api.nvim_create_autocmd('BufWipeout', {
+  group = vim.api.nvim_create_augroup('EolCodeLensCleanup', { clear = true }),
+  callback = function(args)
+    local timer = codelens_timers[args.buf]
+    if timer then
+      timer:stop()
+      codelens_timers[args.buf] = nil
+    end
+  end,
 })
 
 vim.lsp.enable({
@@ -750,7 +817,7 @@ vim.lsp.enable({
   'dockerls',
   'docker_compose_ls',
   'terraformls',
-  'kotlin_language_server',
+  "kotlin_lsp",
   'jdtls',
   'springls',
   'clangd',

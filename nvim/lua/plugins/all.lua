@@ -197,8 +197,14 @@ return {
         return not ft:match('^fff') and ft ~= 'TelescopePrompt' and vim.bo.buftype ~= 'prompt'
       end,
       keymap = {
-        preset = 'default',
-        ['<CR>'] = { 'select_and_accept', 'fallback' },
+        preset      = 'default',
+        ['<CR>']    = { 'select_and_accept', 'fallback' },
+
+        -- hide the menu, then let the arrow key do its normal thing
+        ['<Up>']    = { function(cmp) cmp.hide() end, 'fallback' },
+        ['<Down>']  = { function(cmp) cmp.hide() end, 'fallback' },
+        ['<Left>']  = { function(cmp) cmp.hide() end, 'fallback' },
+        ['<Right>'] = { function(cmp) cmp.hide() end, 'fallback' },
       },
 
       completion = {

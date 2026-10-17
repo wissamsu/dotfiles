@@ -12,7 +12,9 @@ end
 map("n", ";", ":", { desc = "Enter Command Mode" })
 
 map("n", "<leader>nt", ":lua add_notebook_cell()<CR>", { noremap = true, silent = true })
-
+vim.keymap.set('i', '<C-h>', function()
+  require('blink.cmp').show()
+end, { desc = 'Show completion menu' })
 map("n", "<C-c>", function()
   vim.cmd("%y+")
 end, { desc = "Copy entire file with line count" })

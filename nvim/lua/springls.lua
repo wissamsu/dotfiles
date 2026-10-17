@@ -44,15 +44,18 @@ function M.client_for_root(name, root)
 end
 
 --- Synchronously run a command on `client`.
+--- Only use this when the result is actually needed: it blocks the editor
+--- event loop (input) until the server answers.
 ---@param client vim.lsp.Client
 ---@param command string
 ---@param arguments any[]|nil
+---@param timeout_ms integer? defaults to 15s
 ---@return any result, string|nil error
-function M.execute(client, command, arguments)
+function M.execute(client, command, arguments, timeout_ms)
   local response = client:request_sync('workspace/executeCommand', {
     command = command,
     arguments = arguments or {},
-  }, 180000, 0)
+  }, timeout_ms or 15000, 0)
   if not response then
     return nil, 'no response'
   end
@@ -60,6 +63,19 @@ function M.execute(client, command, arguments)
     return nil, type(response.err) == 'table' and response.err.message or tostring(response.err)
   end
   return response.result
+end
+
+--- Fire a command at `client` without waiting for its response. Used for
+--- fire-and-forget bridge commands: blocking on them used to stall springls
+--- startup (and the UI) while jdtls was still importing the project.
+---@param client vim.lsp.Client
+---@param command string
+---@param arguments any[]|nil
+function M.execute_async(client, command, arguments)
+  client:request('workspace/executeCommand', {
+    command = command,
+    arguments = arguments or {},
+  }, function() end, nil)
 end
 
 --- Handle a `sts4.classpath.*` callback coming from jdtls, plus a few commands
@@ -134,7 +150,9 @@ function M.add_classpath_listener(params, ctx)
   local p = params or {}
   -- Argument order matters: jdtls reads [0] as the callback id (String)
   -- and [1] as the batching flag (boolean).
-  M.execute(jdtls, 'sts.java.addClasspathListener', { p.callbackCommandId, p.batched })
+  -- Fire and forget: springls should not be made to wait while jdtls is still
+  -- importing; the listener is registered asynchronously either way.
+  M.execute_async(jdtls, 'sts.java.addClasspathListener', { p.callbackCommandId, p.batched })
   return vim.NIL
 end
 
@@ -148,7 +166,7 @@ function M.remove_classpath_listener(params, ctx)
       and M.client_for_root('jdtls', springls.config.root_dir)
     or M.client('jdtls')
   if jdtls then
-    M.execute(jdtls, 'sts.java.removeClasspathListener', { (params or {}).callbackCommandId })
+    M.execute_async(jdtls, 'sts.java.removeClasspathListener', { (params or {}).callbackCommandId })
   end
   return vim.NIL
 end
@@ -183,7 +201,9 @@ function M.java_data_request(err, params, ctx)
   local jdtls = springls and springls.config.root_dir
       and M.client_for_root('jdtls', springls.config.root_dir)
     or M.client('jdtls')
-  if not command or not jdtls then
+  -- Do not block the UI for a jdtls that is still importing/indexing; answer
+  -- with null instead, the same way VS Code would if the Java side is busy.
+  if not command or not jdtls or not jdtls.initialized then
     return vim.NIL
   end
 
