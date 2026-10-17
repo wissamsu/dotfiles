@@ -1,11 +1,5 @@
-vim.o.shadafile = "NONE"
-vim.api.nvim_create_autocmd("UIEnter", {
-  once = true,
-  callback = function()
-    vim.o.shadafile = ""
-    vim.schedule(function() vim.cmd.rshada() end)
-  end,
-})
+-- shada handling lives in init.lua so that it stays on the startup path
+-- (UIEnter can fire before this deferred module is loaded).
 
 vim.cmd("colorscheme ex-modus")
 vim.o.title = true

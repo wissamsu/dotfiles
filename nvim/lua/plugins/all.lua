@@ -980,7 +980,13 @@ return {
       { "<leader>dvb", "<cmd>DiffviewFileHistory<cr>",   desc = "Diffview: branch history" },
     },
     dependencies = { "nvim-lua/plenary.nvim" },
-    opts = {},
+    opts = {
+      view = {
+        default = { winbar_info = true },
+        merge_tool = { winbar_info = true },
+        file_history = { winbar_info = true },
+      },
+    },
   },
   {
     "3rd/image.nvim",
