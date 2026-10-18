@@ -1,6 +1,16 @@
 local rocks = vim.uv.os_homedir() .. "/.luarocks/share/lua/5.1/"
 package.path = package.path .. ";" .. rocks .. "?.lua;" .. rocks .. "?/init.lua"
 return {
+  -- lazy.nvim
+  {
+    "AlexandrosAlexiou/kotlin.nvim",
+    ft = { "kotlin" },
+    dependencies = { "mason.nvim", "oil.nvim", "trouble.nvim" },
+    init = function()
+      vim.env.KOTLIN_LSP_DIR = "/home/wiss/.local/share/kotlin-lsp/kotlin-server-263.6379.0"
+    end,
+    opts = {},
+  },
   {
     'nvim-treesitter/nvim-treesitter',
     cmd = { "TSUpdate", "TSInsall" },
