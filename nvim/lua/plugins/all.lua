@@ -12,6 +12,12 @@ return {
     opts = {},
   },
   {
+    "aznhe21/actions-preview.nvim",
+    keys = {
+      { "<leader>ca", function() require("actions-preview").code_actions() end, mode = { "n", "v" } },
+    },
+  },
+  {
     'nvim-treesitter/nvim-treesitter',
     cmd = { "TSUpdate", "TSInsall" },
   },
@@ -33,7 +39,7 @@ return {
     },
     keys = {
       {
-        "<leader>ds",
+        "<le<LeftMouse>der>ds",
         "<cmd>Trouble diagnostics toggle focus=true<cr>",
         desc = "Diagnostics (Trouble)",
       },
