@@ -124,12 +124,273 @@ vim.lsp.config('terraformls', {
   root_markers = { '.terraform', '.git' },
 })
 
-local kotlin_cmd = resolve_command('kotlin-lsp', {
-  'kotlin-lsp',
-  'kotlin-language-server',
-  'kmp-lsp',
-})
-local kotlin_args = vim.fs.basename(kotlin_cmd) == 'kotlin-lsp' and { '--stdio' } or {}
+-- Kotlin (JetBrains kotlin-lsp / intellij-server)
+--
+-- The server is a headless IntelliJ and leans on the VS Code client for a few
+-- things, so Neovim has to supply them:
+--   * completion items carry an empty textEdit plus a
+--     `jetbrains.kotlin.completion.apply` command that performs the real
+--     insert (text + imports + caret) server-side. blink.cmp applies the
+--     empty edit and then runs the command, giving VS Code behaviour.
+--   * it asks for the `jetbrains.kotlin` configuration before every inlay
+--     hint request; hints whose optionId is not answered with true are skipped.
+--   * it uses window/showDocument to move the caret after an applied completion.
+--   * diagnostics are pull-only and it never re-pulls itself: Neovim pulls
+--     once on didOpen (always too early) so the handlers below re-pull when
+--     the server announces the project import result.
+--   * definitions of library symbols point into Maven `-sources.jar` files
+--     with a `jar:///...jar!/entry` URI. Neovim's default jump treats that
+--     as a file path, opens an empty buffer and crashes with "Invalid cursor
+--     line: out of range". The helpers below extract the member and jump.
+
+-- Server lifecycle: the launcher runs a full IntelliJ, so importing and
+-- indexing the project costs tens of seconds on every fresh process. Instead
+-- of spawning one per nvim session (stdio), run it detached in multi-client
+-- mode and connect over TCP. The first session starts it (one-time wait with
+-- a notification); later sessions reconnect to the warm instance and have
+-- completions within seconds. The server exits on its own after 8h with no
+-- clients. The port is derived from the project root, so every project gets
+-- its own server and the same project always finds an existing one.
+local kotlin_lsp_cache = vim.fn.stdpath('cache') .. '/kotlin-lsp'
+
+local function resolve_kotlin_server()
+  for _, name in ipairs({
+    vim.fn.stdpath('data') .. '/mason/bin/kotlin-lsp',
+    'intellij-server',
+    'kotlin-lsp',
+  }) do
+    local path = name:find('/') and name or vim.fn.exepath(name)
+    if path ~= '' and vim.fn.executable(path) == 1 then
+      -- The kotlin-lsp shim execs bin/intellij-server with the same options.
+      return path
+    end
+  end
+end
+
+local kotlin_exe = resolve_kotlin_server()
+
+-- Per-project cache/index, like kotlin.nvim: several headless IntelliJ
+-- instances must not fight over one system path.
+local function kotlin_system_path(root)
+  return kotlin_lsp_cache .. '/' .. vim.fn.sha256(root):sub(1, 16)
+end
+
+local function kotlin_tcp_alive(port)
+  local tcp = vim.uv.new_tcp()
+  local done, alive = false, false
+  tcp:connect('127.0.0.1', port, function(err)
+    alive = err == nil
+    done = true
+  end)
+  vim.wait(500, function() return done end, 10)
+  tcp:close()
+  return alive
+end
+
+local function kotlin_server_cmd(root, port)
+  return {
+    kotlin_exe,
+    '--workspace-root=' .. root,
+    '--socket=127.0.0.1:' .. port,
+    '--multi-client',
+    '--idle-timeout=8h',
+    '--data-sharing=none',
+    '--log-level=WARNING',
+    '--system-path=' .. kotlin_system_path(root),
+  }
+end
+
+local function kotlin_stdio_cmd(root)
+  return {
+    kotlin_exe,
+    '--stdio',
+    '--data-sharing=none',
+    '--log-level=WARNING',
+    '--system-path=' .. kotlin_system_path(root),
+  }
+end
+
+-- IntelliJ's declarative inlay hint option ids. The server flattens the
+-- `jetbrains.kotlin` response into dot-paths, so these keys must spell the
+-- option ids exactly. Only `true` renders a hint; parameters match IntelliJ's
+-- own defaults, everything else is off to avoid visual noise.
+local kotlin_inlay_hints = {
+  ['parameters'] = true,
+  ['parameters.compiled'] = true,
+  ['parameters.excluded'] = false,
+  ['parameters.context'] = false,
+  ['type.property'] = false,
+  ['type.variable'] = false,
+  ['type.function.return'] = false,
+  ['type.function.parameter'] = false,
+  ['lambda.return'] = false,
+  ['lambda.receivers.parameters'] = false,
+  ['value.ranges'] = false,
+  ['value.kotlin.time'] = false,
+  ['call.chains'] = false,
+}
+
+-- Diagnostics are pull-based (`textDocument/diagnostic`) and the server
+-- neither pushes results nor asks for a refresh. Neovim only re-pulls on
+-- didOpen/didChange, so the first pull lands before the IntelliJ analysis
+-- exists and the buffer would show zero diagnostics (also for unresolved
+-- imports from libraries) until the next edit. Re-pull when the server
+-- reports the project as imported/ready; one delayed retry for good measure
+-- because inspections keep trickling in after the signal.
+local function kotlin_refresh_diagnostics(client_id)
+  local function attempt()
+    local client = vim.lsp.get_client_by_id(client_id)
+    if not client then return end
+    for bufnr in pairs(client.attached_buffers or {}) do
+      if vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].filetype == 'kotlin' then
+        pcall(vim.lsp.diagnostic._refresh, bufnr, client.id)
+      end
+    end
+  end
+  attempt()
+  vim.defer_fn(attempt, 5000)
+end
+
+-- Library definitions resolve to `jar:///path/foo-sources.jar!/entry` URIs.
+-- zipPlugin is disabled in this config, so extract the member with `unzip`
+-- into a cache dir and open that file; the buffer is read-only because edits
+-- to library sources cannot be persisted anywhere useful.
+local function kotlin_extract_jar_member(jar, member)
+  local slug = vim.fn.sha256(jar):sub(1, 16) .. '-' .. vim.fn.fnamemodify(jar, ':t')
+  local target = table.concat({
+    vim.fn.stdpath('cache'), 'kotlin-lsp-sources', slug, member,
+  }, '/')
+  if vim.fn.filereadable(target) == 1
+      and vim.fn.getftime(target) >= vim.fn.getftime(jar) then
+    return target
+  end
+  vim.fn.mkdir(vim.fn.fnamemodify(target, ':h'), 'p')
+
+  local cmd
+  if vim.fn.executable('unzip') == 1 then
+    cmd = { 'unzip', '-p', jar, member }
+  elseif vim.fn.executable('python3') == 1 then
+    cmd = {
+      'python3', '-c',
+      'import sys, zipfile; sys.stdout.buffer.write(zipfile.ZipFile(sys.argv[1]).read(sys.argv[2]))',
+      jar, member,
+    }
+  else
+    vim.notify('kotlin_lsp: need `unzip` or `python3` to read library sources', vim.log.levels.ERROR)
+    return nil
+  end
+
+  local lines = vim.fn.systemlist(cmd)
+  if vim.v.shell_error ~= 0 or vim.fn.writefile(lines, target) ~= 0 then
+    return nil
+  end
+  return target
+end
+
+local function kotlin_open_jar_location(uri, range)
+  local jar, member = uri:match('^jar://(.+)!/(.+)$')
+  if not jar then return false end
+  local path = kotlin_extract_jar_member(jar, member)
+  if not path then
+    vim.notify('kotlin_lsp: cannot read ' .. uri, vim.log.levels.WARN)
+    return true -- handled: do not fall back to the crashing default jump
+  end
+
+  -- The buffer is a regular kotlin file for autocmds as well; an error in a
+  -- BufReadPost FileType handler (e.g. a client start attempt) would abort the
+  -- edit and leave the cursor wherever the load put it.
+  local ok = pcall(vim.cmd, 'edit ' .. vim.fn.fnameescape(path))
+  local bufnr
+  if ok then
+    bufnr = vim.api.nvim_get_current_buf()
+  else
+    bufnr = vim.fn.bufnr(path)
+    if bufnr < 0 then bufnr = vim.fn.bufadd(path) end
+    pcall(vim.fn.bufload, bufnr)
+    vim.api.nvim_win_set_buf(0, bufnr)
+  end
+  vim.bo[bufnr].swapfile = false
+  vim.bo[bufnr].readonly = true
+  vim.bo[bufnr].modifiable = false
+
+  local line = math.min((range and range.start.line or 0) + 1, vim.api.nvim_buf_line_count(bufnr))
+  local col = 0
+  if range then
+    local text = vim.api.nvim_buf_get_lines(bufnr, line - 1, line, false)[1] or ''
+    local str_ok, byte = pcall(vim.str_byteindex, text, 'utf-16', range.start.character, false)
+    col = str_ok and byte or 0
+  end
+  pcall(vim.api.nvim_win_set_cursor, 0, { line, col })
+  return true
+end
+
+local function kotlin_jump_to_location(location, client)
+  local uri = location.uri or location.targetUri or ''
+  local range = location.range or location.targetSelectionRange or location.targetRange
+  if uri:sub(1, 4) == 'jar:' then
+    kotlin_open_jar_location(uri, range)
+    return
+  end
+  local fname = uri:sub(1, 5) == 'file:' and vim.uri_to_fname(uri) or ''
+  if fname == '' or vim.fn.filereadable(fname) == 0 then
+    vim.notify(('kotlin_lsp: definition is not openable (%s)'):format(uri), vim.log.levels.INFO)
+    return
+  end
+  -- vim.lsp.util.show_document does not clamp, but for real files the buffer
+  -- loads with its content, so the cursor line is always valid.
+  local ok = pcall(vim.lsp.util.show_document, location, client.offset_encoding, { reuse_win = true })
+  if not ok then
+    vim.notify('kotlin_lsp: could not open ' .. uri, vim.log.levels.WARN)
+  end
+end
+
+-- `gd` (the global mapping goes through vim.lsp.buf.definition, which jumps
+-- directly for a single location and cannot be intercepted via handlers).
+local function kotlin_aware_definition()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local client = vim.lsp.get_clients({ bufnr = bufnr, name = 'kotlin_lsp' })[1]
+  if not client then return end
+  local params = vim.lsp.util.make_position_params(0, client.offset_encoding)
+  client:request('textDocument/definition', params, function(err, result)
+    if err or result == nil or (vim.islist(result) and #result == 0) then
+      vim.notify('No definition found', vim.log.levels.INFO)
+      return
+    end
+    local locations = vim.islist(result) and result or { result }
+    if #locations == 1 then
+      kotlin_jump_to_location(locations[1], client)
+      return
+    end
+    -- Several hits (overloads): quickfix for the file ones, like the built-in
+    -- jump, and a direct jump if they only live in jars.
+    local file_locations = vim.tbl_filter(function(location)
+      local uri = location.uri or location.targetUri or ''
+      return uri:sub(1, 5) == 'file:' and vim.fn.filereadable(vim.uri_to_fname(uri)) == 1
+    end, locations)
+    if #file_locations == 0 then
+      kotlin_jump_to_location(locations[1], client)
+      return
+    end
+    local items = vim.lsp.util.locations_to_items(file_locations, client.offset_encoding)
+    vim.fn.setqflist({}, ' ', { title = 'LSP locations', items = items })
+    vim.cmd('botright copen')
+  end, bufnr)
+end
+
+-- Prefer TCP server mode (warm IntelliJ shared across nvim sessions); fall
+-- back to per-session stdio when the port dance fails, and to the legacy
+-- fwcd server (no options understood) when kotlin-lsp is not installed.
+local function start_kotlin_client(dispatchers, config)
+  local root = config.root_dir
+  if kotlin_exe and root then
+    return vim.lsp.rpc.start(kotlin_stdio_cmd(root), dispatchers, { cwd = root })
+  end
+  local legacy = vim.fn.exepath('kotlin-language-server')
+  if legacy == '' then
+    return nil
+  end
+  return vim.lsp.rpc.start({ legacy }, dispatchers)
+end
 
 vim.api.nvim_create_autocmd('LspAttach', {
   group = vim.api.nvim_create_augroup('LspFormatOnSave', { clear = true }),
@@ -169,15 +430,149 @@ vim.api.nvim_create_autocmd('LspAttach', {
   end,
 })
 
-vim.lsp.config('kotlin_lsp', {
-  cmd = vim.list_extend({ kotlin_cmd }, kotlin_args),
-  filetypes = { 'kotlin' },
-  root_markers = {
-    'settings.gradle', 'settings.gradle.kts',
-    'build.gradle', 'build.gradle.kts',
-    'pom.xml', '.git',
-  },
-})
+if kotlin_exe or vim.fn.exepath('kotlin-language-server') ~= '' then
+  vim.lsp.config('kotlin_lsp', {
+    cmd = start_kotlin_client,
+    filetypes = { 'kotlin' },
+    -- Same markers as the official nvim-lspconfig preset. No `.git` on
+    -- purpose: the server is a full JVM, so it should not start for stray
+    -- Kotlin files outside a build-system project.
+    root_markers = {
+      'settings.gradle', 'settings.gradle.kts',
+      'pom.xml',
+      'build.gradle', 'build.gradle.kts',
+      'workspace.json',
+    },
+    -- Without this a kotlin file outside a project (e.g. an extracted
+    -- library source opened by `gd`) would still try to start a client with
+    -- a nil root; our cmd function answers nil and client.initialize then
+    -- crashes on the nil rpc channel.
+    workspace_required = true,
+    -- The official capability only advertises '.', so typing '@' would not
+    -- open the menu until a keyword character is typed. Annotations are a
+    -- keystroke away from '@', so advertise it as a trigger as well.
+    on_attach = function(client, bufnr)
+      local provider = client.server_capabilities.completionProvider
+      if provider and provider.triggerCharacters
+          and not vim.tbl_contains(provider.triggerCharacters, '@') then
+        table.insert(provider.triggerCharacters, '@')
+      end
+      -- Safe variant of the global mapping: results may point into library
+      -- sources jars, which the built-in jump cannot open (and crashes on).
+      vim.keymap.set('n', 'gd', kotlin_aware_definition, {
+        buffer = bufnr,
+        desc = 'Go to definition (jar-aware)',
+      })
+      -- The server always answers with isIncomplete=true. blink.cmp then
+      -- re-requests after every keystroke, so the menu is always one IntelliJ
+      -- round trip (~0.2-1 s, several seconds right after start) behind the
+      -- typed text. The reply is a plain member list filtered by the text
+      -- before the cursor; marking it complete lets blink keep the response
+      -- and fuzzy-filter it locally, so one request per completion session
+      -- suffices and the menu tracks typing instantly. Typing backwards or
+      -- entering a new context still triggers a fresh request.
+      --
+      -- Exception: right after '@' the prefix is empty and the server answers
+      -- with a short relevance-promoted subset of annotations (imported and
+      -- recently used ones): @CrossOrigin is missing while the imported
+      -- @RestController is not, and no local filtering can recover that.
+      -- Keep that one reply incomplete so blink asks again once a letter is
+      -- typed; the request with a non-empty prefix returns the full match
+      -- set, which is then cached and filtered locally as usual.
+      if not client._kotlin_completion_patched then
+        client._kotlin_completion_patched = true
+        local orig_request = client.request
+        client.request = function(self, method, params, handler, bufnr2)
+          if method ~= 'textDocument/completion' or type(handler) ~= 'function' then
+            return orig_request(self, method, params, handler, bufnr2)
+          end
+          local empty_annotation_prefix = false
+          local ctx = params and params.context
+          if ctx and ctx.triggerCharacter == '@' then
+            empty_annotation_prefix = true
+          elseif params and params.position then
+            local b = bufnr2 or vim.api.nvim_get_current_buf()
+            local ok, line = pcall(
+              vim.api.nvim_buf_get_lines, b, params.position.line, params.position.line + 1, false)
+            line = ok and line[1] or nil
+            if line then
+              local str_ok, byte = pcall(vim.str_byteindex, line, 'utf-16', params.position.character, false)
+              if str_ok then empty_annotation_prefix = line:sub(byte, byte) == '@' end
+            end
+          end
+          return orig_request(self, method, params, function(err, result, ...)
+            if not err and type(result) == 'table' then
+              result.isIncomplete = empty_annotation_prefix
+            end
+            return handler(err, result, ...)
+          end, bufnr2)
+        end
+      end
+    end,
+    handlers = {
+      -- The server queries this before rendering inlay hints and skips any
+      -- option that is not answered with true.
+      ['workspace/configuration'] = function(_, params, _)
+        local result = {}
+        for _, item in ipairs(params.items or {}) do
+          if item.section == 'jetbrains.kotlin' then
+            result[#result + 1] = { hints = kotlin_inlay_hints }
+          else
+            result[#result + 1] = vim.NIL
+          end
+        end
+        return result
+      end,
+      -- Applied completions move the caret with this request. The default
+      -- handler would open a window; the caret belongs in the current buffer.
+      ['window/showDocument'] = function(_, result, ctx)
+        if result and not result.external and result.uri ~= nil
+            and result.uri:sub(1, 4) == 'jar:' then
+          kotlin_open_jar_location(result.uri, result.selection)
+          return { success = true }
+        end
+        local ok, bufnr = pcall(vim.uri_to_bufnr, result.uri)
+        if ok and not result.external and result.selection
+            and bufnr == vim.api.nvim_get_current_buf() then
+          local start = result.selection.start
+          local line = math.min(start.line + 1, vim.api.nvim_buf_line_count(bufnr))
+          local text = vim.api.nvim_buf_get_lines(bufnr, line - 1, line, false)[1] or ''
+          local byte_ok, byte = pcall(vim.str_byteindex, text, 'utf-16', start.character, false)
+          pcall(vim.api.nvim_win_set_cursor, 0, { line, byte_ok and byte or 0 })
+          return { success = true }
+        end
+        local doc_ok, reply = pcall(vim.lsp.handlers['window/showDocument'], nil, result, ctx)
+        return doc_ok and reply or { success = false }
+      end,
+      -- Project import finished (or failed). This is the only reliable
+      -- "analysis warm-up done" signal; trigger a diagnostic re-pull, and
+      -- surface import failures instead of leaving them in :LspLog.
+      ['intellij/workspaceImportState'] = function(_, result, ctx)
+        for _, folder in ipairs(result and result.folders or {}) do
+          if folder.status == 'FAILED' then
+            vim.notify(
+              ('kotlin_lsp: %s import failed: %s')
+              :format(folder.tool or 'project', folder.message or 'unknown error'),
+              vim.log.levels.ERROR
+            )
+          elseif folder.status == 'SUCCESS' then
+            kotlin_refresh_diagnostics(ctx.client_id)
+          end
+        end
+      end,
+      -- Belongs to the server's readiness handshake; cheap to re-pull here
+      -- as well in case the import-state notification is skipped.
+      ['intellij/ready-for-test'] = function(_, _, ctx)
+        kotlin_refresh_diagnostics(ctx.client_id)
+      end,
+    },
+  })
+else
+  vim.notify(
+    'kotlin_lsp: kotlin-lsp / intellij-server not found on PATH',
+    vim.log.levels.WARN
+  )
+end
 
 -- Java (jdtls)
 -- Spring Boot Tools jars: the vmware.vscode-spring-boot extension ships the
@@ -460,6 +855,191 @@ vim.api.nvim_create_autocmd('LspAttach', {
     })
   end,
 })
+
+-- Kotlin: the JetBrains server's `source.organizeImports` only removes unused
+-- imports and sorts them; missing imports come from the compiler's
+-- "Import class 'Foo' -> a.b.Foo" quickfix (an `applyModCommand` that resolves
+-- the reference server-side and sends back a `workspace/applyEdit`). Walk the
+-- file's unresolved references after saving, apply every quickfix that has
+-- exactly one candidate (ambiguous ones are left for the user, like IntelliJ's
+-- "add unambiguous imports on the fly"), then organize imports, then write the
+-- buffer back without blocking the initial `:w`.
+local function organize_kotlin_imports_async(client, bufnr)
+  if not vim.api.nvim_buf_is_valid(bufnr) or vim.b[bufnr].kotlin_imports_pending then
+    return
+  end
+
+  vim.b[bufnr].kotlin_imports_pending = true
+
+  local function finish()
+    if vim.api.nvim_buf_is_valid(bufnr) then
+      vim.b[bufnr].kotlin_imports_pending = false
+    end
+  end
+
+  local function save_edit()
+    if not vim.api.nvim_buf_is_valid(bufnr) then
+      finish()
+      return
+    end
+
+    if vim.bo[bufnr].modified then
+      vim.api.nvim_buf_call(bufnr, function()
+        vim.cmd('silent noautocmd update')
+      end)
+    end
+    finish()
+  end
+
+  local function exec_action(action, on_done)
+    local tick = vim.api.nvim_buf_get_changedtick(bufnr)
+
+    if not vim.api.nvim_buf_is_valid(bufnr)
+        or vim.api.nvim_buf_get_changedtick(bufnr) ~= tick then
+      finish()
+      return
+    end
+
+    if action.edit then
+      vim.lsp.util.apply_workspace_edit(action.edit, client.offset_encoding)
+    end
+
+    if action.command then
+      client:exec_cmd(action.command, { bufnr = bufnr }, function()
+        vim.schedule(on_done)
+      end)
+    else
+      vim.schedule(on_done)
+    end
+  end
+
+  local function organize_imports()
+    local params = {
+      textDocument = { uri = vim.uri_from_bufnr(bufnr) },
+      range = {
+        start = { line = 0, character = 0 },
+        ['end'] = { line = 0, character = 0 },
+      },
+      context = {
+        only = { 'source.organizeImports' },
+        diagnostics = {},
+      },
+    }
+
+    client:request('textDocument/codeAction', params, function(err, actions)
+      vim.schedule(function()
+        if err or not actions or not vim.api.nvim_buf_is_valid(bufnr) then
+          finish()
+          return
+        end
+
+        for _, action in ipairs(actions) do
+          local kind = action.kind or ''
+          if not action.disabled
+              and (kind == 'source.organizeImports'
+                or vim.startswith(kind, 'source.organizeImports.')) then
+            exec_action(action, save_edit)
+            return
+          end
+        end
+
+        save_edit()
+      end)
+    end, bufnr)
+  end
+
+  -- One fix per round: the quickfixes embed the full new file text, so they
+  -- cannot be applied in parallel, and the diagnostics must be re-pulled after
+  -- every edit (positions shift).
+  local function fix_unresolved(round)
+    if round > 10 then
+      organize_imports()
+      return
+    end
+
+    local params = { textDocument = { uri = vim.uri_from_bufnr(bufnr) } }
+    client:request('textDocument/diagnostic', params, function(err, result)
+      vim.schedule(function()
+        if err or type(result) ~= 'table' or not vim.api.nvim_buf_is_valid(bufnr) then
+          finish()
+          return
+        end
+
+        local items = result.items or {}
+
+        local function try(index)
+          if index > #items or not vim.api.nvim_buf_is_valid(bufnr) then
+            organize_imports()
+            return
+          end
+
+          local diagnostic = items[index]
+          if diagnostic.code ~= 'UNRESOLVED_REFERENCE' or not diagnostic.data then
+            try(index + 1)
+            return
+          end
+
+          local action_params = {
+            textDocument = { uri = vim.uri_from_bufnr(bufnr) },
+            range = diagnostic.range,
+            context = { diagnostics = { diagnostic } },
+          }
+
+          client:request('textDocument/codeAction', action_params, function(action_err, actions)
+            vim.schedule(function()
+              if action_err or not actions or not vim.api.nvim_buf_is_valid(bufnr) then
+                finish()
+                return
+              end
+
+              local fixes = {}
+              for _, action in ipairs(actions) do
+                if action.kind == 'quickfix' and action.title
+                    and (vim.startswith(action.title, 'Import ')
+                      or vim.startswith(action.title, 'Add import')) then
+                  fixes[#fixes + 1] = action
+                end
+              end
+
+              if #fixes == 1 then
+                exec_action(fixes[1], function()
+                  fix_unresolved(round + 1)
+                end)
+              else
+                -- Ambiguous (several candidates) or not importable: skip it.
+                try(index + 1)
+              end
+            end)
+          end, bufnr)
+        end
+
+        try(1)
+      end)
+    end, bufnr)
+  end
+
+  fix_unresolved(1)
+end
+
+vim.api.nvim_create_autocmd('LspAttach', {
+  group = vim.api.nvim_create_augroup('KotlinImportsOnSave', { clear = true }),
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if not client or client.name ~= 'kotlin_lsp' then
+      return
+    end
+
+    local group = vim.api.nvim_create_augroup('KotlinImports' .. args.buf, { clear = true })
+    vim.api.nvim_create_autocmd('BufWritePost', {
+      group = group,
+      buffer = args.buf,
+      callback = function()
+        organize_kotlin_imports_async(client, args.buf)
+      end,
+    })
+  end,
+})
+
 local function rename_file_to_public_type(bufnr)
   if not vim.api.nvim_buf_is_valid(bufnr) or vim.bo[bufnr].buftype ~= '' then
     return
