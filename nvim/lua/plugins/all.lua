@@ -39,7 +39,7 @@ return {
     },
     keys = {
       {
-        "<le<LeftMouse>der>ds",
+        "<leader>ds",
         "<cmd>Trouble diagnostics toggle focus=true<cr>",
         desc = "Diagnostics (Trouble)",
       },

@@ -56,7 +56,7 @@ bindsym $mod+Shift+k move up
 bindsym $mod+Shift+l move right
 
 # Split orientation
-bindsym $mod+b exec firefox 
+bindsym $mod+b exec env LIBVA_DRIVER_NAME=iHD MOZ_ENABLE_WAYLAND=1 firefox 
 bindsym $mod+Shift+v splitv
 
 # Fullscreen

@@ -6,13 +6,13 @@ require "lfs"
 
 -- Check for lua configuration files that will never be loaded because they are
 -- shadowed by builtin modules.
-table.insert(package.loaders, 2, function (modname)
+table.insert(package.loaders, 2, function(modname)
     if not package.searchpath then return end
     local f = package.searchpath(modname, package.path)
     if not f or f:find(luakit.install_paths.install_dir .. "/", 0, true) ~= 1 then
         return
     end
-    local lf = luakit.config_dir .. "/" .. modname:gsub("%.","/") .. ".lua"
+    local lf = luakit.config_dir .. "/" .. modname:gsub("%.", "/") .. ".lua"
     if f == lf then
         msg.warn("Loading local version of '" .. modname .. "' module: " .. lf)
     elseif lfs.attributes(lf) then
@@ -49,7 +49,7 @@ local webview = require "webview"
 -- Add luakit://log/ chrome page
 local log_chrome = require "log_chrome"
 
-window.add_signal("build", function (w)
+window.add_signal("build", function(w)
     local widgets, l, r = require "lousy.widget", w.sbar.l, w.sbar.r
 
     -- Left-aligned status bar widgets
@@ -128,14 +128,14 @@ local downloads_chrome = require "downloads_chrome"
 local viewpdf = require "viewpdf"
 
 -- Example using xdg-open for opening downloads / showing download folders
-downloads.add_signal("open-file", function (file)
+downloads.add_signal("open-file", function(file)
     luakit.spawn(string.format("xdg-open %q", file))
     return true
 end)
 
 -- Add vimperator-like link hinting & following
 local select = require "select"
-select.label_maker = function ()
+select.label_maker = function()
     local chars = charset("asdfghjkl")
     return trim(sort(reverse(chars)))
 end
@@ -198,7 +198,7 @@ local view_source = require "view_source"
 -- Put "userconf.lua" in your Luakit config dir with your own tweaks; if this is
 -- permanent, no need to copy/paste/modify the default rc.lua whenever you
 -- update Luakit.
-if pcall(function () lousy.util.find_config("userconf.lua") end) then
+if pcall(function() lousy.util.find_config("userconf.lua") end) then
     require "userconf"
 end
 

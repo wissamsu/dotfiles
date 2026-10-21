@@ -36,6 +36,57 @@ local function resolve_command(mason_name, system_names)
   -- launch error if the server is not installed yet.
   return mason_path
 end
+
+vim.lsp.config("kotlin_lsp", {
+  capabilities = vim.tbl_deep_extend('force', vim.lsp.protocol.make_client_capabilities(), {
+    textDocument = {
+      completion = {
+        completionItem = {
+          snippetSupport = true,
+          commitCharactersSupport = false,
+          documentationFormat = { 'markdown', 'plaintext' },
+          deprecatedSupport = true,
+          preselectSupport = false,
+          tagSupport = { valueSet = { 1 } },
+          insertReplaceSupport = true,
+          resolveSupport = {
+            properties = { 'documentation', 'detail', 'additionalTextEdits', 'command', 'data' },
+          },
+          insertTextModeSupport = { valueSet = { 1 } },
+          labelDetailsSupport = true,
+        },
+        completionList = {
+          itemDefaults = { 'commitCharacters', 'editRange', 'insertTextFormat', 'insertTextMode', 'data' },
+        },
+      },
+    },
+  }),
+})
+
+-- Python (basedpyright)
+vim.lsp.config('basedpyright', {
+  cmd = { resolve_command('basedpyright-langserver'), '--stdio' },
+  filetypes = { 'python' },
+  root_markers = {
+    'pyrightconfig.json',
+    'pyproject.toml',
+    'setup.py',
+    'setup.cfg',
+    'requirements.txt',
+    'Pipfile',
+    '.git',
+  },
+  settings = {
+    basedpyright = {
+      analysis = {
+        typeCheckingMode = 'standard', -- basedpyright defaults to 'recommended', which is much noisier
+        autoSearchPaths = true,
+        useLibraryCodeForTypes = true,
+        diagnosticMode = 'openFilesOnly', -- 'workspace' is slower on big repos
+      },
+    },
+  },
+})
 -- XML (lemminx)
 vim.lsp.config('lemminx', {
   cmd = { resolve_command('lemminx') },
@@ -807,4 +858,5 @@ vim.lsp.enable({
   'clangd',
   'neocmakelsp',
   'lemminx',
+  'basedpyright'
 })
