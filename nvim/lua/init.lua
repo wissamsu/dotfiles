@@ -13,6 +13,13 @@
 vim.g.maplocalleader = "\\"
 vim.g.mapleader = " "
 
+-- Disable unneeded remote providers before filetype/ftplugin detection can
+-- probe them (e.g. the built-in Python ftplugin calls has('python3')).
+vim.g.loaded_ruby_provider = 0
+vim.g.loaded_python3_provider = 0
+vim.g.loaded_perl_provider = 0
+vim.g.loaded_node_provider = 0
+
 -- Keep shada out of the startup path; read it once the UI is attached.
 vim.o.shadafile = "NONE"
 vim.api.nvim_create_autocmd("UIEnter", {

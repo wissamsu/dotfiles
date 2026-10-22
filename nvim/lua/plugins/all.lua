@@ -695,19 +695,6 @@ return {
     end,
   },
   {
-    "wojciech-kulik/xcodebuild.nvim",
-    lazy = true,
-    dependencies = {
-      "nvim-tree/nvim-tree.lua",
-      "stevearc/oil.nvim",
-      "nvim-treesitter/nvim-treesitter",
-    },
-    config = function()
-      require("xcodebuild").setup {
-      }
-    end,
-  },
-  {
     'saecki/crates.nvim',
     event = { "BufRead Cargo.toml" },
     config = function()

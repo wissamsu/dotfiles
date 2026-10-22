@@ -213,10 +213,6 @@ vim.opt.backspace = { "indent", "eol", "start" }
 vim.o.smarttab = true
 
 vim.o.incsearch = true
-vim.g.loaded_ruby_provider = 0
-vim.g.loaded_python3_provider = 0
-vim.g.loaded_perl_provider = 0
-vim.g.loaded_node_provider = 0
 
 
 -- Configure diagnostics to display virtual text inline next to errors
@@ -424,55 +420,73 @@ local function is_closer(s) return s:match("^%s*[%]%)}]") ~= nil end
 local function opens(s) return s:match("[%[%({]%s*$") ~= nil end
 
 local st = { first = nil, last = nil, col = 0, blank = {} }
+local drawn = {}
+
+-- Compute the indent scope block around the cursor for the visible range.
+-- Returns nil when there is nothing to draw, otherwise the first/last buffer
+-- rows, the screen column, and a row -> is_blank lookup for on_line.
+local function scope_block(win, buf, top, bot)
+  if win ~= vim.api.nvim_get_current_win() or vim.bo[buf].buftype ~= "" then
+    return nil
+  end
+
+  local ts = vim.bo[buf].tabstop
+  local sw = vim.fn.shiftwidth()
+  local lines = vim.api.nvim_buf_get_lines(buf, top, bot + 1, false)
+  local n = #lines
+  if n == 0 then return nil end
+
+  local cur = vim.api.nvim_win_get_cursor(win)[1] - top -- 1-based index into lines
+  if cur < 1 or cur > n then return nil end
+
+  local ind, blank = {}, {}
+  for i = 1, n do
+    ind[i], blank[i] = measure(lines[i], ts)
+  end
+
+  local base = cur
+  while base > 1 and blank[base] do base = base - 1 end
+
+  if is_closer(lines[base]) then
+    -- on a closing bracket: use the block it closes
+    local p = base - 1
+    while p >= 1 and blank[p] do p = p - 1 end
+    if p >= 1 and ind[p] > ind[base] then base = p end
+  elseif opens(lines[base]) then
+    -- on an opening line (for ... {): use the block it opens
+    local nx = base + 1
+    while nx <= n and blank[nx] do nx = nx + 1 end
+    if nx <= n and ind[nx] > ind[base] then base = nx end
+  end
+
+  local indent = ind[base]
+  if indent < sw then return nil end
+
+  local first, last = base, base
+  while first > 1 and (blank[first - 1] or ind[first - 1] >= indent) do first = first - 1 end
+  while last < n and (blank[last + 1] or ind[last + 1] >= indent) do last = last + 1 end
+
+  local first_row, last_row = first + top - 1, last + top - 1 -- 0-based buffer rows
+  local row_blank = {}
+  for i = first, last do
+    row_blank[i + top - 1] = blank[i]
+  end
+
+  return first_row, last_row, indent - sw - vim.fn.winsaveview().leftcol, row_blank
+end
 
 vim.api.nvim_set_decoration_provider(ns, {
   on_win = function(_, win, buf, top, bot)
-    st.first = nil
-    if win ~= vim.api.nvim_get_current_win() or vim.bo[buf].buftype ~= "" then
+    local first, last, col, blank = scope_block(win, buf, top, bot)
+    if not first then
+      st.first, st.last = nil, nil
+      drawn[win] = nil
       return false
     end
 
-    local ts = vim.bo[buf].tabstop
-    local sw = vim.fn.shiftwidth()
-    local lines = vim.api.nvim_buf_get_lines(buf, top, bot + 1, false)
-    local n = #lines
-    if n == 0 then return false end
-
-    local cur = vim.api.nvim_win_get_cursor(win)[1] - top -- 1-based index into lines
-    if cur < 1 or cur > n then return false end
-
-    local ind, blank = {}, {}
-    for i = 1, n do
-      ind[i], blank[i] = measure(lines[i], ts)
-    end
-
-    local base = cur
-    while base > 1 and blank[base] do base = base - 1 end
-
-    if is_closer(lines[base]) then
-      -- on a closing bracket: use the block it closes
-      local p = base - 1
-      while p >= 1 and blank[p] do p = p - 1 end
-      if p >= 1 and ind[p] > ind[base] then base = p end
-    elseif opens(lines[base]) then
-      -- on an opening line (for ... {): use the block it opens
-      local nx = base + 1
-      while nx <= n and blank[nx] do nx = nx + 1 end
-      if nx <= n and ind[nx] > ind[base] then base = nx end
-    end
-
-    local indent = ind[base]
-    if indent < sw then return false end
-
-    local first, last = base, base
-    while first > 1 and (blank[first - 1] or ind[first - 1] >= indent) do first = first - 1 end
-    while last < n and (blank[last + 1] or ind[last + 1] >= indent) do last = last + 1 end
-
-    st.first, st.last = first + top - 1, last + top - 1 -- back to 0-based buffer rows
-    st.blank = {}
-    for i = first, last do st.blank[i + top - 1] = blank[i] end
-    st.col = indent - sw - vim.fn.winsaveview().leftcol
-    return st.col >= 0
+    st.first, st.last, st.col, st.blank = first, last, col, blank
+    drawn[win] = { first = first, last = last, col = col }
+    return col >= 0
   end,
 
   on_line = function(_, _, buf, row)
@@ -488,16 +502,29 @@ vim.api.nvim_set_decoration_provider(ns, {
   end,
 })
 
--- Neovim doesn't repaint the whole window on a plain cursor move, so ask for it
--- only when the cursor changes line
-local last_row = -1
+-- Neovim only repaints the cursor line on a plain move, so ask for a full
+-- window repaint only when the visible scope block actually changes.
 vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
   callback = function()
-    local row = vim.api.nvim_win_get_cursor(0)[1]
-    if row ~= last_row then
-      last_row = row
-      vim.api.nvim__redraw({ win = 0, valid = false })
+    local win = vim.api.nvim_get_current_win()
+    local buf = vim.api.nvim_win_get_buf(win)
+    if vim.bo[buf].buftype ~= "" then return end
+
+    local first, last, col = scope_block(win, buf, vim.fn.line("w0"), vim.fn.line("w$"))
+    local prev = drawn[win]
+    if not first and not prev then return end
+
+    local changed = first
+        and (not prev or prev.first ~= first or prev.last ~= last or prev.col ~= col)
+    if changed or not first then
+      vim.api.nvim__redraw({ win = win, valid = false })
     end
+  end,
+})
+
+vim.api.nvim_create_autocmd("WinClosed", {
+  callback = function(args)
+    drawn[tonumber(args.match)] = nil
   end,
 })
 

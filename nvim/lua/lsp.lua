@@ -128,7 +128,7 @@ end
 local clangd_args = {
   resolve_command('clangd'),
   '--background-index',
-  '--clang-tidy',
+  '--log=error',
   '--header-insertion=iwyu',
   '--completion-style=detailed',
   '--function-arg-placeholders=false',
