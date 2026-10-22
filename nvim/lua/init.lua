@@ -1,11 +1,12 @@
 -- Startup strategy
 -- ---------------
--- Everything expensive (options, mappings, plugin manager, LSP) is loaded one
+-- Everything expensive (options, mappings, plugin manager) is loaded one
 -- event-loop tick after startup, so the measured startup only contains things
--- that must be in place while Neovim is still booting. Events that fire for the
--- file Neovim was launched with are recorded and replayed once lazy.nvim has
--- registered its `ft`/`event`/`keys` handlers, so lazy-loaded plugins still see
--- them.
+-- that must be in place while Neovim is still booting. LSP goes one step
+-- further and loads when the first real file is opened. Events that fire for
+-- the file Neovim was launched with are recorded and replayed once lazy.nvim
+-- has registered its `ft`/`event`/`keys` handlers, so lazy-loaded plugins still
+-- see them.
 --
 -- Scripted or headless invocations that need plugin commands (`nvim -c ...`,
 -- `--headless +...`) can set NVIM_SYNC_STARTUP=1 to load everything inline.
@@ -124,7 +125,28 @@ local function load()
     },
   })
 
-  require("lsp")
+  -- LSP is the most expensive part of the config (vim.lsp + all server
+  -- configs). Hold it back until the first real file is opened; vim.lsp.enable
+  -- attaches to buffers whose FileType already fired, so deferred loading is
+  -- safe. Configs for plugin-created scratch buffers are skipped.
+  local lsp_loaded = false
+  local lsp_group = vim.api.nvim_create_augroup("DeferredLspLoad", { clear = true })
+  local function load_lsp()
+    if lsp_loaded then
+      return
+    end
+    lsp_loaded = true
+    vim.api.nvim_clear_autocmds({ group = lsp_group })
+    require("lsp")
+  end
+  vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile", "FileType" }, {
+    group = lsp_group,
+    callback = function(args)
+      if vim.bo[args.buf].buftype == "" then
+        load_lsp()
+      end
+    end,
+  })
 end
 
 

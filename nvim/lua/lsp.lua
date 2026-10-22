@@ -437,12 +437,6 @@ local function java_debug_plugin_jar()
   return jars[#jars]
 end
 
-local jdtls_bundles = spring_boot_bundles()
-local dbg_jar = java_debug_plugin_jar()
-if dbg_jar then
-  jdtls_bundles[#jdtls_bundles + 1] = dbg_jar
-end
-
 local root_markers = {
   'gradlew', 'build.gradle', 'build.gradle.kts',
   'mvnw', 'pom.xml',
@@ -482,6 +476,17 @@ local function start_jdtls(dispatchers, config)
   local root = config.root_dir or vim.fn.getcwd()
   local workspace = jdtls_workspace(root)
   vim.fn.mkdir(workspace, 'p')
+
+  -- Resolve extension bundles only when a Java client actually starts; the
+  -- globs touch the Mason package tree and cost time on every startup.
+  local bundles = spring_boot_bundles()
+  local dbg_jar = java_debug_plugin_jar()
+  if dbg_jar then
+    bundles[#bundles + 1] = dbg_jar
+  end
+  config.init_options = config.init_options or {}
+  config.init_options.bundles = bundles
+
   local cmd = { mason_bin .. 'jdtls' }
 
   if vim.fn.filereadable(jdtls_lombok) == 1 then
@@ -504,7 +509,7 @@ vim.lsp.config('jdtls', {
   root_markers = root_markers,
   capabilities = vim.lsp.protocol.make_client_capabilities(),
   init_options = {
-    bundles = jdtls_bundles,
+    -- Populated by start_jdtls() when the client starts.
     extendedClientCapabilities = {
       classFileContentsSupport = true,
     },
@@ -821,41 +826,89 @@ local function spring_boot_ls_jar()
   return jars[#jars]
 end
 
-local spring_ls_jar = spring_boot_ls_jar()
+local spring_capabilities = vim.lsp.protocol.make_client_capabilities()
 
-if spring_ls_jar then
-  local spring_capabilities = vim.lsp.protocol.make_client_capabilities()
+-- Required: without dynamic execute-command registration the server NPEs in
+-- JdtLsProjectCache.initialize() and never finishes initializing.
+spring_capabilities.workspace.executeCommand = spring_capabilities.workspace.executeCommand or {}
+spring_capabilities.workspace.executeCommand.dynamicRegistration = true
+spring_capabilities.workspace.didChangeWatchedFiles = spring_capabilities.workspace.didChangeWatchedFiles or {}
+spring_capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = true
 
-  -- Required: without dynamic execute-command registration the server NPEs in
-  -- JdtLsProjectCache.initialize() and never finishes initializing.
-  spring_capabilities.workspace.executeCommand = spring_capabilities.workspace.executeCommand or {}
-  spring_capabilities.workspace.executeCommand.dynamicRegistration = true
-  spring_capabilities.workspace.didChangeWatchedFiles = spring_capabilities.workspace.didChangeWatchedFiles or {}
-  spring_capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = true
+local spring_root_markers = {
+  'gradlew', 'build.gradle', 'build.gradle.kts',
+  'mvnw', 'pom.xml',
+  'settings.gradle', 'settings.gradle.kts',
+}
 
-  local spring_root_markers = {
-    'gradlew', 'build.gradle', 'build.gradle.kts',
-    'mvnw', 'pom.xml',
-    'settings.gradle', 'settings.gradle.kts',
-  }
+local function is_compose_file(name)
+  return name:match('^docker%-compose.*%.ya?ml$') ~= nil
+      or name:match('^compose[%.%-].*ya?ml$') ~= nil
+end
 
-  local function is_compose_file(name)
-    return name:match('^docker%-compose.*%.ya?ml$') ~= nil
-        or name:match('^compose[%.%-].*ya?ml$') ~= nil
+-- Spring LS is a second JVM on top of jdtls. Plain Maven/Gradle projects have
+-- no use for it, so only start it when the build actually references Spring.
+-- Check the nearest build files and a couple of ancestors for multi-module
+-- layouts; cache the answer per root.
+local spring_project_cache = {}
+local function is_spring_project(root)
+  local cached = spring_project_cache[root]
+  if cached ~= nil then
+    return cached
   end
 
-  vim.lsp.config('springls', {
-    root_dir = function(bufnr, on_dir)
-      local name = vim.fs.basename(vim.api.nvim_buf_get_name(bufnr))
-      if is_compose_file(name) then
-        return
+  local found = false
+  local dir = root
+  for _ = 1, 3 do
+    for _, file in ipairs({ 'pom.xml', 'build.gradle', 'build.gradle.kts' }) do
+      local path = dir .. '/' .. file
+      if vim.fn.filereadable(path) == 1 then
+        local ok, lines = pcall(vim.fn.readfile, path, '', 500)
+        if ok then
+          for _, line in ipairs(lines) do
+            if line:find('spring%-boot') or line:find('org%.springframework') then
+              found = true
+              break
+            end
+          end
+        end
       end
-      local root = vim.fs.root(bufnr, spring_root_markers)
-      if root then
-        on_dir(root)
+      if found then
+        break
       end
-    end,
-    cmd = {
+    end
+    if found then
+      break
+    end
+
+    local parent = vim.fs.dirname(dir)
+    if not parent or parent == dir or parent == '' then
+      break
+    end
+    dir = parent
+  end
+
+  spring_project_cache[root] = found
+  return found
+end
+
+vim.lsp.config('springls', {
+  root_dir = function(bufnr, on_dir)
+    local name = vim.fs.basename(vim.api.nvim_buf_get_name(bufnr))
+    if is_compose_file(name) then
+      return
+    end
+    local root = vim.fs.root(bufnr, spring_root_markers)
+    if root and is_spring_project(root) then
+      on_dir(root)
+    end
+  end,
+  cmd = function(dispatchers, _)
+    local jar = spring_boot_ls_jar()
+    if not jar then
+      error('springls: vscode-spring-boot-tools not installed (run :MasonInstall vscode-spring-boot-tools)')
+    end
+    return vim.lsp.rpc.start({
       vim.fn.exepath('java') ~= '' and vim.fn.exepath('java') or 'java',
       '-Xms256m',
       '-Xmx2G',
@@ -866,44 +919,39 @@ if spring_ls_jar then
       '-Xlog:disable',
       '-Dsts.lsp.client=vscode',
       '-jar',
-      spring_ls_jar,
-    },
-    -- Do not start Spring LS for arbitrary YAML/properties files in any Git
-    -- repository. A build marker is required so this is limited to Java/Spring
-    -- projects.
-    -- Neovim detects application*.properties as `jproperties`; include both
-    -- that and the generic name. Some setups expose .yml as `yml` as well.
-    filetypes = { 'java', 'properties', 'jproperties', 'yaml', 'yml' },
-    get_language_id = function(_, filetype)
-      if filetype == 'properties' or filetype == 'jproperties' then
-        return 'spring-boot-properties'
-      end
-      if filetype == 'yaml' or filetype == 'yml' then
-        return 'spring-boot-properties-yaml'
-      end
-      return filetype
-    end,
-    capabilities = spring_capabilities,
-    init_options = {
-      settings = { bootLanguageServer = { mode = 'HQL' } },
-      extendedClientCapabilities = {
-        progressReportProvider = true,
-        classFileContentsSupport = true,
-        openFileContentProvider = true,
-        soundTargets = true,
-        springBootLanguageServerClientCapabilities = {
-          refreshDocumentLifecycleHandler = true,
-        },
+      jar,
+    }, dispatchers)
+  end,
+  -- Do not start Spring LS for arbitrary YAML/properties files in any Git
+  -- repository. A Spring build is required so this is limited to Java/Spring
+  -- projects.
+  -- Neovim detects application*.properties as `jproperties`; include both
+  -- that and the generic name. Some setups expose .yml as `yml` as well.
+  filetypes = { 'java', 'properties', 'jproperties', 'yaml', 'yml' },
+  get_language_id = function(_, filetype)
+    if filetype == 'properties' or filetype == 'jproperties' then
+      return 'spring-boot-properties'
+    end
+    if filetype == 'yaml' or filetype == 'yml' then
+      return 'spring-boot-properties-yaml'
+    end
+    return filetype
+  end,
+  capabilities = spring_capabilities,
+  init_options = {
+    settings = { bootLanguageServer = { mode = 'HQL' } },
+    extendedClientCapabilities = {
+      progressReportProvider = true,
+      classFileContentsSupport = true,
+      openFileContentProvider = true,
+      soundTargets = true,
+      springBootLanguageServerClientCapabilities = {
+        refreshDocumentLifecycleHandler = true,
       },
-      triggerFiles = { '**/pom.xml', '**/build.gradle', '**/build.gradle.kts' },
     },
-  })
-else
-  vim.notify(
-    'springls: vscode-spring-boot-tools not installed (run :MasonInstall vscode-spring-boot-tools)',
-    vim.log.levels.WARN
-  )
-end
+    triggerFiles = { '**/pom.xml', '**/build.gradle', '**/build.gradle.kts' },
+  },
+})
 
 local springls_bridge = require('springls')
 
@@ -1030,4 +1078,5 @@ vim.lsp.enable({
   'lemminx',
   'basedpyright',
   'autotools_ls',
+  'kotlin_lsp'
 })

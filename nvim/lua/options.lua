@@ -16,7 +16,7 @@ vim.o.swapfile = false
 vim.o.backup = false
 vim.o.writebackup = false
 vim.o.scrolloff = 8
-vim.o.signcolumn = "yes"
+vim.o.signcolumn = "auto"
 vim.o.colorcolumn = "80"
 vim.o.mouse = "a"
 vim.schedule(function() vim.o.clipboard = "unnamedplus" end)
@@ -139,7 +139,9 @@ end
 vim.api.nvim_create_autocmd({ "BufEnter", "DiagnosticChanged" }, {
   callback = function(args)
     refresh_diagnostic_cache(args.buf)
-    vim.cmd("redrawstatus")
+    if args.buf == vim.api.nvim_get_current_buf() then
+      vim.cmd("redrawstatus")
+    end
   end,
 })
 
@@ -675,7 +677,7 @@ function _G.buftab_click(buf)
   vim.api.nvim_set_current_buf(buf)
 end
 
-vim.o.showtabline = 2 -- always show; use 1 to show only with 2+ buffers
+vim.o.showtabline = 1 -- always show; use 1 to show only with 2+ buffers
 vim.o.tabline = "%!v:lua.buftabline()"
 
 vim.api.nvim_create_autocmd("BufEnter", {

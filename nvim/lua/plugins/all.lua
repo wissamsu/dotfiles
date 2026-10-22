@@ -90,7 +90,7 @@ return {
   },
   {
     'nvim-treesitter/nvim-treesitter',
-    cmd = { "TSUpdate", "TSInsall" },
+    cmd = { "TSUpdate", "TSInstall" },
   },
   {
     "folke/trouble.nvim",
