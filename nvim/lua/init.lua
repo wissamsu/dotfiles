@@ -120,6 +120,7 @@ local function load()
   require("lsp")
 end
 
+
 local function replay_startup_events()
   vim.api.nvim_clear_autocmds({ group = replay_group })
   for _, e in ipairs(early_events) do

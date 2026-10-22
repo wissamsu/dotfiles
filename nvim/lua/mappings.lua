@@ -18,7 +18,35 @@ end, { desc = 'Show completion menu' })
 map("n", "<C-c>", function()
   vim.cmd("%y+")
 end, { desc = "Copy entire file with line count" })
-map("n", "<C-n>", ":Fyler<CR>", { desc = "Toggle Tree", silent = true })
+map("n", "<C-n>", function()
+  local fyler = require("fyler")
+
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    local ft = vim.bo[buf].filetype:lower()
+    local name = vim.api.nvim_buf_get_name(buf):lower()
+
+    if ft:find("fyler") or name:find("fyler") then
+      -- prefer a built-in close if this version has one
+      if type(fyler.close) == "function" then
+        fyler.close()
+        return
+      end
+      -- otherwise fire the buffer-local "q" mapping directly
+      vim.api.nvim_win_call(win, function()
+        local m = vim.fn.maparg("q", "n", false, true)
+        if m.callback then
+          m.callback()
+        else
+          vim.api.nvim_feedkeys("q", "m", false)
+        end
+      end)
+      return
+    end
+  end
+
+  fyler.open()
+end, { desc = "Toggle Tree", silent = true })
 
 map("n", "<leader>tn", ":tabnew<CR>", { silent = true, desc = "New Tab" })
 map("n", "<leader>tc", ":tabclose<CR>", { silent = true, desc = "Close Tab" })

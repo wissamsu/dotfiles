@@ -37,6 +37,13 @@ local function resolve_command(mason_name, system_names)
   return mason_path
 end
 
+-- Makefile / autotools (autotools-language-server)
+vim.lsp.config('autotools_ls', {
+  cmd = { resolve_command('autotools-language-server') },
+  filetypes = { 'make', 'automake', 'config' },
+  root_markers = { 'Makefile', 'makefile', 'GNUmakefile', 'Makefile.am', 'configure.ac', '.git' },
+})
+
 vim.lsp.config("kotlin_lsp", {
   capabilities = vim.tbl_deep_extend('force', vim.lsp.protocol.make_client_capabilities(), {
     textDocument = {
@@ -105,16 +112,37 @@ vim.lsp.config('lemminx', {
     },
   },
 })
+
+--here
+local clangd_xdg = vim.fn.stdpath('config') .. '/clangd-xdg'
+local function ensure_clangd_config()
+  local dir = clangd_xdg .. '/clangd'
+  vim.fn.mkdir(dir, 'p')
+  vim.fn.writefile({
+    'Diagnostics:',
+    '  UnusedIncludes: Strict',
+    '  MissingIncludes: Strict',
+  }, dir .. '/config.yaml')
+end
+
+local clangd_args = {
+  resolve_command('clangd'),
+  '--background-index',
+  '--clang-tidy',
+  '--header-insertion=iwyu',
+  '--completion-style=detailed',
+  '--function-arg-placeholders=false',
+}
+
 -- C / C++ (clangd)
 vim.lsp.config('clangd', {
-  cmd = {
-    resolve_command('clangd'),
-    '--background-index',
-    '--clang-tidy',
-    '--header-insertion=iwyu',
-    '--completion-style=detailed',
-    '--function-arg-placeholders=false',
-  },
+  cmd = function(dispatchers, config)
+    ensure_clangd_config()
+    return vim.lsp.rpc.start(clangd_args, dispatchers, {
+      cwd = config.root_dir,
+      env = { XDG_CONFIG_HOME = clangd_xdg },
+    })
+  end,
   filetypes = { 'c', 'cpp', 'objc', 'objcpp', 'cuda' },
   root_markers = {
     '.clangd',
@@ -133,6 +161,148 @@ vim.lsp.config('clangd', {
     { offsetEncoding = { 'utf-16' } }
   ),
 })
+
+local function clangd_format_and_write(client, bufnr)
+  if not vim.api.nvim_buf_is_valid(bufnr) then return end
+  local tick = vim.api.nvim_buf_get_changedtick(bufnr)
+  local params = {
+    textDocument = vim.lsp.util.make_text_document_params(bufnr),
+    options = {
+      tabSize = vim.bo[bufnr].shiftwidth,
+      insertSpaces = vim.bo[bufnr].expandtab,
+    },
+  }
+  client:request('textDocument/formatting', params, function(err, edits)
+    vim.schedule(function()
+      if not vim.api.nvim_buf_is_valid(bufnr)
+          or vim.api.nvim_buf_get_changedtick(bufnr) ~= tick then
+        return
+      end
+      vim.api.nvim_buf_call(bufnr, function()
+        if not err and edits and #edits > 0 then
+          local view = vim.fn.winsaveview()
+          vim.lsp.util.apply_text_edits(edits, bufnr, client.offset_encoding)
+          vim.fn.winrestview(view)
+        end
+        if vim.bo[bufnr].modified then
+          vim.cmd('silent noautocmd write')
+        end
+      end)
+    end)
+  end, bufnr)
+end
+
+local function clangd_fix_includes(client, bufnr, done)
+  if not vim.api.nvim_buf_is_valid(bufnr) then return end
+  local tick = vim.api.nvim_buf_get_changedtick(bufnr)
+
+  -- Pass every clangd diagnostic: include-fixer fixes hang off ordinary
+  -- compile errors, not just the include-cleaner codes.
+  local ns = vim.lsp.diagnostic.get_namespace(client.id)
+  local diags = {}
+  for _, d in ipairs(vim.diagnostic.get(bufnr, { namespace = ns })) do
+    local lsp = d.user_data and d.user_data.lsp
+    if lsp then diags[#diags + 1] = lsp end
+  end
+  if #diags == 0 then return done() end
+
+  local params = {
+    textDocument = vim.lsp.util.make_text_document_params(bufnr),
+    range = {
+      start = { line = 0, character = 0 },
+      ['end'] = { line = vim.api.nvim_buf_line_count(bufnr), character = 0 },
+    },
+    context = { only = { 'quickfix' }, diagnostics = diags },
+  }
+
+  client:request('textDocument/codeAction', params, function(err, actions)
+    vim.schedule(function()
+      if err or not actions
+          or not vim.api.nvim_buf_is_valid(bufnr)
+          or vim.api.nvim_buf_get_changedtick(bufnr) ~= tick then
+        return done()
+      end
+
+      -- Only include-related fixes; never apply unrelated quickfixes.
+      local has_all_missing, has_all_unused = false, false
+      for _, a in ipairs(actions) do
+        local t = (a.title or ''):lower()
+        if t:find('add all missing includes', 1, true) then has_all_missing = true end
+        if t:find('remove all unused includes', 1, true) then has_all_unused = true end
+      end
+
+      local picked, symbols = {}, {}
+      for _, a in ipairs(actions) do
+        local t = (a.title or ''):lower()
+        local keep = false
+        if t:find('^include ') then
+          -- include-fixer: may offer several headers per symbol, take the first
+          local sym = t:match('for symbol (.+)$') or t
+          if not symbols[sym] then
+            symbols[sym] = true
+            keep = true
+          end
+        elseif t:find('add all missing includes', 1, true)
+            or t:find('remove all unused includes', 1, true) then
+          keep = true
+        elseif t:find('^#include ') then
+          keep = not has_all_missing
+        elseif t:find('^remove #include') then
+          keep = not has_all_unused
+        end
+        if keep then picked[#picked + 1] = a end
+      end
+
+      local uri = vim.uri_from_bufnr(bufnr)
+      local edits, seen = {}, {}
+      for _, action in ipairs(picked) do
+        local e = action.edit
+        if e then
+          local list = {}
+          vim.list_extend(list, (e.changes and e.changes[uri]) or {})
+          for _, dc in ipairs(e.documentChanges or {}) do
+            if dc.textDocument and dc.textDocument.uri == uri then
+              vim.list_extend(list, dc.edits or {})
+            end
+          end
+          for _, edit in ipairs(list) do
+            local r = edit.range
+            local key = string.format('%d:%d-%d:%d:%s',
+              r.start.line, r.start.character, r['end'].line, r['end'].character, edit.newText)
+            if not seen[key] then
+              seen[key] = true
+              edits[#edits + 1] = edit
+            end
+          end
+        end
+      end
+
+      if #edits > 0 then
+        vim.lsp.util.apply_text_edits(edits, bufnr, client.offset_encoding)
+      end
+      done()
+    end)
+  end, bufnr)
+end
+
+vim.api.nvim_create_autocmd('LspAttach', {
+  group = vim.api.nvim_create_augroup('ClangdOnSave', { clear = true }),
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if not client or client.name ~= 'clangd' then return end
+
+    vim.api.nvim_create_autocmd('BufWritePost', {
+      group = vim.api.nvim_create_augroup('ClangdOnSave' .. args.buf, { clear = true }),
+      buffer = args.buf,
+      callback = function()
+        clangd_fix_includes(client, args.buf, function()
+          clangd_format_and_write(client, args.buf)
+        end)
+      end,
+    })
+  end,
+})
+
 -- CMake (neocmakelsp)
 vim.lsp.config('neocmakelsp', {
   cmd = { resolve_command('neocmakelsp'), 'stdio' },
@@ -189,7 +359,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
           bufnr = bufnr,
           method = 'textDocument/formatting',
         })[1]
-        if not client then return end
+        if not client or client.name == 'clangd' then return end
         local tick = vim.api.nvim_buf_get_changedtick(bufnr)
 
         local params = vim.lsp.util.make_formatting_params()
@@ -858,5 +1028,6 @@ vim.lsp.enable({
   'clangd',
   'neocmakelsp',
   'lemminx',
-  'basedpyright'
+  'basedpyright',
+  'autotools_ls',
 })

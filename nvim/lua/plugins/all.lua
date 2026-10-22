@@ -3,13 +3,84 @@ package.path = package.path .. ";" .. rocks .. "?.lua;" .. rocks .. "?/init.lua"
 return {
   -- lazy.nvim
   {
+    "rest-nvim/rest.nvim",
+    ft = "http",
+    cmd = "Rest",
+    dependencies = {
+      {
+        "nvim-treesitter/nvim-treesitter",
+        opts = function(_, opts)
+          opts.ensure_installed = opts.ensure_installed or {}
+          table.insert(opts.ensure_installed, "http")
+        end,
+      },
+    },
+    keys = {
+      { "<leader>rr", "<cmd>Rest run<cr>",        ft = "http", desc = "Rest: run request under cursor" },
+      { "<leader>rl", "<cmd>Rest last<cr>",       ft = "http", desc = "Rest: re-run last request" },
+      { "<leader>ro", "<cmd>Rest open<cr>",       ft = "http", desc = "Rest: open result pane" },
+      { "<leader>rL", "<cmd>Rest logs<cr>",       ft = "http", desc = "Rest: open logs" },
+      { "<leader>re", "<cmd>Rest env select<cr>", ft = "http", desc = "Rest: select env file" },
+      { "<leader>rs", "<cmd>Rest env show<cr>",   ft = "http", desc = "Rest: show current env" },
+      {
+        "<leader>rc",
+        function()
+          for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+            local buf = vim.api.nvim_win_get_buf(win)
+            if vim.bo[buf].filetype == "rest_nvim_result" then
+              vim.api.nvim_win_close(win, true)
+            end
+          end
+        end,
+        desc = "Rest: close result pane",
+      },
+    },
+    config = function()
+      -- new vertical splits open on the right
+      vim.o.splitright = true
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = "rest_nvim_result",
+        callback = function(args)
+          vim.keymap.set("n", "q", "<cmd>close<cr>", {
+            buffer = args.buf,
+            silent = true,
+            desc = "Rest: close result pane",
+          })
+        end,
+      })
+      -- rest.nvim v3 is configured through this global, not a setup() call
+      vim.g.rest_nvim = {
+        env = {
+          enable = true,
+          pattern = ".*%.env.*", -- matches .env, .env.dev, local.env, etc.
+        },
+        result = {
+          split = {
+            horizontal = false,                         -- false = vertical split (right side)
+            in_place = false,
+            stay_in_current_window_after_split = false, -- jump into the result pane so Tab works right away
+          },
+        },
+        ui = {
+          winbar = true,
+          keybinds = {
+            prev = "<S-Tab>",
+            next = "<Tab>",
+          },
+        },
+      }
+    end,
+  },
+  {
     "AlexandrosAlexiou/kotlin.nvim",
     ft = { "kotlin" },
     dependencies = { "mason.nvim", "oil.nvim", "trouble.nvim" },
     init = function()
       vim.env.KOTLIN_LSP_DIR = "/home/wiss/.local/share/kotlin-lsp/kotlin-server-263.6379.0"
     end,
-    opts = {},
+    opts = {
+      jvm_args = { "-Xmx13g" },
+    },
   },
   {
     "aznhe21/actions-preview.nvim",
@@ -613,7 +684,6 @@ return {
       "AndroidRun",
       "AndroidBuildRelease",
       "AndroidClean",
-      "AndroidNew",
       "AndroidRefreshDependencies",
       "AndroidUninstall",
       "LaunchAvd",
@@ -654,72 +724,98 @@ return {
     dependencies = { "rcarriga/nvim-dap-ui",
       "nvim-neotest/nvim-nio",
       "theHamsta/nvim-dap-virtual-text",
+      {
+        "julianolf/nvim-dap-lldb",
+        opts = { codelldb_path = vim.fn.stdpath("data") .. "/mason/bin/codelldb" },
+      },
     },
     keys = {
-      {
-        "<leader>dc",
-        function()
-          local dap = require('dap')
-          if dap.session() then
-            dap.continue()
-          else
-            require('java-dap').launch()
-          end
-        end,
-        desc = "Debug: launch / continue"
-      },
       { "<leader>db", function() require('dap').toggle_breakpoint() end, desc = "Debug: toggle breakpoint" },
       { "<leader>do", function() require('dap').step_over() end,         desc = "Debug: step over" },
       { "<leader>di", function() require('dap').step_into() end,         desc = "Debug: step into" },
       { "<leader>du", function() require('dap').step_out() end,          desc = "Debug: step out" },
       {
+        "<leader>dc",
+        function()
+          local dap = require("dap")
+          if dap.session() then
+            dap.continue()
+          elseif vim.bo.filetype == "java" then
+            require("java-dap").launch()
+          else
+            dap.continue() -- shows the config picker (lldb launch, etc.)
+          end
+        end,
+        desc = "Debug: launch / continue",
+      },
+      {
         "<leader>dq",
         function()
-          local dap = require('dap')
+          local dap = require("dap")
           local session = dap.session()
           dap.terminate({ all = true })
-          if package.loaded['dapui'] then
-            require('dapui').close()
-          end
-          require('java-dap').cleanup_terminal(session)
+          if package.loaded["dapui"] then require("dapui").close() end
+          local ok, jd = pcall(require, "java-dap")
+          if ok then jd.cleanup_terminal(session) end
         end,
-        desc = "Debug: stop"
+        desc = "Debug: stop",
       },
       { "<leader>dr",  function() require('dap').repl.open() end, desc = "Debug: open repl" },
       { "<leader>dui", function() require('dapui').toggle() end,  desc = "Debug: toggle UI" },
     },
     config = function()
-      require('java-dap').setup()
+      local dap = require("dap")
+      local dapui = require("dapui")
 
-      require('dap').set_log_level('WARN')
-      local dap = require('dap')
-      dap.listeners.after.event_initialized['java-dap'] = function()
-        require('dap').set_exception_breakpoints({ 'all' })
+      -- unchanged for Java: set it up first, as before
+      local ok, jd = pcall(require, "java-dap")
+      if ok then jd.setup() end
+
+      dap.set_log_level("WARN")
+
+      dap.listeners.after.event_initialized["exc-bps"] = function(session)
+        if session.config.type == "java" then
+          dap.set_exception_breakpoints({ "all" })
+        end
       end
-      -- The Java debug adapter emits these metadata events, but nvim-dap has
-      -- no built-in event methods for them. Register no-op listeners so they
-      -- do not get reported as spurious "No event handler" warnings.
+
+      -- no-op listeners for Java adapter metadata events (unchanged)
       dap.listeners.after.event_processid = dap.listeners.after.event_processid or {}
       dap.listeners.after.event_telemetry = dap.listeners.after.event_telemetry or {}
-      dap.listeners.after.event_processid['java-dap-metadata'] = function() end
-      dap.listeners.after.event_telemetry['java-dap-metadata'] = function() end
-      local close_dap_ui = function(session)
-        if package.loaded['dapui'] then
-          pcall(require('dapui').close)
-        end
-        require('java-dap').cleanup_terminal(session)
+      dap.listeners.after.event_processid["java-dap-metadata"] = function() end
+      dap.listeners.after.event_telemetry["java-dap-metadata"] = function() end
+
+      dapui.setup()
+
+      local function is_java(session)
+        return session and session.config and session.config.type == "java"
       end
-      require('dap').listeners.after.event_terminated['java-dap-ui'] = close_dap_ui
-      require('dap').listeners.after.event_exited['java-dap-ui'] = close_dap_ui
-      require('nvim-dap-virtual-text').setup({
+
+      -- non-Java sessions (lldb etc.): open the UI ourselves
+      dap.listeners.after.event_initialized["dapui_config"] = function(session)
+        if not is_java(session) then
+          dapui.open()
+        end
+      end
+
+      local close_dap_ui = function(session)
+        pcall(dapui.close)
+        -- Java-only cleanup, same call as before
+        if ok and is_java(session) then
+          jd.cleanup_terminal(session)
+        end
+      end
+      dap.listeners.after.event_terminated["java-dap-ui"] = close_dap_ui
+      dap.listeners.after.event_exited["java-dap-ui"] = close_dap_ui
+
+      require("nvim-dap-virtual-text").setup({
         enabled = true,
-        commented = true,                   -- prefix with comment string, e.g. "// x = 5"
-        only_first_definition = true,       -- show value only at the first definition
-        all_references = false,             -- true = show at every reference, not just definition
-        highlight_changed_variables = true, -- highlight values that changed since last step
+        commented = true,
+        only_first_definition = true,
+        all_references = false,
+        highlight_changed_variables = true,
         virt_text_pos = vim.fn.has('nvim-0.10') == 1 and 'inline' or 'eol',
         display_callback = function(variable, _buf, _stackframe, _node, options)
-          -- truncate long values (big DTOs, collections, etc.) so lines stay readable
           local value = variable.value:gsub('%s+', ' ')
           if #value > 50 then
             value = value:sub(1, 47) .. '...'
@@ -731,16 +827,12 @@ return {
           end
         end,
       })
-      require('dapui').setup({
-        auto_open = true,
-        auto_close = false,
-      })
 
-      vim.fn.sign_define('DapBreakpoint', { text = '●', texthl = 'DiagnosticOk' })
-      vim.fn.sign_define('DapBreakpointCondition', { text = '●', texthl = 'DiagnosticOk' })
-      vim.fn.sign_define('DapBreakpointRejected', { text = '●', texthl = 'DiagnosticError' })
-      vim.fn.sign_define('DapLogPoint', { text = '●', texthl = 'DiagnosticOk' })
-      vim.fn.sign_define('DapStopped', { text = '➜', texthl = 'DiagnosticError' })
+      vim.fn.sign_define("DapBreakpoint", { text = "●", texthl = "DiagnosticOk" })
+      vim.fn.sign_define("DapBreakpointCondition", { text = "●", texthl = "DiagnosticOk" })
+      vim.fn.sign_define("DapBreakpointRejected", { text = "●", texthl = "DiagnosticError" })
+      vim.fn.sign_define("DapLogPoint", { text = "●", texthl = "DiagnosticOk" })
+      vim.fn.sign_define("DapStopped", { text = "➜", texthl = "DiagnosticError" })
     end,
   },
   {
@@ -859,6 +951,7 @@ return {
     dependencies = { "nvim-tree/nvim-web-devicons" },
     cmd = { "Fyler" },
     opts = {
+      kind = "split_left_most",
       integrations = { icon = "nvim_web_devicons" },
       extensions = { trash = { enabled = true } }, -- deletes go to trash
       mappings = {
