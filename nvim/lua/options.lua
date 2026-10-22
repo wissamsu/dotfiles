@@ -512,20 +512,28 @@ local max_treesitter_lines = 10000
 vim.api.nvim_create_autocmd("FileType", {
   pattern = treesitter_filetypes,
   callback = function(args)
-    if vim.bo[args.buf].buftype ~= "" or vim.api.nvim_buf_line_count(args.buf) > max_treesitter_lines then
+    local buf = args.buf
+    if vim.bo[buf].buftype ~= "" or vim.api.nvim_buf_line_count(buf) > max_treesitter_lines then
       vim.opt_local.foldmethod = "manual"
       return
     end
 
-    local ok = pcall(vim.treesitter.start, args.buf)
-    if ok then
-      vim.opt_local.foldmethod = "expr"
-      vim.opt_local.foldexpr = "v:lua.vim.treesitter.foldexpr()"
-      vim.opt_local.foldenable = true
-      vim.opt_local.foldlevel = 99
-    else
-      vim.opt_local.foldmethod = "manual"
-    end
+    vim.defer_fn(function()
+      if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
+        return
+      end
+      local ok = pcall(vim.treesitter.start, buf)
+      for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+        if ok then
+          vim.wo[win].foldmethod = "expr"
+          vim.wo[win].foldexpr = "v:lua.vim.treesitter.foldexpr()"
+          vim.wo[win].foldenable = true
+          vim.wo[win].foldlevel = 99
+        else
+          vim.wo[win].foldmethod = "manual"
+        end
+      end
+    end, 30)
   end,
 })
 --tabline
