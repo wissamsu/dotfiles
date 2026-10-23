@@ -1086,6 +1086,21 @@ return {
         merge_tool = { winbar_info = true },
         file_history = { winbar_info = true },
       },
+      hooks = {
+        diff_buf_win_enter = function(_, winid, ctx)
+          if not (ctx and ctx.layout_name and ctx.layout_name:match("^diff2_")) then
+            return
+          end
+
+          local label = ctx.symbol == "a" and "BEFORE" or ctx.symbol == "b" and "AFTER"
+          if not label then
+            return
+          end
+
+          local title = (vim.wo[winid].winbar or ""):gsub("^%s+", "")
+          vim.wo[winid].winbar = title ~= "" and (" " .. label .. "  " .. title) or (" " .. label)
+        end,
+      },
     },
   },
   {
