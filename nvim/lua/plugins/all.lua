@@ -286,6 +286,7 @@ return {
       keymap = {
         preset      = 'default',
         ['<CR>']    = { 'select_and_accept', 'fallback' },
+        ['<C-s>']   = { 'show_signature', 'hide_signature', 'fallback' },
 
         -- hide the menu, then let the arrow key do its normal thing
         ['<Left>']  = { function(cmp) cmp.hide() end, 'fallback' },
@@ -381,7 +382,11 @@ return {
       signature = {
         enabled = true,
         window = {
+          border = 'rounded',
           direction_priority = { 'n', 's' },
+          show_documentation = true,
+          max_width = 100,
+          max_height = 20, -- leave room for the description
         },
       },
 
