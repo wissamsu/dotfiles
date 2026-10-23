@@ -542,8 +542,14 @@ vim.api.nvim_create_autocmd("FileType", {
   pattern = treesitter_filetypes,
   callback = function(args)
     local buf = args.buf
+    -- The working-tree side of a diff is a normal buffer with the file's real
+    -- name, so check the window's tab as well as the buffer name below.
+    local is_diffview_buf = vim.api.nvim_buf_get_name(buf):match('^diffview://') ~= nil
+
     if vim.bo[buf].buftype ~= "" or vim.api.nvim_buf_line_count(buf) > max_treesitter_lines then
-      vim.opt_local.foldmethod = "manual"
+      if not is_diffview_buf then
+        vim.opt_local.foldmethod = "manual"
+      end
       return
     end
 
@@ -553,13 +559,19 @@ vim.api.nvim_create_autocmd("FileType", {
       end
       local ok = pcall(vim.treesitter.start, buf)
       for _, win in ipairs(vim.fn.win_findbuf(buf)) do
-        if ok then
-          vim.wo[win].foldmethod = "expr"
-          vim.wo[win].foldexpr = "v:lua.vim.treesitter.foldexpr()"
-          vim.wo[win].foldenable = true
-          vim.wo[win].foldlevel = 99
-        else
-          vim.wo[win].foldmethod = "manual"
+        local tab = vim.api.nvim_win_get_tabpage(win)
+        -- Diffview uses foldmethod=diff + foldlevel=0 to collapse unchanged
+        -- lines. Treesitter may highlight there, but must not replace those
+        -- folds (that would expand every unchanged region again).
+        if not is_diffview_buf and not vim.t[tab].diffview_view_initialized then
+          if ok then
+            vim.wo[win].foldmethod = "expr"
+            vim.wo[win].foldexpr = "v:lua.vim.treesitter.foldexpr()"
+            vim.wo[win].foldenable = true
+            vim.wo[win].foldlevel = 99
+          else
+            vim.wo[win].foldmethod = "manual"
+          end
         end
       end
     end, 30)
