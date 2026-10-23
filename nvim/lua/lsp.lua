@@ -128,18 +128,116 @@ end
 local clangd_args = {
   resolve_command('clangd'),
   '--background-index',
+  '--enable-config',
   '--log=error',
   '--header-insertion=iwyu',
   '--completion-style=detailed',
   '--function-arg-placeholders=false',
 }
 
+local function is_file(path)
+  return vim.fn.filereadable(path) == 1
+end
+
+local function cdb_dir(path)
+  return is_file(path .. '/compile_commands.json') and path or nil
+end
+
+-- clangd finds <root>/build/compile_commands.json for an opened source file but
+-- then refuses to background-index entries that live inside that build dir
+-- (e.g. FetchContent deps in build/_deps). Those headers never reach the index,
+-- so completion cannot offer `fmt::print` or auto-insert its include. Passing
+-- the CDB explicitly makes clangd index every entry in it.
+local function project_compilation_database(root)
+  if not root or root == '' then
+    return nil
+  end
+
+  if cdb_dir(root) then
+    return root
+  end
+
+  -- Mirror clangd's ancestor/build lookup.
+  local dir = root
+  for _ = 1, 16 do
+    local build = dir .. '/build'
+    if cdb_dir(build) then
+      return build
+    end
+    for _, cfg in ipairs({ 'Debug', 'Release', 'RelWithDebInfo', 'MinSizeRel' }) do
+      if cdb_dir(build .. '/' .. cfg) then
+        return build .. '/' .. cfg
+      end
+    end
+    local parent = vim.fs.dirname(dir)
+    if not parent or parent == dir or parent == '' then
+      break
+    end
+    dir = parent
+  end
+
+  -- Non-standard build dir names: cmake-build-*, out, builddir, ...
+  local names = {}
+  for name, kind in vim.fs.dir(root) do
+    if kind == 'directory' then
+      names[#names + 1] = name
+    end
+  end
+  table.sort(names)
+  for _, name in ipairs(names) do
+    local path = root .. '/' .. name
+    if cdb_dir(path) then
+      return path
+    end
+    for _, cfg in ipairs({ 'Debug', 'Release', 'RelWithDebInfo', 'MinSizeRel' }) do
+      if cdb_dir(path .. '/' .. cfg) then
+        return path .. '/' .. cfg
+      end
+    end
+  end
+
+  return nil
+end
+
+-- A project that selects its own compilation database via .clangd must keep
+-- precedence over the auto-detected one.
+local function project_selects_compilation_database(root)
+  local dir = root
+  while dir and dir ~= '' do
+    local config_file = dir .. '/.clangd'
+    if is_file(config_file) then
+      local ok, lines = pcall(vim.fn.readfile, config_file, '', 400)
+      if ok then
+        for _, line in ipairs(lines) do
+          if line:match('^%s*CompilationDatabase%s*:') then
+            return true
+          end
+        end
+      end
+    end
+    local parent = vim.fs.dirname(dir)
+    if not parent or parent == dir then
+      break
+    end
+    dir = parent
+  end
+  return false
+end
+
 -- C / C++ (clangd)
 vim.lsp.config('clangd', {
   cmd = function(dispatchers, config)
     ensure_clangd_config()
-    return vim.lsp.rpc.start(clangd_args, dispatchers, {
-      cwd = config.root_dir,
+    local root = config.root_dir
+    local args = vim.deepcopy(clangd_args)
+    if root and not project_selects_compilation_database(root) then
+      local compile_commands_dir = project_compilation_database(root)
+      if compile_commands_dir then
+        args[#args + 1] = '--compile-commands-dir=' .. compile_commands_dir
+      end
+    end
+    return vim.lsp.rpc.start(args, dispatchers, {
+      cwd = root,
       env = { XDG_CONFIG_HOME = clangd_xdg },
     })
   end,
