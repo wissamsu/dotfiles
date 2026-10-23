@@ -659,6 +659,12 @@ vim.lsp.config('jdtls', {
           enabled = 'none',
         },
       },
+      signatureHelp = {
+        enabled = true,
+        description = {
+          enabled = true,
+        },
+      },
     },
   },
 })
