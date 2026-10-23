@@ -162,26 +162,39 @@ vim.lsp.config('clangd', {
   ),
 })
 
-local function clangd_format_and_write(client, bufnr)
+-- Used only when the project has no .clang-format of its own.
+local clang_format_fallback =
+'{BasedOnStyle: LLVM, AllowShortFunctionsOnASingleLine: None}'
+
+local function clangd_format_and_write(_, bufnr)
   if not vim.api.nvim_buf_is_valid(bufnr) then return end
   local tick = vim.api.nvim_buf_get_changedtick(bufnr)
-  local params = {
-    textDocument = vim.lsp.util.make_text_document_params(bufnr),
-    options = {
-      tabSize = vim.bo[bufnr].shiftwidth,
-      insertSpaces = vim.bo[bufnr].expandtab,
-    },
-  }
-  client:request('textDocument/formatting', params, function(err, edits)
+  local name = vim.api.nvim_buf_get_name(bufnr)
+
+  -- A project's own .clang-format wins; otherwise use the inline style.
+  local has_file = vim.fs.root(bufnr, { '.clang-format', '_clang-format' }) ~= nil
+  local style = has_file and 'file' or clang_format_fallback
+
+  local input = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), '\n') .. '\n'
+
+  vim.system({
+    resolve_command('clang-format'),
+    '--style=' .. style,
+    '--assume-filename=' .. name,
+  }, { stdin = input, text = true }, function(res)
     vim.schedule(function()
-      if not vim.api.nvim_buf_is_valid(bufnr)
+      if res.code ~= 0
+          or not vim.api.nvim_buf_is_valid(bufnr)
           or vim.api.nvim_buf_get_changedtick(bufnr) ~= tick then
         return
       end
+      local out = (res.stdout:gsub('\n$', ''))
+      local new_lines = vim.split(out, '\n', { plain = true })
+
       vim.api.nvim_buf_call(bufnr, function()
-        if not err and edits and #edits > 0 then
+        if not vim.deep_equal(new_lines, vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)) then
           local view = vim.fn.winsaveview()
-          vim.lsp.util.apply_text_edits(edits, bufnr, client.offset_encoding)
+          vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, new_lines)
           vim.fn.winrestview(view)
         end
         if vim.bo[bufnr].modified then
@@ -189,7 +202,7 @@ local function clangd_format_and_write(client, bufnr)
         end
       end)
     end)
-  end, bufnr)
+  end)
 end
 
 local function clangd_fix_includes(client, bufnr, done)
