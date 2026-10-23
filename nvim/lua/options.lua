@@ -538,12 +538,36 @@ local treesitter_filetypes = {
 }
 local max_treesitter_lines = 10000
 
+-- BLOCK 1: fold the import block
+local function fold_imports(buf)
+  if not vim.api.nvim_buf_is_valid(buf) then return end
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, 200, false)
+  local first, last
+  for i, l in ipairs(lines) do
+    if l:match('^import%s') then
+      first = first or i
+      last = i
+    elseif first and l:match('%S') and not l:match('^%s*//') then
+      break
+    end
+  end
+  if not first or last == first then return end
+
+  for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+    vim.api.nvim_win_call(win, function()
+      if vim.wo.foldmethod == 'manual' then
+        vim.cmd(('%d,%dfold'):format(first, last))
+      else
+        pcall(vim.cmd, ('%d,%dfoldclose'):format(first, last))
+      end
+    end)
+  end
+end
+
 vim.api.nvim_create_autocmd("FileType", {
   pattern = treesitter_filetypes,
   callback = function(args)
     local buf = args.buf
-    -- The working-tree side of a diff is a normal buffer with the file's real
-    -- name, so check the window's tab as well as the buffer name below.
     local is_diffview_buf = vim.api.nvim_buf_get_name(buf):match('^diffview://') ~= nil
 
     if vim.bo[buf].buftype ~= "" or vim.api.nvim_buf_line_count(buf) > max_treesitter_lines then
@@ -560,9 +584,6 @@ vim.api.nvim_create_autocmd("FileType", {
       local ok = pcall(vim.treesitter.start, buf)
       for _, win in ipairs(vim.fn.win_findbuf(buf)) do
         local tab = vim.api.nvim_win_get_tabpage(win)
-        -- Diffview uses foldmethod=diff + foldlevel=0 to collapse unchanged
-        -- lines. Treesitter may highlight there, but must not replace those
-        -- folds (that would expand every unchanged region again).
         if not is_diffview_buf and not vim.t[tab].diffview_view_initialized then
           if ok then
             vim.wo[win].foldmethod = "expr"
@@ -574,7 +595,22 @@ vim.api.nvim_create_autocmd("FileType", {
           end
         end
       end
+
+      -- BLOCK 2: fold imports for Java right after the fold setup
+      if vim.bo[buf].filetype == 'java' and not is_diffview_buf then
+        fold_imports(buf)
+      end
     end, 30)
+  end,
+})
+
+-- BLOCK 3: Kotlin (not in treesitter_filetypes, so fold immediately)
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'kotlin',
+  callback = function(a)
+    if vim.bo[a.buf].buftype == '' then
+      fold_imports(a.buf)
+    end
   end,
 })
 --tabline
