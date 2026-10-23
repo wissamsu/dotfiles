@@ -689,7 +689,7 @@ function _G.buftab_click(buf)
   vim.api.nvim_set_current_buf(buf)
 end
 
-vim.o.showtabline = 1 -- always show; use 1 to show only with 2+ buffers
+vim.o.showtabline = 2 -- always show; use 1 to show only with 2+ buffers
 vim.o.tabline = "%!v:lua.buftabline()"
 
 vim.api.nvim_create_autocmd("BufEnter", {
