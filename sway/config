@@ -130,7 +130,7 @@ input type:keyboard {
 }
 
 # Output
-output * bg /home/wiss/Downloads/background.png fill
+output * bg /home/wiss/Downloads/background.jpg fill
 
 # Gaps
 default_border pixel 2
