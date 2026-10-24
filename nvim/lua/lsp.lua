@@ -1,3 +1,6 @@
+local mason_bin = vim.fn.stdpath('data') .. '/mason/bin/'
+
+--lua_lsp
 vim.lsp.config('lua_ls', {
   -- Mason's bin dir, so it works even if Mason isn't on PATH yet.
   -- stdpath('data') respects NVIM_APPNAME, so this resolves to nvim2's Mason.
@@ -19,24 +22,7 @@ vim.lsp.config('lua_ls', {
   },
 })
 
-local mason_bin = vim.fn.stdpath('data') .. '/mason/bin/'
-
-local function resolve_command(mason_name, system_names)
-  local mason_path = mason_bin .. mason_name
-  if vim.fn.executable(mason_path) == 1 then
-    return mason_path
-  end
-
-  for _, name in ipairs(system_names or { mason_name }) do
-    local path = vim.fn.exepath(name)
-    if path ~= '' then return path end
-  end
-
-  -- Keep the expected command name in the config so Neovim reports a useful
-  -- launch error if the server is not installed yet.
-  return mason_path
-end
-
+--json_lsp
 vim.lsp.config('jsonls', {
   cmd = { vim.fn.stdpath("data") .. "/mason/bin/vscode-json-language-server", '--stdio' },
   filetypes = { 'json', 'jsonc' },
@@ -61,14 +47,70 @@ vim.lsp.config('jsonls', {
   },
 })
 
+local function resolve_command(mason_name, system_names)
+  local mason_path = mason_bin .. mason_name
+  if vim.fn.executable(mason_path) == 1 then
+    return mason_path
+  end
 
--- Makefile / autotools (autotools-language-server)
+  for _, name in ipairs(system_names or { mason_name }) do
+    local path = vim.fn.exepath(name)
+    if path ~= '' then return path end
+  end
+
+  return mason_path
+end
+
+--cmake_lsp
+vim.lsp.config('neocmakelsp', {
+  cmd = { resolve_command('neocmakelsp'), 'stdio' },
+  filetypes = { 'cmake' },
+  root_markers = {
+    'CMakePresets.json',
+    'CMakeLists.txt',
+    '.git',
+  },
+  init_options = {
+    format = { enable = true },
+    lint = { enable = true },
+    scan_cmake_in_package = true, -- also scan cmake files from installed packages for completion
+  },
+})
+
+-- dockerfile_lsp
+vim.lsp.config('dockerls', {
+  cmd = { resolve_command('docker-langserver'), '--stdio' },
+  filetypes = { 'dockerfile' },
+  root_markers = { 'Dockerfile', '.git' },
+})
+
+
+--dockercompose_lsp
+vim.lsp.config('docker_compose_ls', {
+  cmd = { resolve_command('docker-compose-langserver'), '--stdio' },
+  filetypes = { 'yaml.docker-compose' },
+  root_markers = { 'docker-compose.yaml', 'docker-compose.yml', 'compose.yaml', 'compose.yml', '.git' },
+})
+
+vim.lsp.config('terraformls', {
+  cmd = { resolve_command('terraform-ls'), 'serve' },
+  filetypes = { 'terraform', 'terraform-vars', 'tf', 'tfvars' },
+  get_language_id = function(_, filetype)
+    if filetype == 'tf' then return 'terraform' end
+    if filetype == 'tfvars' then return 'terraform-vars' end
+    return filetype
+  end,
+  root_markers = { '.terraform', '.git' },
+})
+
+--makefile_lsp
 vim.lsp.config('autotools_ls', {
   cmd = { resolve_command('autotools-language-server') },
   filetypes = { 'make', 'automake', 'config' },
   root_markers = { 'Makefile', 'makefile', 'GNUmakefile', 'Makefile.am', 'configure.ac', '.git' },
 })
 
+--kotlin_lsp
 vim.lsp.config("kotlin_lsp", {
   capabilities = vim.tbl_deep_extend('force', vim.lsp.protocol.make_client_capabilities(), {
     textDocument = {
@@ -95,7 +137,7 @@ vim.lsp.config("kotlin_lsp", {
   }),
 })
 
--- Python (basedpyright)
+--python_lsp
 vim.lsp.config('basedpyright', {
   cmd = { resolve_command('basedpyright-langserver'), '--stdio' },
   filetypes = { 'python' },
@@ -119,7 +161,9 @@ vim.lsp.config('basedpyright', {
     },
   },
 })
--- XML (lemminx)
+
+
+--xml_lsp
 vim.lsp.config('lemminx', {
   cmd = { resolve_command('lemminx') },
   filetypes = { 'xml', 'xsd', 'xsl', 'xslt', 'svg' },
@@ -138,7 +182,151 @@ vim.lsp.config('lemminx', {
   },
 })
 
---here
+--springls_config
+local function spring_boot_ls_jar()
+  local jars = vim.fn.split(vim.fn.glob(
+    vim.fn.stdpath('data')
+    .. '/mason/packages/vscode-spring-boot-tools/extension/language-server/*-exec.jar'
+  ), '\n')
+  return jars[#jars]
+end
+
+local spring_capabilities = vim.lsp.protocol.make_client_capabilities()
+
+-- Required: without dynamic execute-command registration the server NPEs in
+-- JdtLsProjectCache.initialize() and never finishes initializing.
+spring_capabilities.workspace.executeCommand = spring_capabilities.workspace.executeCommand or {}
+spring_capabilities.workspace.executeCommand.dynamicRegistration = true
+spring_capabilities.workspace.didChangeWatchedFiles = spring_capabilities.workspace.didChangeWatchedFiles or {}
+spring_capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = true
+
+local spring_root_markers = {
+  'gradlew', 'build.gradle', 'build.gradle.kts',
+  'mvnw', 'pom.xml',
+  'settings.gradle', 'settings.gradle.kts',
+}
+
+local function is_compose_file(name)
+  return name:match('^docker%-compose.*%.ya?ml$') ~= nil
+      or name:match('^compose[%.%-].*ya?ml$') ~= nil
+end
+
+-- Spring LS is a second JVM on top of jdtls. Plain Maven/Gradle projects have
+-- no use for it, so only start it when the build actually references Spring.
+-- Check the nearest build files and a couple of ancestors for multi-module
+-- layouts; cache the answer per root.
+local spring_project_cache = {}
+local function is_spring_project(root)
+  local cached = spring_project_cache[root]
+  if cached ~= nil then
+    return cached
+  end
+
+  local found = false
+  local dir = root
+  for _ = 1, 3 do
+    for _, file in ipairs({ 'pom.xml', 'build.gradle', 'build.gradle.kts' }) do
+      local path = dir .. '/' .. file
+      if vim.fn.filereadable(path) == 1 then
+        local ok, lines = pcall(vim.fn.readfile, path, '', 500)
+        if ok then
+          for _, line in ipairs(lines) do
+            if line:find('spring%-boot') or line:find('org%.springframework') then
+              found = true
+              break
+            end
+          end
+        end
+      end
+      if found then
+        break
+      end
+    end
+    if found then
+      break
+    end
+
+    local parent = vim.fs.dirname(dir)
+    if not parent or parent == dir or parent == '' then
+      break
+    end
+    dir = parent
+  end
+
+  spring_project_cache[root] = found
+  return found
+end
+
+--spring_lsp
+vim.lsp.config('springls', {
+  root_dir = function(bufnr, on_dir)
+    local name = vim.fs.basename(vim.api.nvim_buf_get_name(bufnr))
+    if is_compose_file(name) then
+      return
+    end
+    local root = vim.fs.root(bufnr, spring_root_markers)
+    if root and is_spring_project(root) then
+      on_dir(root)
+    end
+  end,
+  cmd = function(dispatchers, _)
+    local jar = spring_boot_ls_jar()
+    if not jar then
+      error('springls: vscode-spring-boot-tools not installed (run :MasonInstall vscode-spring-boot-tools)')
+    end
+    return vim.lsp.rpc.start({
+      vim.fn.exepath('java') ~= '' and vim.fn.exepath('java') or 'java',
+      '-Xms256m',
+      '-Xmx2G',
+      '-XX:+UseParallelGC',
+      '-XX:GCTimeRatio=4',
+      '-XX:AdaptiveSizePolicyWeight=90',
+      '-Djava.awt.headless=true',
+      '-Xlog:disable',
+      '-Dsts.lsp.client=vscode',
+      '-jar',
+      jar,
+    }, dispatchers)
+  end,
+  filetypes = { 'java', 'properties', 'jproperties', 'yaml', 'yml' },
+  get_language_id = function(_, filetype)
+    if filetype == 'properties' or filetype == 'jproperties' then
+      return 'spring-boot-properties'
+    end
+    if filetype == 'yaml' or filetype == 'yml' then
+      return 'spring-boot-properties-yaml'
+    end
+    return filetype
+  end,
+  capabilities = spring_capabilities,
+  init_options = {
+    settings = { bootLanguageServer = { mode = 'HQL' } },
+    extendedClientCapabilities = {
+      progressReportProvider = true,
+      classFileContentsSupport = true,
+      openFileContentProvider = true,
+      soundTargets = true,
+      springBootLanguageServerClientCapabilities = {
+        refreshDocumentLifecycleHandler = true,
+      },
+    },
+    triggerFiles = { '**/pom.xml', '**/build.gradle', '**/build.gradle.kts' },
+  },
+})
+
+local springls_bridge = require('springls')
+
+vim.api.nvim_create_autocmd('LspAttach', {
+  group = vim.api.nvim_create_augroup('SpringLsBridge', { clear = true }),
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if client then
+      springls_bridge.setup(client)
+    end
+  end,
+})
+
+--clangd_config
 local clangd_xdg = vim.fn.stdpath('config') .. '/clangd-xdg'
 local function ensure_clangd_config()
   local dir = clangd_xdg .. '/clangd'
@@ -168,11 +356,6 @@ local function cdb_dir(path)
   return is_file(path .. '/compile_commands.json') and path or nil
 end
 
--- clangd finds <root>/build/compile_commands.json for an opened source file but
--- then refuses to background-index entries that live inside that build dir
--- (e.g. FetchContent deps in build/_deps). Those headers never reach the index,
--- so completion cannot offer `fmt::print` or auto-insert its include. Passing
--- the CDB explicitly makes clangd index every entry in it.
 local function project_compilation_database(root)
   if not root or root == '' then
     return nil
@@ -182,7 +365,6 @@ local function project_compilation_database(root)
     return root
   end
 
-  -- Mirror clangd's ancestor/build lookup.
   local dir = root
   for _ = 1, 16 do
     local build = dir .. '/build'
@@ -201,7 +383,6 @@ local function project_compilation_database(root)
     dir = parent
   end
 
-  -- Non-standard build dir names: cmake-build-*, out, builddir, ...
   local names = {}
   for name, kind in vim.fs.dir(root) do
     if kind == 'directory' then
@@ -224,8 +405,6 @@ local function project_compilation_database(root)
   return nil
 end
 
--- A project that selects its own compilation database via .clangd must keep
--- precedence over the auto-detected one.
 local function project_selects_compilation_database(root)
   local dir = root
   while dir and dir ~= '' do
@@ -249,7 +428,7 @@ local function project_selects_compilation_database(root)
   return false
 end
 
--- C / C++ (clangd)
+--clangd_lsp
 vim.lsp.config('clangd', {
   cmd = function(dispatchers, config)
     ensure_clangd_config()
@@ -285,7 +464,6 @@ vim.lsp.config('clangd', {
   ),
 })
 
--- Used only when the project has no .clang-format of its own.
 local clang_format_fallback =
 '{BasedOnStyle: LLVM, AllowShortFunctionsOnASingleLine: None}'
 
@@ -294,7 +472,6 @@ local function clangd_format_and_write(_, bufnr)
   local tick = vim.api.nvim_buf_get_changedtick(bufnr)
   local name = vim.api.nvim_buf_get_name(bufnr)
 
-  -- A project's own .clang-format wins; otherwise use the inline style.
   local has_file = vim.fs.root(bufnr, { '.clang-format', '_clang-format' }) ~= nil
   local style = has_file and 'file' or clang_format_fallback
 
@@ -332,8 +509,6 @@ local function clangd_fix_includes(client, bufnr, done)
   if not vim.api.nvim_buf_is_valid(bufnr) then return end
   local tick = vim.api.nvim_buf_get_changedtick(bufnr)
 
-  -- Pass every clangd diagnostic: include-fixer fixes hang off ordinary
-  -- compile errors, not just the include-cleaner codes.
   local ns = vim.lsp.diagnostic.get_namespace(client.id)
   local diags = {}
   for _, d in ipairs(vim.diagnostic.get(bufnr, { namespace = ns })) do
@@ -359,7 +534,6 @@ local function clangd_fix_includes(client, bufnr, done)
         return done()
       end
 
-      -- Only include-related fixes; never apply unrelated quickfixes.
       local has_all_missing, has_all_unused = false, false
       for _, a in ipairs(actions) do
         local t = (a.title or ''):lower()
@@ -372,7 +546,6 @@ local function clangd_fix_includes(client, bufnr, done)
         local t = (a.title or ''):lower()
         local keep = false
         if t:find('^include ') then
-          -- include-fixer: may offer several headers per symbol, take the first
           local sym = t:match('for symbol (.+)$') or t
           if not symbols[sym] then
             symbols[sym] = true
@@ -439,47 +612,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
   end,
 })
 
--- CMake (neocmakelsp)
-vim.lsp.config('neocmakelsp', {
-  cmd = { resolve_command('neocmakelsp'), 'stdio' },
-  filetypes = { 'cmake' },
-  root_markers = {
-    'CMakePresets.json',
-    'CMakeLists.txt',
-    '.git',
-  },
-  init_options = {
-    format = { enable = true },
-    lint = { enable = true },
-    scan_cmake_in_package = true, -- also scan cmake files from installed packages for completion
-  },
-})
 
--- Dockerfile
-vim.lsp.config('dockerls', {
-  cmd = { resolve_command('docker-langserver'), '--stdio' },
-  filetypes = { 'dockerfile' },
-  root_markers = { 'Dockerfile', '.git' },
-})
-
-
--- docker-compose.yml / compose.yaml
-vim.lsp.config('docker_compose_ls', {
-  cmd = { resolve_command('docker-compose-langserver'), '--stdio' },
-  filetypes = { 'yaml.docker-compose' },
-  root_markers = { 'docker-compose.yaml', 'docker-compose.yml', 'compose.yaml', 'compose.yml', '.git' },
-})
-
-vim.lsp.config('terraformls', {
-  cmd = { resolve_command('terraform-ls'), 'serve' },
-  filetypes = { 'terraform', 'terraform-vars', 'tf', 'tfvars' },
-  get_language_id = function(_, filetype)
-    if filetype == 'tf' then return 'terraform' end
-    if filetype == 'tfvars' then return 'terraform-vars' end
-    return filetype
-  end,
-  root_markers = { '.terraform', '.git' },
-})
 
 vim.api.nvim_create_autocmd('LspAttach', {
   group = vim.api.nvim_create_augroup('LspFormatOnSave', { clear = true }),
@@ -495,7 +628,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
           bufnr = bufnr,
           method = 'textDocument/formatting',
         })[1]
-        if not client or client.name == 'clangd' then return end
+        if not client or client.name == 'clangd' or client.name == 'jdtls' then return end
         local tick = vim.api.nvim_buf_get_changedtick(bufnr)
 
         local params = vim.lsp.util.make_formatting_params()
@@ -504,7 +637,6 @@ vim.api.nvim_create_autocmd('LspAttach', {
         client:request('textDocument/formatting', params, function(err, edits)
           if err or not edits or #edits == 0 then return end
           if not vim.api.nvim_buf_is_valid(bufnr) then return end
-          -- you kept typing while the formatter ran, so the edits are stale
           if vim.api.nvim_buf_get_changedtick(bufnr) ~= tick then return end
 
           vim.api.nvim_buf_call(bufnr, function()
@@ -519,10 +651,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
   end,
 })
 
--- Java (jdtls)
--- Spring Boot Tools jars: the vmware.vscode-spring-boot extension ships the
--- jdtls extension jars that spring-boot.nvim's Spring Boot LS needs to
--- resolve project classpath / Spring Boot version for property completion.
+--jdtls_config
 local function spring_boot_bundles()
   local known = {
     "io.projectreactor.reactor-core.jar",
@@ -558,11 +687,6 @@ local function spring_boot_bundles()
   return bundles
 end
 
--- java-debug-adapter (mason) installs the vscode-java-debug extension. Its
--- server jar is an Eclipse/OSGi bundle that must run *inside* jdtls; the DAP
--- session is then hosted by jdtls (see the nvim-dap adapter in
--- plugins/lsphelptools.lua). Loading it here via init_options.bundles.
--- Java (jdtls)
 local function java_debug_plugin_jar()
   local jars = vim.fn.split(
     vim.fn.glob(
@@ -580,24 +704,13 @@ local root_markers = {
   '.git',
 }
 
--- Keep a separate JDTLS workspace for each project. This must be resolved
--- when a client starts, not when Neovim loads this file, because one session
--- can visit several Java projects.
 local function jdtls_workspace(root_dir)
   local project_name = vim.fn.fnamemodify(root_dir, ':p:h:t')
   return vim.fn.stdpath('cache') .. '/jdtls/workspace/' .. project_name
 end
 
--- JDTLS does not run Maven annotation processors itself. Lombok needs to be
--- loaded into the JDTLS JVM so generated constructors, getters, etc. are
--- visible to the Java language server.
 local jdtls_lombok = vim.fn.stdpath('data') .. '/mason/packages/jdtls/lombok.jar'
 
--- The mason launcher starts the JVM with -Xms1G and no explicit cap, and uses
--- the default GC. On big Spring projects the Eclipse compiler that produces
--- diagnostics is then GC-bound. ParallelGC trades pause latency for
--- throughput, which is what a batch compiler wants, and the explicit heap cap
--- keeps it from thrashing while swapping with the Spring LS JVM.
 local jdtls_jvm_args = {
   '-Xmx4G',
   '-XX:+UseParallelGC',
@@ -613,8 +726,6 @@ local function start_jdtls(dispatchers, config)
   local workspace = jdtls_workspace(root)
   vim.fn.mkdir(workspace, 'p')
 
-  -- Resolve extension bundles only when a Java client actually starts; the
-  -- globs touch the Mason package tree and cost time on every startup.
   local bundles = spring_boot_bundles()
   local dbg_jar = java_debug_plugin_jar()
   if dbg_jar then
@@ -639,13 +750,13 @@ local function start_jdtls(dispatchers, config)
   return vim.lsp.rpc.start(cmd, dispatchers, { cwd = root })
 end
 
+--jdtls_lsp
 vim.lsp.config('jdtls', {
   cmd = start_jdtls,
   filetypes = { 'java' },
   root_markers = root_markers,
   capabilities = vim.lsp.protocol.make_client_capabilities(),
   init_options = {
-    -- Populated by start_jdtls() when the client starts.
     extendedClientCapabilities = {
       classFileContentsSupport = true,
     },
@@ -658,16 +769,11 @@ vim.lsp.config('jdtls', {
       maven = {
         downloadSources = false,
       },
-      -- Rebuild changed projects in the background as soon as they change, so
-      -- the Eclipse compiler publishes diagnostics promptly after an edit.
       autobuild = {
         enabled = true,
       },
-      -- Allow up to two project builds at once (multi-module repos) instead of
-      -- serializing every build behind the first.
       maxConcurrentBuilds = 2,
       import = {
-        -- keep .project/.classpath/.factorypath/.settings out of the repo
         generatesMetadataFilesAtProjectRoot = false,
       },
       implementationsCodeLens = {
@@ -694,9 +800,26 @@ vim.lsp.config('jdtls', {
   },
 })
 
--- Organize imports after saving instead of using JDTLS's synchronous
--- `willSaveWaitUntil` save action. The edit is written back automatically,
--- while the initial `:w` returns immediately.
+local function jdtls_format_and_write(client, bufnr)
+  if not vim.api.nvim_buf_is_valid(bufnr) then return end
+  local tick = vim.api.nvim_buf_get_changedtick(bufnr)
+  local params = vim.lsp.util.make_formatting_params()
+  params.textDocument = vim.lsp.util.make_text_document_params(bufnr)
+  client:request('textDocument/formatting', params, function(err, edits)
+    if err or not edits or #edits == 0
+        or not vim.api.nvim_buf_is_valid(bufnr)
+        or vim.api.nvim_buf_get_changedtick(bufnr) ~= tick then
+      return
+    end
+    vim.api.nvim_buf_call(bufnr, function()
+      local view = vim.fn.winsaveview()
+      vim.lsp.util.apply_text_edits(edits, bufnr, client.offset_encoding)
+      vim.fn.winrestview(view)
+      vim.cmd('silent noautocmd write')
+    end)
+  end, bufnr)
+end
+
 local function organize_jdtls_imports_async(client, bufnr)
   if not vim.api.nvim_buf_is_valid(bufnr) or vim.b[bufnr].jdtls_organize_imports_pending then
     return
@@ -708,6 +831,7 @@ local function organize_jdtls_imports_async(client, bufnr)
   local function finish()
     if vim.api.nvim_buf_is_valid(bufnr) then
       vim.b[bufnr].jdtls_organize_imports_pending = false
+      vim.schedule(function() jdtls_format_and_write(client, bufnr) end)
     end
   end
 
@@ -739,8 +863,13 @@ local function organize_jdtls_imports_async(client, bufnr)
 
     if action.command then
       local command = type(action.command) == 'table' and action.command or action
-      client:exec_cmd(command, { bufnr = bufnr }, function()
-        vim.schedule(save_edit)
+      client:exec_cmd(command, { bufnr = bufnr }, function(err, result)
+        vim.schedule(function()
+          if not err and type(result) == 'table' and (result.changes or result.documentChanges) then
+            vim.lsp.util.apply_workspace_edit(result, client.offset_encoding)
+          end
+          save_edit()
+        end)
       end)
     else
       save_edit()
@@ -823,7 +952,6 @@ local function rename_file_to_public_type(bufnr)
 
   local type_name
   for _, line in ipairs(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)) do
-    -- column 0 only, so nested types are ignored
     if line:match('^public%s') then
       for _, kw in ipairs({ 'class', 'interface', 'enum', 'record', '@interface' }) do
         type_name = line:match('^public%s+[%w%s]-' .. kw .. '%s+([%w_$]+)')
@@ -855,7 +983,6 @@ vim.api.nvim_create_autocmd('BufWritePost', {
   end,
 })
 
--- Handle jdt:// URIs for Go To Definition into Java dependencies and class files
 local function jdtls_for_buffer()
   local root = vim.fs.root(0, {
     'mvnw', 'pom.xml', 'gradlew', 'build.gradle', 'build.gradle.kts',
@@ -873,7 +1000,6 @@ end
 local function jdt_aware_definition()
   local params = vim.lsp.util.make_position_params(0, 'utf-8')
   vim.lsp.buf_request_all(0, 'textDocument/definition', params, function(results)
-    -- results is a table keyed by client_id, each with { err = ..., result = ... }
     local result
     for _, res in pairs(results) do
       if res.result and not vim.tbl_isempty(res.result) then
@@ -891,8 +1017,6 @@ local function jdt_aware_definition()
     local uri = res.uri or res.targetUri
 
     if uri and uri:sub(1, 6) == 'jdt://' then
-      -- JDTLS is intentionally not attached to properties/YAML buffers, so
-      -- look it up by project rather than restricting the search to bufnr=0.
       local client = jdtls_for_buffer()
       if not client then
         vim.notify('JDTLS is not available for this project yet', vim.log.levels.WARN)
@@ -940,7 +1064,6 @@ local function jdt_aware_definition()
   end)
 end
 
--- Set up a buffer-local 'gd' keymap specifically when jdtls attaches
 vim.api.nvim_create_autocmd('LspAttach', {
   group = vim.api.nvim_create_augroup('JdtlsKeymaps', { clear = true }),
   callback = function(args)
@@ -950,159 +1073,6 @@ vim.api.nvim_create_autocmd('LspAttach', {
         buffer = args.buf,
         desc = 'Go to definition (jdt:// aware)',
       })
-    end
-  end,
-})
-
--- Spring Boot language server.
---
--- This is a second JVM. In VSCode the Spring Tools extension starts it and
--- brokers every message between it and jdtls; Neovim does neither, which is
--- why Spring commands, property completion and live data used to do nothing.
--- We start it ourselves and bridge the two with lua/springls.lua.
-local function spring_boot_ls_jar()
-  local jars = vim.fn.split(vim.fn.glob(
-    vim.fn.stdpath('data')
-    .. '/mason/packages/vscode-spring-boot-tools/extension/language-server/*-exec.jar'
-  ), '\n')
-  return jars[#jars]
-end
-
-local spring_capabilities = vim.lsp.protocol.make_client_capabilities()
-
--- Required: without dynamic execute-command registration the server NPEs in
--- JdtLsProjectCache.initialize() and never finishes initializing.
-spring_capabilities.workspace.executeCommand = spring_capabilities.workspace.executeCommand or {}
-spring_capabilities.workspace.executeCommand.dynamicRegistration = true
-spring_capabilities.workspace.didChangeWatchedFiles = spring_capabilities.workspace.didChangeWatchedFiles or {}
-spring_capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = true
-
-local spring_root_markers = {
-  'gradlew', 'build.gradle', 'build.gradle.kts',
-  'mvnw', 'pom.xml',
-  'settings.gradle', 'settings.gradle.kts',
-}
-
-local function is_compose_file(name)
-  return name:match('^docker%-compose.*%.ya?ml$') ~= nil
-      or name:match('^compose[%.%-].*ya?ml$') ~= nil
-end
-
--- Spring LS is a second JVM on top of jdtls. Plain Maven/Gradle projects have
--- no use for it, so only start it when the build actually references Spring.
--- Check the nearest build files and a couple of ancestors for multi-module
--- layouts; cache the answer per root.
-local spring_project_cache = {}
-local function is_spring_project(root)
-  local cached = spring_project_cache[root]
-  if cached ~= nil then
-    return cached
-  end
-
-  local found = false
-  local dir = root
-  for _ = 1, 3 do
-    for _, file in ipairs({ 'pom.xml', 'build.gradle', 'build.gradle.kts' }) do
-      local path = dir .. '/' .. file
-      if vim.fn.filereadable(path) == 1 then
-        local ok, lines = pcall(vim.fn.readfile, path, '', 500)
-        if ok then
-          for _, line in ipairs(lines) do
-            if line:find('spring%-boot') or line:find('org%.springframework') then
-              found = true
-              break
-            end
-          end
-        end
-      end
-      if found then
-        break
-      end
-    end
-    if found then
-      break
-    end
-
-    local parent = vim.fs.dirname(dir)
-    if not parent or parent == dir or parent == '' then
-      break
-    end
-    dir = parent
-  end
-
-  spring_project_cache[root] = found
-  return found
-end
-
-vim.lsp.config('springls', {
-  root_dir = function(bufnr, on_dir)
-    local name = vim.fs.basename(vim.api.nvim_buf_get_name(bufnr))
-    if is_compose_file(name) then
-      return
-    end
-    local root = vim.fs.root(bufnr, spring_root_markers)
-    if root and is_spring_project(root) then
-      on_dir(root)
-    end
-  end,
-  cmd = function(dispatchers, _)
-    local jar = spring_boot_ls_jar()
-    if not jar then
-      error('springls: vscode-spring-boot-tools not installed (run :MasonInstall vscode-spring-boot-tools)')
-    end
-    return vim.lsp.rpc.start({
-      vim.fn.exepath('java') ~= '' and vim.fn.exepath('java') or 'java',
-      '-Xms256m',
-      '-Xmx2G',
-      '-XX:+UseParallelGC',
-      '-XX:GCTimeRatio=4',
-      '-XX:AdaptiveSizePolicyWeight=90',
-      '-Djava.awt.headless=true',
-      '-Xlog:disable',
-      '-Dsts.lsp.client=vscode',
-      '-jar',
-      jar,
-    }, dispatchers)
-  end,
-  -- Do not start Spring LS for arbitrary YAML/properties files in any Git
-  -- repository. A Spring build is required so this is limited to Java/Spring
-  -- projects.
-  -- Neovim detects application*.properties as `jproperties`; include both
-  -- that and the generic name. Some setups expose .yml as `yml` as well.
-  filetypes = { 'java', 'properties', 'jproperties', 'yaml', 'yml' },
-  get_language_id = function(_, filetype)
-    if filetype == 'properties' or filetype == 'jproperties' then
-      return 'spring-boot-properties'
-    end
-    if filetype == 'yaml' or filetype == 'yml' then
-      return 'spring-boot-properties-yaml'
-    end
-    return filetype
-  end,
-  capabilities = spring_capabilities,
-  init_options = {
-    settings = { bootLanguageServer = { mode = 'HQL' } },
-    extendedClientCapabilities = {
-      progressReportProvider = true,
-      classFileContentsSupport = true,
-      openFileContentProvider = true,
-      soundTargets = true,
-      springBootLanguageServerClientCapabilities = {
-        refreshDocumentLifecycleHandler = true,
-      },
-    },
-    triggerFiles = { '**/pom.xml', '**/build.gradle', '**/build.gradle.kts' },
-  },
-})
-
-local springls_bridge = require('springls')
-
-vim.api.nvim_create_autocmd('LspAttach', {
-  group = vim.api.nvim_create_augroup('SpringLsBridge', { clear = true }),
-  callback = function(args)
-    local client = vim.lsp.get_client_by_id(args.data.client_id)
-    if client then
-      springls_bridge.setup(client)
     end
   end,
 })
@@ -1173,10 +1143,6 @@ local function render_codelens(bufnr)
   end
 end
 
--- Refresh end-of-line code lenses, coalescing bursts: InsertLeave/BufEnter/
--- BufWritePost can all fire within milliseconds, and each one used to send a
--- fresh codeLens + codeLens/resolve round trip to jdtls, which competes with
--- the background build that produces diagnostics.
 local codelens_timers = {}
 
 local function schedule_codelens(bufnr)
