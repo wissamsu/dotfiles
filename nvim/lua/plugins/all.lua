@@ -411,6 +411,29 @@ return {
                  -- Trigger characters are requested immediately; cache the result for
                  -- later keystrokes so stale items can be shown while typing.
                  if context.trigger.kind == 'manual' or context.trigger.kind == 'trigger_character' then
+                   local cached = _G._kotlin_prefetch_cache and _G._kotlin_prefetch_cache[context.bufnr]
+                   if cached and type(cached.items) == 'table' then
+                     local adapted = vim.deepcopy(cached.items)
+                     for _, item in ipairs(adapted) do
+                       item.source_id = 'lsp'
+                       item.source_name = 'LSP'
+                       item.kind = item.kind or require('blink.cmp.types').CompletionItemKind.Property
+                       item.cursor_column = context.cursor[2]
+                       if type(item.textEdit) == 'table' and type(item.textEdit.range) == 'table' then
+                         local start_col = item.textEdit.range.start and item.textEdit.range.start.character or 0
+                         local new_end = context.cursor[2]
+                         item.textEdit.range['end'] = item.textEdit.range['end'] or { line = 0, character = 0 }
+                         item.textEdit.range['end'].character = new_end
+                         item.textEdit.newText = context.line:sub(start_col + 1, new_end)
+                       end
+                     end
+                     vim.schedule(function()
+                       local trigger = require('blink.cmp.completion.trigger')
+                       if trigger.context ~= nil and trigger.context.id == context.id then
+                         require('blink.cmp.sources.lib').emit_completions(context, { lsp = adapted })
+                       end
+                     end)
+                   end
                    return module:get_completions(context, function(response)
                      local cache = _G._kotlin_prefetch_cache
                      if response and type(response.items) == 'table' then

@@ -148,6 +148,46 @@ local function stop_kotlin_warmups()
   end
 end
 
+local function seed_kotlin_completion_cache(client, source_buf)
+  if not client.server_capabilities.completionProvider then
+    return
+  end
+  if not vim.api.nvim_buf_is_valid(source_buf) or not vim.lsp.buf_is_attached(source_buf, client.id) then
+    return
+  end
+
+  local lines = vim.api.nvim_buf_get_lines(source_buf, 0, -1, false)
+  local line, character
+  for i, text in ipairs(lines) do
+    local at = text:find('@', 1, true)
+    if at then
+      line = i - 1
+      character = at
+      break
+    end
+  end
+  if line == nil then
+    line = math.max(#lines - 1, 0)
+    character = #(lines[#lines] or '')
+  end
+
+  local params = {
+    textDocument = vim.lsp.util.make_text_document_params(source_buf),
+    position = { line = line, character = character },
+  }
+  client:request('textDocument/completion', params, function(err, res)
+    if err or not res then
+      return
+    end
+    local items = res.items or res
+    if type(items) ~= 'table' then
+      return
+    end
+    _G._kotlin_prefetch_cache = _G._kotlin_prefetch_cache or {}
+    _G._kotlin_prefetch_cache[source_buf] = { items = vim.deepcopy(items) }
+  end, source_buf)
+end
+
 local function start_kotlin_warmup(client, source_buf)
   if not client.server_capabilities.completionProvider then
     return
@@ -210,10 +250,10 @@ local function start_kotlin_warmup(client, source_buf)
     end
     remaining = remaining - 1
     local line = vim.api.nvim_buf_line_count(warm_buf)
-    vim.api.nvim_buf_set_lines(warm_buf, line, line, false, { '@RestC' })
+    vim.api.nvim_buf_set_lines(warm_buf, line, line, false, { 'a' })
     client:request('textDocument/completion', {
       textDocument = vim.lsp.util.make_text_document_params(warm_buf),
-      position = { line = line, character = 6 },
+      position = { line = line, character = 1 },
     }, function()
       if stopped or not vim.api.nvim_buf_is_valid(warm_buf) then
         return
@@ -269,6 +309,7 @@ vim.api.nvim_create_autocmd('LspProgress', {
       return
     end
     vim.schedule(function()
+      seed_kotlin_completion_cache(client, buf)
       start_kotlin_warmup(client, buf)
     end)
   end,
