@@ -37,6 +37,31 @@ local function resolve_command(mason_name, system_names)
   return mason_path
 end
 
+vim.lsp.config('jsonls', {
+  cmd = { vim.fn.stdpath("data") .. "/mason/bin/vscode-json-language-server", '--stdio' },
+  filetypes = { 'json', 'jsonc' },
+  root_markers = { '.git', 'package.json' },
+  settings = {
+    json = {
+      format = {
+        enable = true, -- <--- Ensure this is enabled
+      },
+      schemas = {
+        {
+          fileMatch = { 'package.json' },
+          url = 'https://json.schemastore.org/package.json',
+        },
+        {
+          fileMatch = { 'tsconfig*.json' },
+          url = 'https://json.schemastore.org/tsconfig.json',
+        },
+      },
+      validate = { enable = true },
+    },
+  },
+})
+
+
 -- Makefile / autotools (autotools-language-server)
 vim.lsp.config('autotools_ls', {
   cmd = { resolve_command('autotools-language-server') },
@@ -1195,5 +1220,6 @@ vim.lsp.enable({
   'lemminx',
   'basedpyright',
   'autotools_ls',
-  'kotlin_lsp'
+  'kotlin_lsp',
+  'jsonls'
 })

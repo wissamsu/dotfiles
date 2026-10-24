@@ -1,4 +1,3 @@
--- lua/mvn_search.lua
 local pickers = require("telescope.pickers")
 local finders = require("telescope.finders")
 local conf = require("telescope.config").values
@@ -13,6 +12,9 @@ local SCOPES = { "compile", "test", "provided", "runtime" }
 local ATTEMPTS = 10
 local cache = {} -- query -> docs, lasts until Neovim restarts
 
+-- Sections whose <dependencies> blocks should NOT be touched
+local SKIP_TAGS = { "dependencyManagement", "pluginManagement", "build", "profiles", "reporting" }
+
 local function err(msg)
   vim.notify("MvnSearch: " .. msg, vim.log.levels.ERROR)
 end
@@ -22,10 +24,147 @@ local function snippet(s)
   return #s > 200 and (s:sub(1, 200) .. "...") or s
 end
 
-local function to_xml(d, scope)
-  return ("<dependency>\n  <groupId>%s</groupId>\n  <artifactId>%s</artifactId>\n  <version>%s</version>\n  <scope>%s</scope>\n</dependency>")
-      :format(d.g, d.a, d.latestVersion, scope)
+-- Build the dependency as a list of lines, indented with `indent`/`unit`
+local function dep_lines(d, scope, indent, unit)
+  local lines = {
+    indent .. "<dependency>",
+    indent .. unit .. "<groupId>" .. d.g .. "</groupId>",
+    indent .. unit .. "<artifactId>" .. d.a .. "</artifactId>",
+    indent .. unit .. "<version>" .. (d.latestVersion or "") .. "</version>",
+  }
+  -- compile is Maven's default, so omit it
+  if scope ~= "compile" then
+    table.insert(lines, indent .. unit .. "<scope>" .. scope .. "</scope>")
+  end
+  table.insert(lines, indent .. "</dependency>")
+  return lines
 end
+
+---------------------------------------------------------------------------
+-- pom.xml handling
+---------------------------------------------------------------------------
+
+local function find_pom()
+  local name = vim.api.nvim_buf_get_name(0)
+  if name:match("pom%.xml$") then
+    return name
+  end
+  local start = (name ~= "" and vim.fs.dirname(name)) or vim.loop.cwd()
+  return vim.fs.find("pom.xml", { upward = true, path = start })[1]
+end
+
+-- Guess the indentation unit used by the file (defaults to 4 spaces)
+local function detect_unit(lines)
+  for _, l in ipairs(lines) do
+    local ws = l:match("^(%s+)<")
+    if ws then return ws end
+  end
+  return "    "
+end
+
+-- Locate the project-level <dependencies> block.
+-- Returns open_line, close_line (1-based). If self-closing, both are equal.
+local function find_dependencies(lines)
+  local depth, open_i = 0, nil
+  for i, line in ipairs(lines) do
+    for _, tag in ipairs(SKIP_TAGS) do
+      local opens = select(2, line:gsub("<" .. tag .. ">", ""))
+      local closes = select(2, line:gsub("</" .. tag .. ">", ""))
+      depth = depth + opens - closes
+    end
+    if depth == 0 then
+      if not open_i then
+        if line:match("^%s*<dependencies>%s*$") then
+          open_i = i
+        elseif line:match("^%s*<dependencies%s*/>%s*$") then
+          return i, i
+        end
+      elseif line:match("</dependencies>") then
+        return open_i, i
+      end
+    end
+  end
+  return nil, nil
+end
+
+local function already_declared(lines, open_i, close_i, d)
+  local block = table.concat(lines, "\n", open_i, close_i)
+  for body in block:gmatch("<dependency>(.-)</dependency>") do
+    local g = body:match("<groupId>%s*(.-)%s*</groupId>")
+    local a = body:match("<artifactId>%s*(.-)%s*</artifactId>")
+    if g == d.g and a == d.a then return true end
+  end
+  return false
+end
+
+local function add_to_pom(d, scope)
+  local path = find_pom()
+  if not path then
+    return err("no pom.xml found (looked upward from the current file)")
+  end
+
+  local bufnr = vim.fn.bufadd(path)
+  vim.fn.bufload(bufnr)
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local unit = detect_unit(lines)
+  local label = ("%s:%s:%s"):format(d.g, d.a, d.latestVersion or "?")
+
+  local open_i, close_i = find_dependencies(lines)
+
+  if open_i and open_i ~= close_i then
+    -- Normal case: existing <dependencies> ... </dependencies>
+    if already_declared(lines, open_i, close_i, d) then
+      return vim.notify(("MvnSearch: %s:%s is already in %s"):format(d.g, d.a, vim.fn.fnamemodify(path, ":.")),
+        vim.log.levels.WARN)
+    end
+    local base = lines[close_i]:match("^(%s*)") or ""
+    local child = base .. unit
+    -- Prefer the indentation of an existing <dependency> if there is one
+    for i = open_i + 1, close_i - 1 do
+      local ws = lines[i]:match("^(%s*)<dependency>")
+      if ws then
+        child = ws
+        break
+      end
+    end
+    local child_unit = child:sub(#base + 1)
+    if child_unit == "" then child_unit = unit end
+    vim.api.nvim_buf_set_lines(bufnr, close_i - 1, close_i - 1, false, dep_lines(d, scope, child, child_unit))
+  elseif open_i then
+    -- Self-closing <dependencies/>: expand it
+    local base = lines[open_i]:match("^(%s*)") or ""
+    local new = { base .. "<dependencies>" }
+    vim.list_extend(new, dep_lines(d, scope, base .. unit, unit))
+    table.insert(new, base .. "</dependencies>")
+    vim.api.nvim_buf_set_lines(bufnr, open_i - 1, open_i, false, new)
+  else
+    -- No <dependencies> block: create one before </project>
+    local proj_close
+    for i = #lines, 1, -1 do
+      if lines[i]:match("</project>") then
+        proj_close = i
+        break
+      end
+    end
+    if not proj_close then
+      return err("couldn't find </project> in " .. path)
+    end
+    local new = { unit .. "<dependencies>" }
+    vim.list_extend(new, dep_lines(d, scope, unit .. unit, unit))
+    table.insert(new, unit .. "</dependencies>")
+    vim.api.nvim_buf_set_lines(bufnr, proj_close - 1, proj_close - 1, false, new)
+  end
+
+  -- Save the pom (works whether or not the buffer is currently visible)
+  vim.api.nvim_buf_call(bufnr, function()
+    vim.cmd("silent write")
+  end)
+  vim.notify(("Added %s (%s) to %s"):format(label, scope, vim.fn.fnamemodify(path, ":.")))
+end
+
+---------------------------------------------------------------------------
+-- Maven Central search
+---------------------------------------------------------------------------
 
 -- Fast-fail fetch: abort slow requests at curl level and retry
 local function fetch(query, attempt, on_done)
@@ -81,8 +220,7 @@ local function show_picker(query, docs)
         if not sel then return end
         vim.ui.select(SCOPES, { prompt = "Scope:" }, function(scope)
           if not scope then return end
-          vim.fn.setreg("+", to_xml(sel.value, scope))
-          vim.notify("Dependency (" .. scope .. ") copied to clipboard")
+          add_to_pom(sel.value, scope)
         end)
       end)
       return true
