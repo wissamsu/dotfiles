@@ -396,6 +396,62 @@ return {
           buffer = {
             min_keyword_length = 3,
           },
+          --here
+          lsp = {
+            async = function(ctx)
+              return ctx.bufnr ~= nil and vim.bo[ctx.bufnr].filetype == 'kotlin'
+            end,
+            override = {
+              get_completions = function(module, context, callback)
+                if
+                    context.bufnr == nil
+                    or vim.bo[context.bufnr].filetype ~= 'kotlin'
+                    or context.trigger.kind == 'manual'
+                    or context.trigger.kind == 'trigger_character'
+                then
+                  return module:get_completions(context, callback)
+                end
+
+                local done = false
+                local cancel_request
+                local timer = vim.uv.new_timer()
+                timer:start(
+                  150,
+                  0,
+                  vim.schedule_wrap(function()
+                    timer:stop()
+                    if done then
+                      return
+                    end
+                    if
+                        not vim.api.nvim_buf_is_valid(context.bufnr)
+                        or vim.api.nvim_get_current_buf() ~= context.bufnr
+                    then
+                      callback({
+                        is_incomplete_forward = true,
+                        is_incomplete_backward = true,
+                        items = {},
+                      })
+                      return
+                    end
+                    cancel_request = module:get_completions(context, callback)
+                  end)
+                )
+
+                return function()
+                  done = true
+                  if not timer:is_closing() then
+                    timer:stop()
+                    timer:close()
+                  end
+                  if cancel_request then
+                    cancel_request()
+                  end
+                end
+              end,
+            },
+          },
+          --here
         },
       },
     },

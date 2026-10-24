@@ -137,6 +137,43 @@ vim.lsp.config("kotlin_lsp", {
   }),
 })
 
+--new
+local kotlin_completion_warmed = {}
+
+vim.api.nvim_create_autocmd('LspAttach', {
+  group = vim.api.nvim_create_augroup('KotlinCompletionWarmup', { clear = true }),
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if not client or client.name ~= 'kotlin_lsp' or kotlin_completion_warmed[client.id] then
+      return
+    end
+    kotlin_completion_warmed[client.id] = true
+
+    local buf = args.buf
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    local line, character
+    for i, text in ipairs(lines) do
+      local at = text:find('@', 1, true)
+      if at then
+        line = i - 1
+        character = at
+        break
+      end
+    end
+    if line == nil then
+      line = math.max(#lines - 1, 0)
+      character = #(lines[#lines] or '')
+    end
+
+    local params = {
+      textDocument = vim.lsp.util.make_text_document_params(buf),
+      position = { line = line, character = character },
+    }
+    client:request('textDocument/completion', params, function() end, buf)
+  end,
+})
+--new
+
 --python_lsp
 vim.lsp.config('basedpyright', {
   cmd = { resolve_command('basedpyright-langserver'), '--stdio' },
