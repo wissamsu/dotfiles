@@ -853,6 +853,8 @@ return {
             dap.continue()
           elseif vim.bo.filetype == "java" then
             require("java-dap").launch()
+          elseif vim.bo.filetype == "kotlin" then
+            require("kotlin-dap").launch()
           else
             dap.continue() -- shows the config picker (lldb launch, etc.)
           end
@@ -881,6 +883,8 @@ return {
       -- unchanged for Java: set it up first, as before
       local ok, jd = pcall(require, "java-dap")
       if ok then jd.setup() end
+      local okk, kd = pcall(require, "kotlin-dap")
+      if okk then kd.setup() end
 
       dap.set_log_level("WARN")
 
@@ -914,6 +918,10 @@ return {
         -- Java-only cleanup, same call as before
         if ok and is_java(session) then
           jd.cleanup_terminal(session)
+        end
+        local okk, kd = pcall(require, "kotlin-dap")
+        if okk and session and session.config and session.config.type == "kotlin" then
+          kd.cleanup_terminal(session)
         end
       end
       dap.listeners.after.event_terminated["java-dap-ui"] = close_dap_ui
