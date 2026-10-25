@@ -908,7 +908,31 @@ return {
       dap.listeners.after.event_processid["java-dap-metadata"] = function() end
       dap.listeners.after.event_telemetry["java-dap-metadata"] = function() end
 
-      dapui.setup()
+      dapui.setup({
+        layouts = {
+          {
+            elements = {
+              { id = "scopes",      size = 0.25 },
+              { id = "breakpoints", size = 0.25 },
+              { id = "stacks",      size = 0.25 },
+              { id = "watches",     size = 0.25 },
+            },
+            size = 40,
+            position = "left",
+          },
+          {
+            elements = {
+              { id = "console", size = 1.0 },
+            },
+            size = 15,
+            position = "bottom",
+          },
+        },
+        controls = {
+          enabled = true,
+          element = "console", -- put the pause/step/stop winbar on the console
+        },
+      })
 
       local function is_java(session)
         return session and session.config and session.config.type == "java"
@@ -934,6 +958,31 @@ return {
       end
       dap.listeners.after.event_terminated["java-dap-ui"] = close_dap_ui
       dap.listeners.after.event_exited["java-dap-ui"] = close_dap_ui
+      dap.listeners.after.event_terminated["java-dap-ui"] = close_dap_ui
+      dap.listeners.after.event_exited["java-dap-ui"] = close_dap_ui
+
+      local function follow_console()
+        local session = dap.session()
+        local buf = session and session.term_buf
+        if not buf or not vim.api.nvim_buf_is_valid(buf) then
+          return
+        end
+        local last = vim.api.nvim_buf_line_count(buf)
+        for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+          pcall(vim.api.nvim_win_set_cursor, win, { last, 0 })
+        end
+      end
+
+      local function follow_console_soon()
+        -- The terminal buffer is created slightly after the session starts,
+        -- so retry a few times until it is attached to a window.
+        for _, delay in ipairs({ 100, 300, 800, 2000 }) do
+          vim.defer_fn(follow_console, delay)
+        end
+      end
+
+      dap.listeners.after.event_process["follow-console"] = follow_console_soon
+      dap.listeners.after.event_initialized["follow-console"] = follow_console_soon
 
       require("nvim-dap-virtual-text").setup({
         enabled = true,
@@ -1092,7 +1141,7 @@ return {
     opts = {
       kind = "split_left_most",
       integrations = { icon = "nvim_web_devicons" },
-      extensions = { trash = { enabled = true } }, -- deletes go to trash
+      extensions = { trash = { enabled = true } },
       mappings = {
         n = {
           ["q"] = { action = "close", desc = "Close finder" },
@@ -1100,11 +1149,216 @@ return {
       },
       ui = {
         hidden_items = {
-          switches = {}, -- don't hide dotfiles (show hidden)
+          switches = {},
         },
       },
     },
     config = function(_, opts)
+      ---------------------------------------------------------------------
+      -- Java kind icons (class/interface/record/enum/annotation/exception)
+      -- + diagnostics at end of line
+      ---------------------------------------------------------------------
+      local devicons = require("nvim-web-devicons")
+      local orig_get_icon = devicons.get_icon
+
+      -- Kind icons (Font Awesome glyphs, available in every Nerd Font version)
+      local kind_icons = {
+        class      = { glyph = "\u{f1b2}", hl = "JavaKindClass" },  -- cube
+        interface  = { glyph = "\u{f12e}", hl = "JavaKindInterface" }, -- puzzle piece
+        record     = { glyph = "\u{f192}", hl = "JavaKindRecord" }, -- dot in circle
+        enum       = { glyph = "\u{f009}", hl = "JavaKindEnum" },   -- 2x2 grid
+        annotation = { glyph = "\u{f1fa}", hl = "JavaKindAnnotation" }, -- @
+        exception  = { glyph = "\u{f0e7}", hl = "JavaKindException" }, -- bolt
+      }
+
+      local function define_hl()
+        vim.api.nvim_set_hl(0, "JavaKindClass", { fg = "#4fc1e9" })  -- blue
+        vim.api.nvim_set_hl(0, "JavaKindInterface", { fg = "#62b543" }) -- green
+        vim.api.nvim_set_hl(0, "JavaKindRecord", { fg = "#f0d63c" }) -- yellow
+        vim.api.nvim_set_hl(0, "JavaKindEnum", { fg = "#ef6f5a" })   -- salmon
+        vim.api.nvim_set_hl(0, "JavaKindAnnotation", { fg = "#b07ad9" }) -- purple
+        vim.api.nvim_set_hl(0, "JavaKindException", { fg = "#f0b429" }) -- amber
+      end
+      define_hl()
+      vim.api.nvim_create_autocmd("ColorScheme", { callback = define_hl })
+
+      local skip_dirs = {
+        [".git"] = true,
+        [".idea"] = true,
+        [".gradle"] = true,
+        target = true,
+        build = true,
+        node_modules = true,
+      }
+
+      local kind_cache = {} -- full path -> kind
+      local index = {}  -- basename -> full path
+      local index_time = 0
+
+      local function now_ms() return vim.uv.hrtime() / 1e6 end
+
+      local function rebuild_index()
+        index = {}
+        index_time = now_ms()
+        local root = vim.fn.getcwd()
+        for path, type in vim.fs.dir(root, {
+          depth = 15,
+          skip = function(dir) return not skip_dirs[vim.fs.basename(dir)] end,
+        }) do
+          if type == "file" and path:match("%.java$") then
+            local base = vim.fs.basename(path)
+            index[base] = index[base] or (root .. "/" .. path)
+          end
+        end
+      end
+
+      local function resolve(name)
+        if index[name] then return index[name] end
+        -- not found: rebuild at most once every 3s (picks up new files)
+        if now_ms() - index_time > 3000 then rebuild_index() end
+        return index[name]
+      end
+
+      local kws = { "class", "interface", "enum", "record" }
+
+      local function get_kind(path)
+        if kind_cache[path] ~= nil then return kind_cache[path] or nil end
+        local result = false
+        local fname = vim.fs.basename(path)
+        local f = io.open(path, "r")
+        if f then
+          for _ = 1, 120 do
+            local line = f:read("*l")
+            if not line then break end
+
+            local k
+            if line:find("^%s*[%w%s]-@interface%s+%u") then
+              k = "annotation"
+            else
+              for _, kw in ipairs(kws) do
+                if line:find("^%s*[%w%s]-%f[%w]" .. kw .. "%s+%u") then
+                  k = kw
+                  break
+                end
+              end
+            end
+
+            if k then
+              if k == "class" and (
+                    fname:match("Exception%.java$") or fname:match("Error%.java$")
+                    or line:find("extends%s+[%w_%.]*Exception")
+                    or line:find("extends%s+[%w_%.]*Error")
+                    or line:find("extends%s+[%w_%.]*Throwable")
+                  ) then
+                k = "exception"
+              end
+              result = k
+              break
+            end
+          end
+          f:close()
+        end
+        kind_cache[path] = result
+        return result or nil
+      end
+
+      -- Replace the Java icon with the kind icon
+      devicons.get_icon = function(name, ext, o)
+        local icon, hl = orig_get_icon(name, ext, o)
+        if type(name) == "string" and name:match("%.java$") then
+          local path = resolve(name)
+          local ki = path and kind_icons[get_kind(path) or ""]
+          if ki then return ki.glyph, ki.hl end
+        end
+        return icon, hl
+      end
+
+      -- refresh after saving a Java file
+      vim.api.nvim_create_autocmd("BufWritePost", {
+        pattern = "*.java",
+        callback = function(a) kind_cache[vim.fn.fnamemodify(a.file, ":p")] = nil end,
+      })
+
+      local function is_fyler_buf(buf)
+        local ft = (vim.bo[buf].filetype or ""):lower()
+        local name = vim.api.nvim_buf_get_name(buf):lower()
+        return ft:find("fyler", 1, true) ~= nil or name:find("fyler", 1, true) ~= nil
+      end
+
+      ---------------------------------------------------------------------
+      -- Diagnostics per file
+      ---------------------------------------------------------------------
+      local sev = vim.diagnostic.severity
+      local diag_icons = {
+        [sev.ERROR] = { "\u{f057}", "DiagnosticError" },
+        [sev.WARN]  = { "\u{f071}", "DiagnosticWarn" },
+        [sev.INFO]  = { "\u{f05a}", "DiagnosticInfo" },
+        [sev.HINT]  = { "\u{f0eb}", "DiagnosticHint" },
+      }
+      local diag_by_name = {}
+      local diag_dirty = true
+
+      local function rebuild_diags()
+        diag_by_name = {}
+        for _, d in ipairs(vim.diagnostic.get()) do
+          local fname = vim.fs.basename(vim.api.nvim_buf_get_name(d.bufnr))
+          if fname ~= "" then
+            local e = diag_by_name[fname] or { 0, 0, 0, 0 }
+            e[d.severity] = e[d.severity] + 1
+            diag_by_name[fname] = e
+          end
+        end
+        diag_dirty = false
+      end
+
+      vim.api.nvim_create_autocmd("DiagnosticChanged", {
+        callback = function()
+          diag_dirty = true
+          vim.schedule(function()
+            for _, win in ipairs(vim.api.nvim_list_wins()) do
+              if is_fyler_buf(vim.api.nvim_win_get_buf(win)) then
+                pcall(vim.api.nvim__redraw, { win = win, valid = false })
+              end
+            end
+          end)
+        end,
+      })
+
+      local ns = vim.api.nvim_create_namespace("fyler_diagnostics")
+      vim.api.nvim_set_decoration_provider(ns, {
+        on_win = function(_, _, buf)
+          if not is_fyler_buf(buf) then return false end
+          if diag_dirty then rebuild_diags() end
+          return true
+        end,
+        on_line = function(_, _, buf, row)
+          local line = vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
+          if not line then return end
+
+          for tok in line:gmatch("%S+") do
+            local e = diag_by_name[tok]
+            if e then
+              local chunks = {}
+              for s = 1, 4 do
+                if e[s] > 0 then
+                  local ic = diag_icons[s]
+                  chunks[#chunks + 1] = { " " .. ic[1] .. " " .. e[s], ic[2] }
+                end
+              end
+              if #chunks > 0 then
+                vim.api.nvim_buf_set_extmark(buf, ns, row, 0, {
+                  virt_text = chunks,
+                  virt_text_pos = "eol",
+                  ephemeral = true,
+                })
+              end
+              break
+            end
+          end
+        end,
+      })
+      ---------------------------------------------------------------------
+
       require("fyler").setup(opts)
 
       -- Skip the "Want to continue?" popup: auto-confirm every mutation.
