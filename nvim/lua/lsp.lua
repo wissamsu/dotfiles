@@ -216,7 +216,7 @@ local function start_kotlin_warmup(client, source_buf)
   end
   kotlin_warmup_stops[client.id] = stop
 
-  local remaining = 10
+  local remaining = 30
   local function step()
     if stopped or remaining <= 0 or not vim.api.nvim_buf_is_valid(warm_buf)
         or not vim.lsp.buf_is_attached(warm_buf, client.id) then
