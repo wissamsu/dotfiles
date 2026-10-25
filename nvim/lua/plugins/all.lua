@@ -401,118 +401,118 @@ return {
             async = function(ctx)
               return ctx.bufnr ~= nil and vim.bo[ctx.bufnr].filetype == 'kotlin'
             end,
-             override = {
-               get_completions = function(module, context, callback)
-                 _G._kotlin_prefetch_cache = _G._kotlin_prefetch_cache or {}
-                 if context.bufnr == nil or vim.bo[context.bufnr].filetype ~= 'kotlin' then
-                   return module:get_completions(context, callback)
-                 end
+            override = {
+              get_completions = function(module, context, callback)
+                _G._kotlin_prefetch_cache = _G._kotlin_prefetch_cache or {}
+                if context.bufnr == nil or vim.bo[context.bufnr].filetype ~= 'kotlin' then
+                  return module:get_completions(context, callback)
+                end
 
-                 -- Trigger characters are requested immediately; cache the result for
-                 -- later keystrokes so stale items can be shown while typing.
-                 if context.trigger.kind == 'manual' or context.trigger.kind == 'trigger_character' then
-                   local cached = _G._kotlin_prefetch_cache and _G._kotlin_prefetch_cache[context.bufnr]
-                   if cached and type(cached.items) == 'table' then
-                     local adapted = vim.deepcopy(cached.items)
-                     for _, item in ipairs(adapted) do
-                       item.source_id = 'lsp'
-                       item.source_name = 'LSP'
-                       item.kind = item.kind or require('blink.cmp.types').CompletionItemKind.Property
-                       item.cursor_column = context.cursor[2]
-                       if type(item.textEdit) == 'table' and type(item.textEdit.range) == 'table' then
-                         local start_col = item.textEdit.range.start and item.textEdit.range.start.character or 0
-                         local new_end = context.cursor[2]
-                         item.textEdit.range['end'] = item.textEdit.range['end'] or { line = 0, character = 0 }
-                         item.textEdit.range['end'].character = new_end
-                         item.textEdit.newText = context.line:sub(start_col + 1, new_end)
-                       end
-                     end
-                     vim.schedule(function()
-                       local trigger = require('blink.cmp.completion.trigger')
-                       if trigger.context ~= nil and trigger.context.id == context.id then
-                         require('blink.cmp.sources.lib').emit_completions(context, { lsp = adapted })
-                       end
-                     end)
-                   end
-                   return module:get_completions(context, function(response)
-                     local cache = _G._kotlin_prefetch_cache
-                     if response and type(response.items) == 'table' then
-                       cache[context.bufnr] = { items = vim.deepcopy(response.items) }
-                     end
-                     return callback(response)
-                   end)
-                 end
+                -- Trigger characters are requested immediately; cache the result for
+                -- later keystrokes so stale items can be shown while typing.
+                if context.trigger.kind == 'manual' or context.trigger.kind == 'trigger_character' then
+                  local cached = _G._kotlin_prefetch_cache and _G._kotlin_prefetch_cache[context.bufnr]
+                  if cached and type(cached.items) == 'table' then
+                    local adapted = vim.deepcopy(cached.items)
+                    for _, item in ipairs(adapted) do
+                      item.source_id = 'lsp'
+                      item.source_name = 'LSP'
+                      item.kind = item.kind or require('blink.cmp.types').CompletionItemKind.Property
+                      item.cursor_column = context.cursor[2]
+                      if type(item.textEdit) == 'table' and type(item.textEdit.range) == 'table' then
+                        local start_col = item.textEdit.range.start and item.textEdit.range.start.character or 0
+                        local new_end = context.cursor[2]
+                        item.textEdit.range['end'] = item.textEdit.range['end'] or { line = 0, character = 0 }
+                        item.textEdit.range['end'].character = new_end
+                        item.textEdit.newText = context.line:sub(start_col + 1, new_end)
+                      end
+                    end
+                    vim.schedule(function()
+                      local trigger = require('blink.cmp.completion.trigger')
+                      if trigger.context ~= nil and trigger.context.id == context.id then
+                        require('blink.cmp.sources.lib').emit_completions(context, { lsp = adapted })
+                      end
+                    end)
+                  end
+                  return module:get_completions(context, function(response)
+                    local cache = _G._kotlin_prefetch_cache
+                    if response and type(response.items) == 'table' then
+                      cache[context.bufnr] = { items = vim.deepcopy(response.items) }
+                    end
+                    return callback(response)
+                  end)
+                end
 
-                 local done = false
-                 local cancel_request
-                 local timer = vim.uv.new_timer()
+                local done = false
+                local cancel_request
+                local timer = vim.uv.new_timer()
 
-                 -- Show the most recent Kotlin completion result immediately, adapted
-                 -- to the current cursor, instead of waiting for the debounced request.
-                 local cached = _G._kotlin_prefetch_cache[context.bufnr]
-                 if cached and type(cached.items) == 'table' then
-                   local adapted = vim.deepcopy(cached.items)
-                   for _, item in ipairs(adapted) do
-                     item.source_id = 'lsp'
-                     item.source_name = 'LSP'
-                     item.kind = item.kind or require('blink.cmp.types').CompletionItemKind.Property
-                     item.cursor_column = context.cursor[2]
-                     if type(item.textEdit) == 'table' and type(item.textEdit.range) == 'table' then
-                       local start_col = item.textEdit.range.start and item.textEdit.range.start.character or 0
-                       local new_end = context.cursor[2]
-                       item.textEdit.range['end'] = item.textEdit.range['end'] or { line = 0, character = 0 }
-                       item.textEdit.range['end'].character = new_end
-                       item.textEdit.newText = context.line:sub(start_col + 1, new_end)
-                     end
-                   end
-                   vim.schedule(function()
-                     local trigger = require('blink.cmp.completion.trigger')
-                     if trigger.context ~= nil and trigger.context.id == context.id then
-                       require('blink.cmp.sources.lib').emit_completions(context, { lsp = adapted })
-                     end
-                   end)
-                 end
+                -- Show the most recent Kotlin completion result immediately, adapted
+                -- to the current cursor, instead of waiting for the debounced request.
+                local cached = _G._kotlin_prefetch_cache[context.bufnr]
+                if cached and type(cached.items) == 'table' then
+                  local adapted = vim.deepcopy(cached.items)
+                  for _, item in ipairs(adapted) do
+                    item.source_id = 'lsp'
+                    item.source_name = 'LSP'
+                    item.kind = item.kind or require('blink.cmp.types').CompletionItemKind.Property
+                    item.cursor_column = context.cursor[2]
+                    if type(item.textEdit) == 'table' and type(item.textEdit.range) == 'table' then
+                      local start_col = item.textEdit.range.start and item.textEdit.range.start.character or 0
+                      local new_end = context.cursor[2]
+                      item.textEdit.range['end'] = item.textEdit.range['end'] or { line = 0, character = 0 }
+                      item.textEdit.range['end'].character = new_end
+                      item.textEdit.newText = context.line:sub(start_col + 1, new_end)
+                    end
+                  end
+                  vim.schedule(function()
+                    local trigger = require('blink.cmp.completion.trigger')
+                    if trigger.context ~= nil and trigger.context.id == context.id then
+                      require('blink.cmp.sources.lib').emit_completions(context, { lsp = adapted })
+                    end
+                  end)
+                end
 
-                 timer:start(
-                   150,
-                   0,
-                   vim.schedule_wrap(function()
-                     timer:stop()
-                     if done then
-                       return
-                     end
-                     if
-                         not vim.api.nvim_buf_is_valid(context.bufnr)
-                         or vim.api.nvim_get_current_buf() ~= context.bufnr
-                     then
-                       callback({
-                         is_incomplete_forward = true,
-                         is_incomplete_backward = true,
-                         items = {},
-                       })
-                       return
-                     end
-                     cancel_request = module:get_completions(context, function(response)
-                       if response and type(response.items) == 'table' then
-                         _G._kotlin_prefetch_cache[context.bufnr] = { items = vim.deepcopy(response.items) }
-                       end
-                       return callback(response)
-                     end)
-                   end)
-                 )
+                timer:start(
+                  150,
+                  0,
+                  vim.schedule_wrap(function()
+                    timer:stop()
+                    if done then
+                      return
+                    end
+                    if
+                        not vim.api.nvim_buf_is_valid(context.bufnr)
+                        or vim.api.nvim_get_current_buf() ~= context.bufnr
+                    then
+                      callback({
+                        is_incomplete_forward = true,
+                        is_incomplete_backward = true,
+                        items = {},
+                      })
+                      return
+                    end
+                    cancel_request = module:get_completions(context, function(response)
+                      if response and type(response.items) == 'table' then
+                        _G._kotlin_prefetch_cache[context.bufnr] = { items = vim.deepcopy(response.items) }
+                      end
+                      return callback(response)
+                    end)
+                  end)
+                )
 
-                 return function()
-                   done = true
-                   if not timer:is_closing() then
-                     timer:stop()
-                     timer:close()
-                   end
-                   if cancel_request then
-                     cancel_request()
-                   end
-                 end
-               end,
-             },
+                return function()
+                  done = true
+                  if not timer:is_closing() then
+                    timer:stop()
+                    timer:close()
+                  end
+                  if cancel_request then
+                    cancel_request()
+                  end
+                end
+              end,
+            },
           },
           --here
         },
@@ -964,7 +964,7 @@ return {
     },
     cmd = { "Neotest" },
     keys = {
-      { "<leader>tt", function() require("neotest").run.run() end,                     desc = "Test: nearest" },
+      { "<leader>tr", function() require("neotest").run.run() end,                     desc = "Test: run nearest" },
       { "<leader>tf", function() require("neotest").run.run(vim.fn.expand("%")) end,   desc = "Test: file" },
       { "<leader>tl", function() require("neotest").run.run_last() end,                desc = "Test: last" },
       { "<leader>td", function() require("neotest").run.run({ strategy = "dap" }) end, desc = "Test: debug nearest" },
@@ -974,13 +974,25 @@ return {
       { "<leader>tx", function() require("neotest").run.stop() end,                    desc = "Test: stop" },
     },
     config = function()
+      local java_adapter = require("neotest-java")({
+        -- see the neotest-java README for the current option names
+        -- incremental_build = true,
+      })
+      local original_is_test_file = java_adapter.is_test_file
+      java_adapter.is_test_file = function(file_path)
+        if type(file_path) == "string" and not file_path:match("%.java$") then
+          return false
+        end
+        return original_is_test_file(file_path)
+      end
+
+      local adapters = { java_adapter }
+      local ok_kotlin, kotlin_adapter = pcall(require, "neotest-kotlin")
+      if ok_kotlin then
+        table.insert(adapters, kotlin_adapter)
+      end
       require("neotest").setup({
-        adapters = {
-          require("neotest-java")({
-            -- see the neotest-java README for the current option names
-            -- incremental_build = true,
-          }),
-        },
+        adapters = adapters,
       })
     end,
   },
