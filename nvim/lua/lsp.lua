@@ -1108,7 +1108,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
   group = vim.api.nvim_create_augroup('JdtlsOrganizeImportsOnSave', { clear = true }),
   callback = function(args)
     local client = vim.lsp.get_client_by_id(args.data.client_id)
-    if not client or (client.name ~= 'jdtls' and client.name ~= 'kotlin_lsp') then
+    if not client or (client.name ~= 'jdtls') then
       return
     end
 
@@ -1123,6 +1123,91 @@ vim.api.nvim_create_autocmd('LspAttach', {
   end,
 })
 
+local function kotlin_organize_imports(client, bufnr)
+  if not vim.api.nvim_buf_is_valid(bufnr) or vim.b[bufnr].kotlin_organize_pending then
+    return
+  end
+  vim.b[bufnr].kotlin_organize_pending = true
+  local tick = vim.api.nvim_buf_get_changedtick(bufnr)
+
+  local function save()
+    vim.b[bufnr].kotlin_organize_pending = false
+    if vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].modified then
+      vim.api.nvim_buf_call(bufnr, function()
+        vim.cmd('silent noautocmd update')
+      end)
+    end
+  end
+
+  local function apply(action)
+    if not vim.api.nvim_buf_is_valid(bufnr)
+        or vim.api.nvim_buf_get_changedtick(bufnr) ~= tick then
+      vim.b[bufnr].kotlin_organize_pending = false
+      return
+    end
+    if action.edit then
+      vim.lsp.util.apply_workspace_edit(action.edit, client.offset_encoding)
+    end
+    if action.command then
+      local cmd = type(action.command) == 'table' and action.command or action
+      client:exec_cmd(cmd, { bufnr = bufnr }, function()
+        vim.schedule(save)
+      end)
+    else
+      save()
+    end
+  end
+
+  local params = {
+    textDocument = vim.lsp.util.make_text_document_params(bufnr),
+    range = {
+      start = { line = 0, character = 0 },
+      ['end'] = { line = vim.api.nvim_buf_line_count(bufnr), character = 0 },
+    },
+    context = { only = { 'source.organizeImports' }, diagnostics = {} },
+  }
+
+  client:request('textDocument/codeAction', params, function(err, actions)
+    vim.schedule(function()
+      local action
+      for _, a in ipairs(actions or {}) do
+        local kind = a.kind or ''
+        if not a.disabled and (kind == 'source.organizeImports'
+              or vim.startswith(kind, 'source.organizeImports.')) then
+          action = a
+          break
+        end
+      end
+      if err or not action then
+        vim.b[bufnr].kotlin_organize_pending = false
+        return
+      end
+      if not action.edit and not action.command and client:supports_method('codeAction/resolve') then
+        client:request('codeAction/resolve', action, function(_, resolved)
+          vim.schedule(function() apply(resolved or action) end)
+        end, bufnr)
+      else
+        apply(action)
+      end
+    end)
+  end, bufnr)
+end
+
+vim.api.nvim_create_autocmd('LspAttach', {
+  group = vim.api.nvim_create_augroup('KotlinOrganizeImportsOnSave', { clear = true }),
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if not client or client.name ~= 'kotlin_lsp' then return end
+
+    vim.api.nvim_create_autocmd('BufWritePost', {
+      group = vim.api.nvim_create_augroup('KotlinOrganizeImports' .. args.buf, { clear = true }),
+      buffer = args.buf,
+      callback = function()
+        kotlin_organize_imports(client, args.buf)
+      end,
+    })
+  end,
+})
 
 local function rename_file_to_public_type(bufnr)
   if not vim.api.nvim_buf_is_valid(bufnr) or vim.bo[bufnr].buftype ~= '' then

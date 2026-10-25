@@ -846,27 +846,66 @@ vim.schedule(function()
 end)
 --search highlight
 local timer = vim.uv.new_timer()
+local count_ns = vim.api.nvim_create_namespace("search_count")
+vim.api.nvim_set_hl(0, "SearchCount", { fg = "#1e1e2e", bg = "#f9e2af", bold = true })
+
+local function clear_count()
+  vim.api.nvim_buf_clear_namespace(0, count_ns, 0, -1)
+end
+
+local function show_count()
+  clear_count()
+  if vim.v.hlsearch == 0 then return end
+
+  local ok, sc = pcall(vim.fn.searchcount, { maxcount = 0, timeout = 100, recompute = 1 })
+  if not ok or not sc.total or sc.total == 0 then return end
+
+  -- end of the match under the cursor (does not move the cursor)
+  local pos = vim.fn.searchpos(vim.fn.getreg("/"), "cenW")
+  local lnum, endcol = pos[1], pos[2]
+  if lnum == 0 then return end
+
+  local line = vim.api.nvim_buf_get_lines(0, lnum - 1, lnum, false)[1] or ""
+  -- step past the full (possibly multibyte) last character
+  local col = endcol + vim.str_utf_end(line, endcol)
+
+  vim.api.nvim_buf_set_extmark(0, count_ns, lnum - 1, math.min(col, #line), {
+    virt_text = { { string.format(" %d/%d ", sc.current, sc.total), "SearchCount" } },
+    virt_text_pos = "inline",
+  })
+end
 
 local function clear_later()
   timer:stop()
   timer:start(2000, 0, vim.schedule_wrap(function()
     vim.cmd("nohlsearch")
+    clear_count()
   end))
 end
 
+local function after_search()
+  show_count()
+  clear_later()
+end
+
 vim.api.nvim_create_autocmd("CmdlineLeave", {
-  pattern = { "/", "\\?" },
+  pattern = { "/", "?" },
   callback = function()
-    if not vim.v.event.abort then clear_later() end
+    if not vim.v.event.abort then vim.schedule(after_search) end
   end,
 })
 
 for _, key in ipairs({ "n", "N", "*", "#" }) do
   vim.keymap.set("n", key, function()
-    vim.schedule(clear_later)
+    vim.schedule(after_search)
     return key
   end, { expr = true })
 end
+
+-- remove the label as soon as you move away from the match
+vim.api.nvim_create_autocmd({ "CursorMoved", "InsertEnter" }, {
+  callback = clear_count,
+})
 --comment
 vim.keymap.set("n", "<leader>/", "gcc", { remap = true, desc = "Toggle comment" })
 vim.keymap.set("x", "<leader>/", "gc", { remap = true, desc = "Toggle comment" })
