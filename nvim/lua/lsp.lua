@@ -110,32 +110,7 @@ vim.lsp.config('autotools_ls', {
   root_markers = { 'Makefile', 'makefile', 'GNUmakefile', 'Makefile.am', 'configure.ac', '.git' },
 })
 
---kotlin_lsp
-vim.lsp.config("kotlin_lsp", {
-  capabilities = vim.tbl_deep_extend('force', vim.lsp.protocol.make_client_capabilities(), {
-    textDocument = {
-      completion = {
-        completionItem = {
-          snippetSupport = true,
-          commitCharactersSupport = false,
-          documentationFormat = { 'markdown', 'plaintext' },
-          deprecatedSupport = true,
-          preselectSupport = false,
-          tagSupport = { valueSet = { 1 } },
-          insertReplaceSupport = true,
-          resolveSupport = {
-            properties = { 'documentation', 'detail', 'additionalTextEdits', 'command', 'data' },
-          },
-          insertTextModeSupport = { valueSet = { 1 } },
-          labelDetailsSupport = true,
-        },
-        completionList = {
-          itemDefaults = { 'commitCharacters', 'editRange', 'insertTextFormat', 'insertTextMode', 'data' },
-        },
-      },
-    },
-  }),
-})
+
 
 local kotlin_completion_warmed = {}
 local kotlin_progress_titles = {}
@@ -244,7 +219,7 @@ local function start_kotlin_warmup(client, source_buf)
   local remaining = 10
   local function step()
     if stopped or remaining <= 0 or not vim.api.nvim_buf_is_valid(warm_buf)
-      or not vim.lsp.buf_is_attached(warm_buf, client.id) then
+        or not vim.lsp.buf_is_attached(warm_buf, client.id) then
       stop()
       return
     end
@@ -288,7 +263,6 @@ vim.api.nvim_create_autocmd('LspProgress', {
     if title ~= 'Indexing' then
       return
     end
-    kotlin_completion_warmed[client.id] = true
     local mode = vim.fn.mode()
     if mode:sub(1, 1) == 'i' or mode:sub(1, 1) == 'R' then
       return
@@ -298,8 +272,8 @@ vim.api.nvim_create_autocmd('LspProgress', {
       buf = nil
       for _, candidate in ipairs(vim.api.nvim_list_bufs()) do
         if vim.api.nvim_buf_is_loaded(candidate)
-          and vim.bo[candidate].filetype == 'kotlin'
-          and vim.lsp.buf_is_attached(candidate, client.id) then
+            and vim.bo[candidate].filetype == 'kotlin'
+            and vim.lsp.buf_is_attached(candidate, client.id) then
           buf = candidate
           break
         end
@@ -308,10 +282,23 @@ vim.api.nvim_create_autocmd('LspProgress', {
     if not buf then
       return
     end
+    kotlin_completion_warmed[client.id] = true
     vim.schedule(function()
       seed_kotlin_completion_cache(client, buf)
       start_kotlin_warmup(client, buf)
     end)
+  end,
+})
+
+vim.api.nvim_create_autocmd('LspAttach', {
+  group = vim.api.nvim_create_augroup('KotlinCompletionSeedOnAttach', { clear = true }),
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if client and client.name == 'kotlin_lsp' and kotlin_completion_warmed[client.id] then
+      vim.schedule(function()
+        seed_kotlin_completion_cache(client, args.buf)
+      end)
+    end
   end,
 })
 
@@ -823,7 +810,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
           bufnr = bufnr,
           method = 'textDocument/formatting',
         })[1]
-        if not client or client.name == 'clangd' or client.name == 'jdtls' then return end
+        if not client or client.name == 'clangd' or client.name == 'jdtls' or client.name == 'kotlin_lsp' then return end
         local tick = vim.api.nvim_buf_get_changedtick(bufnr)
 
         local params = vim.lsp.util.make_formatting_params()
@@ -1121,7 +1108,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
   group = vim.api.nvim_create_augroup('JdtlsOrganizeImportsOnSave', { clear = true }),
   callback = function(args)
     local client = vim.lsp.get_client_by_id(args.data.client_id)
-    if not client or client.name ~= 'jdtls' then
+    if not client or (client.name ~= 'jdtls' and client.name ~= 'kotlin_lsp') then
       return
     end
 
@@ -1285,7 +1272,11 @@ local function render_codelens(bufnr)
   if not vim.api.nvim_buf_is_valid(bufnr) then return end
   local tick = vim.api.nvim_buf_get_changedtick(bufnr)
 
-  for _, client in ipairs(vim.lsp.get_clients({ bufnr = bufnr, method = 'textDocument/codeLens' })) do
+  local lens_clients = vim.tbl_filter(function(c)
+    return c.name ~= 'kotlin_lsp'
+  end, vim.lsp.get_clients({ bufnr = bufnr, method = 'textDocument/codeLens' }))
+
+  for _, client in ipairs(lens_clients) do
     local ns = vim.api.nvim_create_namespace('eol_codelens_' .. client.id)
     local params = { textDocument = vim.lsp.util.make_text_document_params(bufnr) }
 
@@ -1381,6 +1372,5 @@ vim.lsp.enable({
   'lemminx',
   'basedpyright',
   'autotools_ls',
-  'kotlin_lsp',
   'jsonls'
 })

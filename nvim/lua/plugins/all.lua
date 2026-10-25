@@ -79,6 +79,7 @@ return {
       vim.env.KOTLIN_LSP_DIR = "/home/wiss/.local/share/kotlin-lsp/kotlin-server-263.6379.0"
     end,
     opts = {
+      inlay_hints = { enabled = false },
       jvm_args = { "-Xmx13g" },
       folding = { enabled = false },
     },
@@ -296,6 +297,7 @@ return {
 
       completion = {
         keyword = { range = 'full' },
+        accept = { auto_brackets = { blocked_filetypes = { 'kotlin' } } },
 
         -- coc-style menu: no border, "label   k [SRC]" layout
         menu = {
@@ -403,6 +405,11 @@ return {
               return ctx.bufnr ~= nil and vim.bo[ctx.bufnr].filetype == 'kotlin'
             end,
             override = {
+              get_trigger_characters = function(self)
+                local chars = self:get_trigger_characters()
+                table.insert(chars, '@')
+                return chars
+              end,
               get_completions = function(module, context, callback)
                 _G._kotlin_prefetch_cache = _G._kotlin_prefetch_cache or {}
                 if context.bufnr == nil or vim.bo[context.bufnr].filetype ~= 'kotlin' then
@@ -475,7 +482,7 @@ return {
                 end
 
                 timer:start(
-                  150,
+                  50,
                   0,
                   vim.schedule_wrap(function()
                     timer:stop()
