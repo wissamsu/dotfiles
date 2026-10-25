@@ -1163,21 +1163,21 @@ return {
 
       -- Kind icons (Font Awesome glyphs, available in every Nerd Font version)
       local kind_icons = {
-        class      = { glyph = "\u{f1b2}", hl = "JavaKindClass" },  -- cube
-        interface  = { glyph = "\u{f12e}", hl = "JavaKindInterface" }, -- puzzle piece
-        record     = { glyph = "\u{f192}", hl = "JavaKindRecord" }, -- dot in circle
-        enum       = { glyph = "\u{f009}", hl = "JavaKindEnum" },   -- 2x2 grid
+        class      = { glyph = "\u{f1b2}", hl = "JavaKindClass" },      -- cube
+        interface  = { glyph = "\u{f12e}", hl = "JavaKindInterface" },  -- puzzle piece
+        record     = { glyph = "\u{f192}", hl = "JavaKindRecord" },     -- dot in circle
+        enum       = { glyph = "\u{f009}", hl = "JavaKindEnum" },       -- 2x2 grid
         annotation = { glyph = "\u{f1fa}", hl = "JavaKindAnnotation" }, -- @
-        exception  = { glyph = "\u{f0e7}", hl = "JavaKindException" }, -- bolt
+        exception  = { glyph = "\u{f0e7}", hl = "JavaKindException" },  -- bolt
       }
 
       local function define_hl()
-        vim.api.nvim_set_hl(0, "JavaKindClass", { fg = "#4fc1e9" })  -- blue
-        vim.api.nvim_set_hl(0, "JavaKindInterface", { fg = "#62b543" }) -- green
-        vim.api.nvim_set_hl(0, "JavaKindRecord", { fg = "#f0d63c" }) -- yellow
-        vim.api.nvim_set_hl(0, "JavaKindEnum", { fg = "#ef6f5a" })   -- salmon
+        vim.api.nvim_set_hl(0, "JavaKindClass", { fg = "#4fc1e9" })      -- blue
+        vim.api.nvim_set_hl(0, "JavaKindInterface", { fg = "#62b543" })  -- green
+        vim.api.nvim_set_hl(0, "JavaKindRecord", { fg = "#f0d63c" })     -- yellow
+        vim.api.nvim_set_hl(0, "JavaKindEnum", { fg = "#ef6f5a" })       -- salmon
         vim.api.nvim_set_hl(0, "JavaKindAnnotation", { fg = "#b07ad9" }) -- purple
-        vim.api.nvim_set_hl(0, "JavaKindException", { fg = "#f0b429" }) -- amber
+        vim.api.nvim_set_hl(0, "JavaKindException", { fg = "#f0b429" })  -- amber
       end
       define_hl()
       vim.api.nvim_create_autocmd("ColorScheme", { callback = define_hl })
@@ -1192,7 +1192,7 @@ return {
       }
 
       local kind_cache = {} -- full path -> kind
-      local index = {}  -- basename -> full path
+      local index = {}      -- basename -> full path
       local index_time = 0
 
       local function now_ms() return vim.uv.hrtime() / 1e6 end
@@ -1284,6 +1284,45 @@ return {
         local name = vim.api.nvim_buf_get_name(buf):lower()
         return ft:find("fyler", 1, true) ~= nil or name:find("fyler", 1, true) ~= nil
       end
+
+      ---------------------------------------------------------------------
+      -- `o` on a folder opens the new line already indented inside it
+      ---------------------------------------------------------------------
+      local function on_folder_line(buf, row)
+        -- detect folders by the highlight group on the row (no text parsing needed)
+        local extmarks = vim.api.nvim_buf_get_extmarks(
+          buf, -1, { row, 0 }, { row, -1 }, { details = true }
+        )
+        for _, m in ipairs(extmarks) do
+          local hl = m[4] and m[4].hl_group
+          if type(hl) == "string" then
+            local l = hl:lower()
+            if l:find("director", 1, true) or l:find("folder", 1, true) then
+              return true
+            end
+          end
+        end
+        return false
+      end
+
+      local function map_o(buf)
+        if vim.b[buf].fyler_o_mapped then return end
+        vim.b[buf].fyler_o_mapped = true
+        vim.keymap.set("n", "o", function()
+          local row = vim.api.nvim_win_get_cursor(0)[1] - 1
+          vim.api.nvim_feedkeys(vim.keycode("o"), "n", false)       -- plain `o` (no recursion)
+          if on_folder_line(buf, row) then
+            vim.api.nvim_feedkeys(vim.keycode("<Tab>"), "m", false) -- same Tab you press by hand
+          end
+        end, { buffer = buf, desc = "Fyler: new line (indented inside folders)" })
+      end
+
+      vim.api.nvim_create_autocmd({ "FileType", "BufWinEnter" }, {
+        callback = function(a)
+          if is_fyler_buf(a.buf) then map_o(a.buf) end
+        end,
+      })
+      ---------------------------------------------------------------------
 
       ---------------------------------------------------------------------
       -- Diagnostics per file
