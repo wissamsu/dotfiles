@@ -80,6 +80,7 @@ return {
     end,
     opts = {
       jvm_args = { "-Xmx13g" },
+      folding = { enabled = false },
     },
   },
   {
