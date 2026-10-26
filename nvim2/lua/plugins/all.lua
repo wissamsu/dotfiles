@@ -303,6 +303,7 @@ return {
                 text = function(ctx)
                   local desc = ctx.label_description or ''
                   if desc == '' then desc = ctx.item.detail or '' end
+                  desc = desc:gsub('import from ', '')
                   local max = 40
                   if vim.fn.strdisplaywidth(desc) > max then
                     desc = '…' .. vim.fn.strcharpart(desc, vim.fn.strchars(desc) - (max - 1))
@@ -396,6 +397,66 @@ return {
                   table.insert(chars, '@')
                 end
                 return chars
+              end,
+              get_completions = function(module, context, callback)
+                _G._kotlin_prefetch_cache = _G._kotlin_prefetch_cache or {}
+                if context.bufnr == nil or vim.bo[context.bufnr].filetype ~= 'kotlin' then
+                  return module:get_completions(context, callback)
+                end
+
+                local cached = _G._kotlin_prefetch_cache[context.bufnr]
+                if cached and type(cached.items) == 'table' then
+                  local adapted = vim.deepcopy(cached.items)
+                  for _, item in ipairs(adapted) do
+                    item.source_id = 'lsp'
+                    item.source_name = 'LSP'
+                    item.kind = item.kind or require('blink.cmp.types').CompletionItemKind.Property
+                    item.cursor_column = context.cursor[2]
+                    if type(item.detail) == 'string' then item.detail = item.detail:gsub('import from ', '') end
+                    if type(item.textEdit) == 'table' and type(item.textEdit.range) == 'table' then
+                      local start_col = item.textEdit.range.start and item.textEdit.range.start.character or 0
+                      local new_end = context.cursor[2]
+                      item.textEdit.range['end'] = item.textEdit.range['end'] or { line = 0, character = 0 }
+                      item.textEdit.range['end'].character = new_end
+                      item.textEdit.newText = context.line:sub(start_col + 1, new_end)
+                    end
+                  end
+                  local to_emit = adapted
+                  local before_at = context.line:sub(1, context.cursor[2])
+                  if before_at:match('@[%w_]*$') then
+                    local filtered = {}
+                    for _, it in ipairs(adapted) do
+                      local hay = (it.detail or '') .. ' ' .. ((it.additionalTextEdits and it.additionalTextEdits[1] and it.additionalTextEdits[1].newText) or '')
+                      if hay:find('annotation', 1, true) then table.insert(filtered, it) end
+                    end
+                    if #filtered > 0 then to_emit = filtered end
+                  end
+                  vim.schedule(function()
+                    local trigger = require('blink.cmp.completion.trigger')
+                    if trigger.context ~= nil and trigger.context.id == context.id then
+                      require('blink.cmp.sources.lib').emit_completions(context, { lsp = to_emit })
+                    end
+                  end)
+                end
+
+                return module:get_completions(context, function(response)
+                  if response and type(response.items) == 'table' then
+                    for _, it in ipairs(response.items) do
+                      if type(it.detail) == 'string' then it.detail = it.detail:gsub('import from ', '') end
+                    end
+                    local before_at = context.line:sub(1, context.cursor[2])
+                    if before_at:match('@[%w_]*$') then
+                      local filtered = {}
+                      for _, it in ipairs(response.items) do
+                        local hay = (it.detail or '') .. ' ' .. ((it.additionalTextEdits and it.additionalTextEdits[1] and it.additionalTextEdits[1].newText) or '')
+                        if hay:find('annotation', 1, true) then table.insert(filtered, it) end
+                      end
+                      if #filtered > 0 then response.items = filtered end
+                    end
+                    _G._kotlin_prefetch_cache[context.bufnr] = { items = vim.deepcopy(response.items) }
+                  end
+                  return callback(response)
+                end)
               end,
             },
           },

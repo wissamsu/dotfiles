@@ -284,6 +284,7 @@ return {
       },
 
       completion = {
+        list = { max_items = 20 },
         keyword = { range = 'full' },
         accept = { auto_brackets = { blocked_filetypes = { 'kotlin' } } },
 
@@ -302,9 +303,31 @@ return {
               label_description = {
                 width = { max = 40 },
                 text = function(ctx)
-                  local desc = ctx.label_description or ''
-                  if desc == '' then desc = ctx.item.detail or '' end
                   local max = 40
+                  local desc = ''
+
+                  if vim.bo.filetype == 'kotlin' then
+                    local item = ctx.item
+
+                    -- 1) package from the auto-import edit: "import com.foo.Bar\n" -> "com.foo"
+                    for _, edit in ipairs(item.additionalTextEdits or {}) do
+                      local full = (edit.newText or ''):match('import%s+([%w_%.]+)')
+                      if full then
+                        desc = full:match('^(.*)%.[^.]+$') or full
+                        break
+                      end
+                    end
+
+                    -- 2) your get_completions override strips "import from ", so a detail
+                    --    that is just a dotted name is the package
+                    if desc == '' and type(item.detail) == 'string' and item.detail:match('^[%w_]+[%w_%.]*$') then
+                      desc = item.detail
+                    end
+                  else
+                    desc = ctx.label_description or ''
+                    if desc == '' then desc = ctx.item.detail or '' end
+                  end
+
                   if vim.fn.strdisplaywidth(desc) > max then
                     desc = '…' .. vim.fn.strcharpart(desc, vim.fn.strchars(desc) - (max - 1))
                   end
@@ -390,6 +413,7 @@ return {
           },
           --here
           lsp = {
+            async = true,
             override = {
               get_trigger_characters = function(self)
                 local chars = self:get_trigger_characters()
@@ -397,6 +421,101 @@ return {
                   table.insert(chars, '@')
                 end
                 return chars
+              end,
+              get_completions = function(module, context, callback)
+                if context.bufnr == nil or vim.bo[context.bufnr].filetype ~= 'kotlin' then
+                  return module:get_completions(context, callback)
+                end
+
+                local annotation_pkgs = { 'annotation', 'stereotype', 'lombok', 'jakarta', 'javax', 'junit', 'jackson' }
+
+                local function item_package(it)
+                  for _, edit in ipairs(it.additionalTextEdits or {}) do
+                    local full = (edit.newText or ''):match('import%s+([%w_%.]+)')
+                    if full then return full:match('^(.*)%.[^.]+$') or full end
+                  end
+                  return ''
+                end
+
+                local function is_annotation(it)
+                  local detail = type(it.detail) == 'string' and it.detail or ''
+                  if detail:match('^annotation class') then return true end
+                  local pkg = item_package(it)
+                  if pkg == '' and detail:match('^[%w_]+[%w_%.]*$') then pkg = detail end
+                  for _, p in ipairs(annotation_pkgs) do
+                    if pkg:find(p, 1, true) then return true end
+                  end
+                  return false
+                end
+
+                local function pkg_of(it)
+                  local pkg = item_package(it)
+                  if pkg == '' and type(it.detail) == 'string' and it.detail:match('^[%w_]+[%w_%.]*$') then
+                    pkg = it.detail
+                  end
+                  return pkg
+                end
+
+                local function refine(items, line, col)
+                  local out, seen = {}, {}
+                  local after_at = line:sub(1, col):match('@[%w_]*$') ~= nil
+                  for _, it in ipairs(items) do
+                    local label = it.label or ''
+                    local keep = not label:find('$', 1, true) -- nested/anonymous classes
+                    if keep then
+                      if after_at then
+                        keep = is_annotation(it)
+                      else
+                        keep = not pkg_of(it):match('%.annotation$') -- hide annotation-package classes outside @
+                      end
+                    end
+                    if keep then
+                      local key = label .. '|' .. pkg_of(it) .. '|' .. tostring(it.kind)
+                      if not seen[key] then
+                        seen[key] = true
+                        out[#out + 1] = it
+                      end
+                    end
+                  end
+                  return out
+                end
+                _G._kotlin_prefetch_cache = _G._kotlin_prefetch_cache or {}
+                local cached = _G._kotlin_prefetch_cache[context.bufnr]
+                if cached and type(cached.items) == 'table' then
+                  local adapted = vim.deepcopy(refine(cached.items, context.line, context.cursor[2]))
+                  for _, item in ipairs(adapted) do
+                    item.source_id = 'lsp'
+                    item.source_name = 'LSP'
+                    item.kind = item.kind or require('blink.cmp.types').CompletionItemKind.Property
+                    item.cursor_column = context.cursor[2]
+                    if type(item.detail) == 'string' then item.detail = item.detail:gsub('import from ', '') end
+                    if type(item.textEdit) == 'table' and type(item.textEdit.range) == 'table' then
+                      local start_col = item.textEdit.range.start and item.textEdit.range.start.character or 0
+                      local new_end = context.cursor[2]
+                      item.textEdit.range['end'] = item.textEdit.range['end'] or { line = 0, character = 0 }
+                      item.textEdit.range['end'].character = new_end
+                      item.textEdit.newText = context.line:sub(start_col + 1, new_end)
+                    end
+                  end
+                  local to_emit = adapted
+                  vim.schedule(function()
+                    local trigger = require('blink.cmp.completion.trigger')
+                    if trigger.context ~= nil and trigger.context.id == context.id then
+                      require('blink.cmp.sources.lib').emit_completions(context, { lsp = to_emit })
+                    end
+                  end)
+                end
+
+                return module:get_completions(context, function(response)
+                  if response and type(response.items) == 'table' then
+                    for _, it in ipairs(response.items) do
+                      if type(it.detail) == 'string' then it.detail = it.detail:gsub('import from ', '') end
+                    end
+                    _G._kotlin_prefetch_cache[context.bufnr] = { items = response.items }
+                    response.items = refine(response.items, context.line, context.cursor[2])
+                  end
+                  return callback(response)
+                end)
               end,
             },
           },
