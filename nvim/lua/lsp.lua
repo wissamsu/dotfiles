@@ -810,7 +810,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
           bufnr = bufnr,
           method = 'textDocument/formatting',
         })[1]
-        if not client or client.name == 'clangd' or client.name == 'jdtls' or client.name == 'kotlin_lsp' then return end
+        if not client or client.name == 'clangd' or client.name == 'jdtls' then return end
         local tick = vim.api.nvim_buf_get_changedtick(bufnr)
 
         local params = vim.lsp.util.make_formatting_params()
@@ -1358,7 +1358,7 @@ local function render_codelens(bufnr)
   local tick = vim.api.nvim_buf_get_changedtick(bufnr)
 
   local lens_clients = vim.tbl_filter(function(c)
-    return c.name ~= 'kotlin_lsp'
+    return true
   end, vim.lsp.get_clients({ bufnr = bufnr, method = 'textDocument/codeLens' }))
 
   for _, client in ipairs(lens_clients) do
@@ -1445,6 +1445,19 @@ vim.api.nvim_create_autocmd('BufWipeout', {
   end,
 })
 
+--ktlsp (fwcd fork) kotlin language server
+vim.lsp.config('kotlin_lsp', {
+  cmd = { '/home/wiss/.local/share/ktlsp/bin/kotlin-language-server' },
+  filetypes = { 'kotlin' },
+  root_markers = { 'settings.gradle', 'settings.gradle.kts', 'build.gradle', 'build.gradle.kts', 'pom.xml', 'build.xml', '.git' },
+  single_file_support = true,
+  settings = {
+    kotlin = {
+      compiler = { jvm = { target = '21' } },
+    },
+  },
+})
+
 vim.lsp.enable({
   'lua_ls',
   'dockerls',
@@ -1457,5 +1470,6 @@ vim.lsp.enable({
   'lemminx',
   'basedpyright',
   'autotools_ls',
-  'jsonls'
+  'jsonls',
+  'kotlin_lsp'
 })
