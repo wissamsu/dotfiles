@@ -2,8 +2,6 @@ local mason_bin = vim.fn.stdpath('data') .. '/mason/bin/'
 
 --lua_lsp
 vim.lsp.config('lua_ls', {
-  -- Mason's bin dir, so it works even if Mason isn't on PATH yet.
-  -- stdpath('data') respects NVIM_APPNAME, so this resolves to nvim2's Mason.
   cmd = { vim.fn.stdpath('data') .. '/mason/bin/lua-language-server' },
   filetypes = { 'lua' },
   root_markers = { '.luarc.json', '.luarc.jsonc', 'stylua.toml', '.git' },
@@ -14,7 +12,7 @@ vim.lsp.config('lua_ls', {
       workspace = {
         checkThirdParty = false,
         library = {
-          vim.env.VIMRUNTIME, -- Indexes only Neovim's builtin runtime, not third-party plugins
+          vim.env.VIMRUNTIME,
         },
       },
       telemetry = { enable = false },
@@ -30,7 +28,7 @@ vim.lsp.config('jsonls', {
   settings = {
     json = {
       format = {
-        enable = true, -- <--- Ensure this is enabled
+        enable = true,
       },
       schemas = {
         {
@@ -73,7 +71,7 @@ vim.lsp.config('neocmakelsp', {
   init_options = {
     format = { enable = true },
     lint = { enable = true },
-    scan_cmake_in_package = true, -- also scan cmake files from installed packages for completion
+    scan_cmake_in_package = true,
   },
 })
 
@@ -335,10 +333,10 @@ vim.lsp.config('basedpyright', {
   settings = {
     basedpyright = {
       analysis = {
-        typeCheckingMode = 'standard', -- basedpyright defaults to 'recommended', which is much noisier
+        typeCheckingMode = 'standard',
         autoSearchPaths = true,
         useLibraryCodeForTypes = true,
-        diagnosticMode = 'openFilesOnly', -- 'workspace' is slower on big repos
+        diagnosticMode = 'openFilesOnly',
       },
     },
   },
@@ -375,8 +373,6 @@ end
 
 local spring_capabilities = vim.lsp.protocol.make_client_capabilities()
 
--- Required: without dynamic execute-command registration the server NPEs in
--- JdtLsProjectCache.initialize() and never finishes initializing.
 spring_capabilities.workspace.executeCommand = spring_capabilities.workspace.executeCommand or {}
 spring_capabilities.workspace.executeCommand.dynamicRegistration = true
 spring_capabilities.workspace.didChangeWatchedFiles = spring_capabilities.workspace.didChangeWatchedFiles or {}
@@ -393,10 +389,6 @@ local function is_compose_file(name)
       or name:match('^compose[%.%-].*ya?ml$') ~= nil
 end
 
--- Spring LS is a second JVM on top of jdtls. Plain Maven/Gradle projects have
--- no use for it, so only start it when the build actually references Spring.
--- Check the nearest build files and a couple of ancestors for multi-module
--- layouts; cache the answer per root.
 local spring_project_cache = {}
 local function is_spring_project(root)
   local cached = spring_project_cache[root]
@@ -1456,6 +1448,61 @@ vim.lsp.config('kotlin_lsp', {
       compiler = { jvm = { target = '21' } },
     },
   },
+})
+
+local springls_restarted = {}
+
+vim.api.nvim_create_autocmd('LspAttach', {
+  group = vim.api.nvim_create_augroup('SpringLsEnsureJdtls', { clear = true }),
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if not client or client.name ~= 'springls' then return end
+
+    local root = client.config.root_dir
+    if springls_restarted[root] then return end
+
+    local jdtls
+    for _, c in ipairs(vim.lsp.get_clients({ name = 'jdtls' })) do
+      if c.config.root_dir == root then
+        jdtls = c
+        break
+      end
+    end
+
+    if jdtls and jdtls.initialized then return end
+
+    if not jdtls then
+      local base = vim.lsp.config['jdtls']
+      if not base then return end
+      local cfg = vim.deepcopy(base) --[[@as vim.lsp.ClientConfig]]
+      cfg.name = 'jdtls'
+      cfg.root_dir = root
+      local id = vim.lsp.start(cfg, { bufnr = args.buf, attach = false })
+      jdtls = id and vim.lsp.get_client_by_id(id)
+    end
+    if not jdtls then return end
+
+    springls_restarted[root] = true
+    local buf = args.buf
+    local timer = assert(vim.uv.new_timer())
+    timer:start(1000, 1000, vim.schedule_wrap(function()
+      if jdtls:is_stopped() then
+        timer:stop(); timer:close()
+        return
+      end
+      if not jdtls.initialized then return end
+      timer:stop(); timer:close()
+
+      vim.defer_fn(function()
+        client:stop()
+        vim.defer_fn(function()
+          if vim.api.nvim_buf_is_valid(buf) and not vim.bo[buf].modified then
+            vim.api.nvim_buf_call(buf, function() vim.cmd('edit') end)
+          end
+        end, 500)
+      end, 5000)
+    end))
+  end,
 })
 
 vim.lsp.enable({
