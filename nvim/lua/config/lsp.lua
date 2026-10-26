@@ -1446,6 +1446,10 @@ vim.lsp.config('kotlin_lsp', {
   settings = {
     kotlin = {
       compiler = { jvm = { target = '21' } },
+      externalSources = {
+        useKlsScheme = false,
+        autoConvertToKotlin = false,
+      },
     },
   },
 })
