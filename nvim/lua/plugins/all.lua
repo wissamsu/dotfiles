@@ -1202,7 +1202,7 @@ return {
           depth = 15,
           skip = function(dir) return not skip_dirs[vim.fs.basename(dir)] end,
         }) do
-          if type == "file" and path:match("%.java$") then
+          if type == "file" and (path:match("%.java$") or path:match("%.kt$")) then
             local base = vim.fs.basename(path)
             index[base] = index[base] or (root .. "/" .. path)
           end
@@ -1218,10 +1218,28 @@ return {
 
       local kws = { "class", "interface", "enum", "record" }
 
+      -- Kotlin: order matters (specific before generic)
+      local kt_rules = {
+        { "annotation", "annotation%s+class" },
+        { "enum",       "enum%s+class" },
+        { "record",     "data%s+class" },
+        { "record",     "value%s+class" },
+        { "interface",  "interface" }, -- also matches `fun interface` / `sealed interface`
+        { "class",      "class" },     -- also matches `sealed`/`abstract`/`open class`
+        { "class",      "object" },
+      }
+
+      local function kotlin_kind(line)
+        for _, r in ipairs(kt_rules) do
+          if line:find("^%s*[%w%s]-%f[%w]" .. r[2] .. "%s+%u") then return r[1] end
+        end
+      end
+
       local function get_kind(path)
         if kind_cache[path] ~= nil then return kind_cache[path] or nil end
         local result = false
         local fname = vim.fs.basename(path)
+        local is_kt = fname:match("%.kt$") ~= nil
         local f = io.open(path, "r")
         if f then
           for _ = 1, 120 do
@@ -1229,7 +1247,9 @@ return {
             if not line then break end
 
             local k
-            if line:find("^%s*[%w%s]-@interface%s+%u") then
+            if is_kt then
+              k = kotlin_kind(line)
+            elseif line:find("^%s*[%w%s]-@interface%s+%u") then
               k = "annotation"
             else
               for _, kw in ipairs(kws) do
@@ -1242,10 +1262,19 @@ return {
 
             if k then
               if k == "class" and (
-                    fname:match("Exception%.java$") or fname:match("Error%.java$")
+                    fname:match("Exception%.%a+$") or fname:match("Error%.%a+$")
                     or line:find("extends%s+[%w_%.]*Exception")
                     or line:find("extends%s+[%w_%.]*Error")
                     or line:find("extends%s+[%w_%.]*Throwable")
+                    -- Kotlin uses `: Exception()` instead of `extends`
+                    or (is_kt and (
+                      line:find("%)%s*:%s*[%w_%.]*Exception")
+                      or line:find("%)%s*:%s*[%w_%.]*Error")
+                      or line:find("%)%s*:%s*[%w_%.]*Throwable")
+                      or line:find("class%s+[%w_]+%s*:%s*[%w_%.]*Exception")
+                      or line:find("class%s+[%w_]+%s*:%s*[%w_%.]*Error")
+                      or line:find("class%s+[%w_]+%s*:%s*[%w_%.]*Throwable")
+                    ))
                   ) then
                 k = "exception"
               end
@@ -1262,7 +1291,7 @@ return {
       -- Replace the Java icon with the kind icon
       devicons.get_icon = function(name, ext, o)
         local icon, hl = orig_get_icon(name, ext, o)
-        if type(name) == "string" and name:match("%.java$") then
+        if type(name) == "string" and (name:match("%.java$") or name:match("%.kt$")) then
           local path = resolve(name)
           local ki = path and kind_icons[get_kind(path) or ""]
           if ki then return ki.glyph, ki.hl end
@@ -1272,7 +1301,7 @@ return {
 
       -- refresh after saving a Java file
       vim.api.nvim_create_autocmd("BufWritePost", {
-        pattern = "*.java",
+        pattern = { "*.java", "*.kt" },
         callback = function(a) kind_cache[vim.fn.fnamemodify(a.file, ":p")] = nil end,
       })
 
