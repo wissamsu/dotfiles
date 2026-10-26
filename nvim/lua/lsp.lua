@@ -1447,7 +1447,7 @@ vim.api.nvim_create_autocmd('BufWipeout', {
 
 --ktlsp (fwcd fork) kotlin language server
 vim.lsp.config('kotlin_lsp', {
-  cmd = { '/home/wiss/src/kotlin-language-server/server/build/install/server/bin/kotlin-language-server' },
+  cmd = { '/home/wiss/.local/share/ktlsp/bin/kotlin-language-server' },
   filetypes = { 'kotlin' },
   root_markers = { 'settings.gradle', 'settings.gradle.kts', 'build.gradle', 'build.gradle.kts', 'pom.xml', 'build.xml', '.git' },
   single_file_support = true,
