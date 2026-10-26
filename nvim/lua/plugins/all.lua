@@ -284,7 +284,7 @@ return {
       },
 
       completion = {
-        list = { max_items = 20 },
+        list = { max_items = 300 },
         keyword = { range = 'full' },
         accept = { auto_brackets = { blocked_filetypes = { 'kotlin' } } },
 
