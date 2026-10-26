@@ -106,7 +106,7 @@ local function load()
     end
     lsp_loaded = true
     vim.api.nvim_clear_autocmds({ group = lsp_group })
-    require("lsp")
+    require("config.lsp")
   end
   vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile", "FileType" }, {
     group = lsp_group,

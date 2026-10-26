@@ -855,9 +855,9 @@ return {
           if dap.session() then
             dap.continue()
           elseif vim.bo.filetype == "java" then
-            require("java-dap").launch()
+            require("config.dap.java-dap").launch()
           elseif vim.bo.filetype == "kotlin" then
-            require("kotlin-dap").launch()
+            require("config.dap.kotlin-dap").launch()
           else
             dap.continue() -- shows the config picker (lldb launch, etc.)
           end
@@ -871,7 +871,7 @@ return {
           local session = dap.session()
           dap.terminate({ all = true })
           if package.loaded["dapui"] then require("dapui").close() end
-          local ok, jd = pcall(require, "java-dap")
+          local ok, jd = pcall(require, "config.dap.java-dap")
           if ok then jd.cleanup_terminal(session) end
         end,
         desc = "Debug: stop",
@@ -884,9 +884,9 @@ return {
       local dapui = require("dapui")
 
       -- unchanged for Java: set it up first, as before
-      local ok, jd = pcall(require, "java-dap")
+      local ok, jd = pcall(require, "config.dap.java-dap")
       if ok then jd.setup() end
-      local okk, kd = pcall(require, "kotlin-dap")
+      local okk, kd = pcall(require, "config.dap.kotlin-dap")
       if okk then kd.setup() end
 
       dap.set_log_level("WARN")
@@ -946,13 +946,11 @@ return {
         if ok and is_java(session) then
           jd.cleanup_terminal(session)
         end
-        local okk, kd = pcall(require, "kotlin-dap")
+        local okk, kd = pcall(require, "config.dap.kotlin-dap")
         if okk and session and session.config and session.config.type == "kotlin" then
           kd.cleanup_terminal(session)
         end
       end
-      dap.listeners.after.event_terminated["java-dap-ui"] = close_dap_ui
-      dap.listeners.after.event_exited["java-dap-ui"] = close_dap_ui
       dap.listeners.after.event_terminated["java-dap-ui"] = close_dap_ui
       dap.listeners.after.event_exited["java-dap-ui"] = close_dap_ui
 
@@ -969,8 +967,6 @@ return {
       end
 
       local function follow_console_soon()
-        -- The terminal buffer is created slightly after the session starts,
-        -- so retry a few times until it is attached to a window.
         for _, delay in ipairs({ 100, 300, 800, 2000 }) do
           vim.defer_fn(follow_console, delay)
         end
@@ -1039,7 +1035,7 @@ return {
       end
 
       local adapters = { java_adapter }
-      local ok_kotlin, kotlin_adapter = pcall(require, "neotest-kotlin")
+      local ok_kotlin, kotlin_adapter = pcall(require, "config.test.neotest-kotlin")
       if ok_kotlin then
         table.insert(adapters, kotlin_adapter)
       end
@@ -1450,7 +1446,7 @@ return {
     "nvim-telescope/telescope.nvim",
     cmd = "Telescope",
     keys = {
-      { "<leader>mv", function() require("mvn_search").search() end, desc = "Maven search" },
+      { "<leader>mv", function() require("config.homemade.mvn_search").search() end, desc = "Maven search" },
     },
     tag = "v0.2.0",
     dependencies = { "nvim-lua/plenary.nvim" },
