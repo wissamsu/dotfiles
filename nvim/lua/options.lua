@@ -604,13 +604,40 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
--- BLOCK 3: Kotlin (not in treesitter_filetypes, so fold immediately)
+-- BLOCK 3: Kotlin import fold, recomputed on every change
+function _G.kotlin_import_fold(lnum)
+  return vim.fn.getline(lnum):match('^import%s') and 1 or 0
+end
+
 vim.api.nvim_create_autocmd('FileType', {
   pattern = 'kotlin',
   callback = function(a)
-    if vim.bo[a.buf].buftype == '' then
-      fold_imports(a.buf)
+    if vim.bo[a.buf].buftype ~= '' then return end
+    vim.opt_local.foldmethod = 'expr'
+    vim.opt_local.foldexpr = 'v:lua.kotlin_import_fold(v:lnum)'
+    vim.opt_local.foldlevel = 0
+    vim.opt_local.foldenable = true
+  end,
+})
+
+-- re-close import folds whenever the number of import lines changes
+local import_counts = {}
+vim.api.nvim_create_autocmd({ 'TextChanged', 'TextChangedI', 'InsertLeave' }, {
+  callback = function(a)
+    if vim.bo[a.buf].filetype ~= 'kotlin' then return end
+    local n = 0
+    for _, l in ipairs(vim.api.nvim_buf_get_lines(a.buf, 0, 200, false)) do
+      if l:match('^import%s') then n = n + 1 end
     end
+    if import_counts[a.buf] == n and a.event ~= 'InsertLeave' then return end
+    import_counts[a.buf] = n
+    vim.schedule(function()
+      if vim.api.nvim_get_current_buf() == a.buf then
+        local view = vim.fn.winsaveview()
+        vim.cmd('silent! normal! zX')
+        vim.fn.winrestview(view)
+      end
+    end)
   end,
 })
 --tabline
