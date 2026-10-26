@@ -1,3 +1,4 @@
+--just
 local rocks = vim.uv.os_homedir() .. "/.luarocks/share/lua/5.1/"
 package.path = package.path .. ";" .. rocks .. "?.lua;" .. rocks .. "?/init.lua"
 return {
