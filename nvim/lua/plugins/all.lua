@@ -464,7 +464,7 @@ return {
                     local keep = not label:find('$', 1, true) -- nested/anonymous classes
                     if keep then
                       if after_at then
-                        keep = is_annotation(it)
+                        keep = true
                       else
                         keep = not pkg_of(it):match('%.annotation$') -- hide annotation-package classes outside @
                       end
