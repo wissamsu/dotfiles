@@ -346,23 +346,23 @@ vim.lsp.config('basedpyright', {
 
 
 --xml_lsp
-vim.lsp.config('lemminx', {
-  cmd = { resolve_command('lemminx') },
-  filetypes = { 'xml', 'xsd', 'xsl', 'xslt', 'svg' },
-  root_markers = { '.git' },
-  settings = {
-    xml = {
-      format = {
-        enabled = true,
-        splitAttributes = 'preserve', -- don't rewrap attributes onto separate lines
-        maxLineWidth = 120,
-      },
-      validation = { enabled = true },
-      -- downloading remote XSD/DTD schemas for validation; set false to stay offline
-      server = { workDir = vim.fn.stdpath('cache') .. '/lemminx' },
-    },
-  },
-})
+-- vim.lsp.config('lemminx', {
+--   cmd = { resolve_command('lemminx') },
+--   filetypes = { 'xml', 'xsd', 'xsl', 'xslt', 'svg' },
+--   root_markers = { '.git' },
+--   settings = {
+--     xml = {
+--       format = {
+--         enabled = true,
+--         splitAttributes = 'preserve', -- don't rewrap attributes onto separate lines
+--         maxLineWidth = 120,
+--       },
+--       validation = { enabled = true },
+--       -- downloading remote XSD/DTD schemas for validation; set false to stay offline
+--       server = { workDir = vim.fn.stdpath('cache') .. '/lemminx' },
+--     },
+--   },
+-- })
 
 --springls_config
 local function spring_boot_ls_jar()
@@ -1467,7 +1467,7 @@ vim.lsp.enable({
   'springls',
   'clangd',
   'neocmakelsp',
-  'lemminx',
+  -- 'lemminx',
   'basedpyright',
   'autotools_ls',
   'jsonls',

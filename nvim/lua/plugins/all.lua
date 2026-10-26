@@ -4,6 +4,36 @@ package.path = package.path .. ";" .. rocks .. "?.lua;" .. rocks .. "?/init.lua"
 return {
   -- lazy.nvim
   {
+    "JavaHello/lemminx-maven.nvim",
+    ft = { "xml", "xsd", "xsl", "xslt", "svg" },
+    cmd = "LemminxMavenInstall",
+    opts = {},
+  },
+  {
+    "kevinhwang91/nvim-bqf",
+    ft = "qf",
+    config = function()
+      require("bqf").setup({
+        preview = {
+          auto_preview = true,
+          should_preview_cb = function(pbufnr, _)
+            local fname = vim.fn.bufname(pbufnr)
+            if vim.startswith(fname, "jdt://") then
+              -- 未加载时不预览
+              return vim.fn.bufloaded(pbufnr) == 1
+            end
+            return true
+          end,
+        },
+        filter = {
+          fzf = {
+            extra_opts = { "--bind", "ctrl-o:toggle-all", "--delimiter", "│" },
+          },
+        },
+      })
+    end,
+  },
+  {
     "rest-nvim/rest.nvim",
     ft = "http",
     cmd = "Rest",
@@ -690,38 +720,6 @@ return {
           require("flash").jump()
         end,
         desc = "Flash",
-      },
-      {
-        "S",
-        mode = { "n", "x", "o" },
-        function()
-          require("flash").treesitter()
-        end,
-        desc = "Flash Treesitter",
-      },
-      {
-        "r",
-        mode = "o",
-        function()
-          require("flash").remote()
-        end,
-        desc = "Remote Flash",
-      },
-      {
-        "R",
-        mode = { "o", "x" },
-        function()
-          require("flash").treesitter_search()
-        end,
-        desc = "Treesitter Search",
-      },
-      {
-        "<c-s>",
-        mode = { "c" },
-        function()
-          require("flash").toggle()
-        end,
-        desc = "Toggle Flash Search",
       },
     },
   },
