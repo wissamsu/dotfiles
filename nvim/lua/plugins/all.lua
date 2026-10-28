@@ -1056,9 +1056,18 @@ return {
       "MasonLog",
     },
 
-    config = function()
-      -- 1. Initialize Mason first
-      require("mason").setup({})
+    opts = {},
+    config = function(_, opts)
+      require("mason").setup(opts)
+
+      -- Automatically install jdtls if it's not already installed
+      local registry = require("mason-registry")
+      registry.refresh(function()
+        local ok, pkg = pcall(registry.get_package, "jdtls")
+        if ok and not pkg:is_installed() then
+          pkg:install()
+        end
+      end)
     end,
   },
   {

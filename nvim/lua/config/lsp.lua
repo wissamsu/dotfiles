@@ -112,14 +112,14 @@ vim.lsp.config('autotools_ls', {
 
 local kotlin_completion_warmed = {}
 local kotlin_progress_titles = {}
-local kotlin_warmup_stops = {}
+-- local kotlin_warmup_stops = {}
 
-local function stop_kotlin_warmups()
-  for id, stop in pairs(kotlin_warmup_stops) do
-    kotlin_warmup_stops[id] = nil
-    stop()
-  end
-end
+-- local function stop_kotlin_warmups()
+--   for id, stop in pairs(kotlin_warmup_stops) do
+--     kotlin_warmup_stops[id] = nil
+--     stop()
+--   end
+-- end
 
 local function seed_kotlin_completion_cache(client, source_buf)
   if not client.server_capabilities.completionProvider then
@@ -161,82 +161,82 @@ local function seed_kotlin_completion_cache(client, source_buf)
   end, source_buf)
 end
 
-local function start_kotlin_warmup(client, source_buf)
-  if not client.server_capabilities.completionProvider then
-    return
-  end
-  if not vim.api.nvim_buf_is_valid(source_buf) or not vim.lsp.buf_is_attached(source_buf, client.id) then
-    return
-  end
-
-  local source_name = vim.api.nvim_buf_get_name(source_buf)
-  local dir = source_name ~= '' and vim.fs.dirname(source_name) or client.root_dir
-  if not dir or dir == '' then
-    return
-  end
-
-  local package
-  for _, line in ipairs(vim.api.nvim_buf_get_lines(source_buf, 0, -1, false)) do
-    local found = line:match('^%s*package%s+([%w_%.]+)')
-    if found then
-      package = 'package ' .. found
-      break
-    end
-  end
-
-  local warm_buf = vim.api.nvim_create_buf(false, true)
-  local warm_path = vim.fs.joinpath(dir, '__kotlin_lsp_warmup_' .. tostring(vim.uv.hrtime()) .. '.kt')
-  vim.api.nvim_buf_set_name(warm_buf, warm_path)
-  local lines = { 'class KotlinLspWarmup' }
-  if package then
-    lines = { package, '', 'class KotlinLspWarmup' }
-  end
-  vim.api.nvim_buf_set_lines(warm_buf, 0, -1, false, lines)
-  vim.api.nvim_buf_call(warm_buf, function()
-    vim.cmd('noautocmd set filetype=kotlin')
-  end)
-  if not vim.lsp.buf_is_attached(warm_buf, client.id) then
-    vim.lsp.buf_attach_client(warm_buf, client.id)
-  end
-
-  local stopped = false
-  local function stop()
-    if stopped then
-      return
-    end
-    stopped = true
-    if kotlin_warmup_stops[client.id] == stop then
-      kotlin_warmup_stops[client.id] = nil
-    end
-    if vim.api.nvim_buf_is_valid(warm_buf) then
-      pcall(vim.api.nvim_buf_delete, warm_buf, { force = true })
-    end
-  end
-  kotlin_warmup_stops[client.id] = stop
-
-  local remaining = 30
-  local function step()
-    if stopped or remaining <= 0 or not vim.api.nvim_buf_is_valid(warm_buf)
-        or not vim.lsp.buf_is_attached(warm_buf, client.id) then
-      stop()
-      return
-    end
-    remaining = remaining - 1
-    local line = vim.api.nvim_buf_line_count(warm_buf)
-    vim.api.nvim_buf_set_lines(warm_buf, line, line, false, { 'a' })
-    client:request('textDocument/completion', {
-      textDocument = vim.lsp.util.make_text_document_params(warm_buf),
-      position = { line = line, character = 1 },
-    }, function()
-      if stopped or not vim.api.nvim_buf_is_valid(warm_buf) then
-        return
-      end
-      vim.api.nvim_buf_set_lines(warm_buf, line, line + 1, false, {})
-      vim.schedule(step)
-    end, warm_buf)
-  end
-  step()
-end
+-- local function start_kotlin_warmup(client, source_buf)
+--   if not client.server_capabilities.completionProvider then
+--     return
+--   end
+--   if not vim.api.nvim_buf_is_valid(source_buf) or not vim.lsp.buf_is_attached(source_buf, client.id) then
+--     return
+--   end
+--
+--   local source_name = vim.api.nvim_buf_get_name(source_buf)
+--   local dir = source_name ~= '' and vim.fs.dirname(source_name) or client.root_dir
+--   if not dir or dir == '' then
+--     return
+--   end
+--
+--   local package
+--   for _, line in ipairs(vim.api.nvim_buf_get_lines(source_buf, 0, -1, false)) do
+--     local found = line:match('^%s*package%s+([%w_%.]+)')
+--     if found then
+--       package = 'package ' .. found
+--       break
+--     end
+--   end
+--
+--   local warm_buf = vim.api.nvim_create_buf(false, true)
+--   local warm_path = vim.fs.joinpath(dir, '__kotlin_lsp_warmup_' .. tostring(vim.uv.hrtime()) .. '.kt')
+--   vim.api.nvim_buf_set_name(warm_buf, warm_path)
+--   local lines = { 'class KotlinLspWarmup' }
+--   if package then
+--     lines = { package, '', 'class KotlinLspWarmup' }
+--   end
+--   vim.api.nvim_buf_set_lines(warm_buf, 0, -1, false, lines)
+--   vim.api.nvim_buf_call(warm_buf, function()
+--     vim.cmd('noautocmd set filetype=kotlin')
+--   end)
+--   if not vim.lsp.buf_is_attached(warm_buf, client.id) then
+--     vim.lsp.buf_attach_client(warm_buf, client.id)
+--   end
+--
+--   local stopped = false
+--   local function stop()
+--     if stopped then
+--       return
+--     end
+--     stopped = true
+--     if kotlin_warmup_stops[client.id] == stop then
+--       kotlin_warmup_stops[client.id] = nil
+--     end
+--     if vim.api.nvim_buf_is_valid(warm_buf) then
+--       pcall(vim.api.nvim_buf_delete, warm_buf, { force = true })
+--     end
+--   end
+--   kotlin_warmup_stops[client.id] = stop
+--
+--   local remaining = 30
+--   local function step()
+--     if stopped or remaining <= 0 or not vim.api.nvim_buf_is_valid(warm_buf)
+--         or not vim.lsp.buf_is_attached(warm_buf, client.id) then
+--       stop()
+--       return
+--     end
+--     remaining = remaining - 1
+--     local line = vim.api.nvim_buf_line_count(warm_buf)
+--     vim.api.nvim_buf_set_lines(warm_buf, line, line, false, { 'a' })
+--     client:request('textDocument/completion', {
+--       textDocument = vim.lsp.util.make_text_document_params(warm_buf),
+--       position = { line = line, character = 1 },
+--     }, function()
+--       if stopped or not vim.api.nvim_buf_is_valid(warm_buf) then
+--         return
+--       end
+--       vim.api.nvim_buf_set_lines(warm_buf, line, line + 1, false, {})
+--       vim.schedule(step)
+--     end, warm_buf)
+--   end
+--   step()
+-- end
 
 vim.api.nvim_create_autocmd('LspProgress', {
   group = vim.api.nvim_create_augroup('KotlinCompletionWarmup', { clear = true }),
@@ -283,7 +283,7 @@ vim.api.nvim_create_autocmd('LspProgress', {
     kotlin_completion_warmed[client.id] = true
     vim.schedule(function()
       seed_kotlin_completion_cache(client, buf)
-      start_kotlin_warmup(client, buf)
+      -- start_kotlin_warmup(client, buf)
     end)
   end,
 })
@@ -300,22 +300,22 @@ vim.api.nvim_create_autocmd('LspAttach', {
   end,
 })
 
-vim.api.nvim_create_autocmd('InsertEnter', {
-  group = vim.api.nvim_create_augroup('KotlinCompletionWarmupCancel', { clear = true }),
-  callback = function()
-    stop_kotlin_warmups()
-  end,
-})
-
-vim.api.nvim_create_autocmd('LspDetach', {
-  group = vim.api.nvim_create_augroup('KotlinCompletionWarmupDetach', { clear = true }),
-  callback = function(args)
-    local stop = kotlin_warmup_stops[args.data.client_id]
-    if stop then
-      stop()
-    end
-  end,
-})
+-- vim.api.nvim_create_autocmd('InsertEnter', {
+--   group = vim.api.nvim_create_augroup('KotlinCompletionWarmupCancel', { clear = true }),
+--   callback = function()
+--     stop_kotlin_warmups()
+--   end,
+-- })
+--
+-- vim.api.nvim_create_autocmd('LspDetach', {
+--   group = vim.api.nvim_create_augroup('KotlinCompletionWarmupDetach', { clear = true }),
+--   callback = function(args)
+--     local stop = kotlin_warmup_stops[args.data.client_id]
+--     if stop then
+--       stop()
+--     end
+--   end,
+-- })
 
 --python_lsp
 vim.lsp.config('basedpyright', {
