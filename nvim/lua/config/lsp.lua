@@ -900,6 +900,7 @@ local jdtls_jvm_args = {
   '-Dsun.zip.disableMemoryMapping=true',
   '-Djava.awt.headless=true',
   '-Xlog:disable',
+  '-XX:ParallelGCThreads=2',
 }
 
 local function start_jdtls(dispatchers, config)
@@ -1425,10 +1426,10 @@ local function schedule_codelens(bufnr)
     if vim.api.nvim_buf_is_valid(bufnr) then
       render_codelens(bufnr)
     end
-  end, 250)
+  end, 1000)
 end
 
-vim.api.nvim_create_autocmd({ 'LspAttach', 'BufEnter', 'BufWritePost', 'InsertLeave' }, {
+vim.api.nvim_create_autocmd({ 'BufWritePost', 'InsertLeave' }, {
   group = vim.api.nvim_create_augroup('EolCodeLens', { clear = true }),
   callback = function(args) schedule_codelens(args.buf) end,
 })

@@ -20,7 +20,8 @@ set $mod Mod4
 # bindsym XF86AudioLowerVolume exec /home/wiss/volume.sh down
 # bindsym XF86AudioMute exec /home/wiss/volume.sh mute
 # bindsym XF86AudioMicMute exec /home/wiss/volume.sh micmute
-
+bindsym XF86MonBrightnessUp exec /home/wiss/brightness.sh up
+bindsym XF86MonBrightnessDown exec /home/wiss/brightness.sh down
 exec rm -f $XDG_RUNTIME_DIR/wob.sock && mkfifo $XDG_RUNTIME_DIR/wob.sock && tail -f $XDG_RUNTIME_DIR/wob.sock | wob
 
 bindsym XF86AudioRaiseVolume exec /home/wiss/volume.sh up
