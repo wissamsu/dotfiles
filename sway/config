@@ -1,4 +1,10 @@
 exec_always autotiling
+seat seat0 hide_cursor when-typing enable
+client.focused          #888888  #888888  #ffffff  #888888  #888888
+client.focused_inactive #444444  #444444  #cdd6f4  #444444  #444444
+client.unfocused        #333333  #333333  #cdd6f4  #333333  #333333
+client.urgent           #f38ba8  #f38ba8  #1e1e2e  #f38ba8  #f38ba8
+seat seat0 xcursor_theme Adwaita 18
 # Audio: single idempotent script starts the PipeWire stack only if it is not
 # already running, so a config reload cannot spawn duplicate daemons.
 exec /home/wiss/start-audio.sh
@@ -10,11 +16,16 @@ exec wl-paste --type image --watch cliphist store
 set $mod Mod4
 
 # Audio keys (Touch Bar control strip + keyboard F-keys)
+# bindsym XF86AudioRaiseVolume exec /home/wiss/volume.sh up
+# bindsym XF86AudioLowerVolume exec /home/wiss/volume.sh down
+# bindsym XF86AudioMute exec /home/wiss/volume.sh mute
+# bindsym XF86AudioMicMute exec /home/wiss/volume.sh micmute
+
+exec rm -f $XDG_RUNTIME_DIR/wob.sock && mkfifo $XDG_RUNTIME_DIR/wob.sock && tail -f $XDG_RUNTIME_DIR/wob.sock | wob
+
 bindsym XF86AudioRaiseVolume exec /home/wiss/volume.sh up
 bindsym XF86AudioLowerVolume exec /home/wiss/volume.sh down
 bindsym XF86AudioMute exec /home/wiss/volume.sh mute
-bindsym XF86AudioMicMute exec /home/wiss/volume.sh micmute
-
 # Keyboard backlight keys (Touch Bar control strip)
 bindsym XF86KbdBrightnessUp exec sudo -n /usr/local/bin/kbd-brightness up
 bindsym XF86KbdBrightnessDown exec sudo -n /usr/local/bin/kbd-brightness down

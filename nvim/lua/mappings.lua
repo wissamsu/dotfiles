@@ -113,3 +113,4 @@ vim.keymap.set('i', '<CR>', function()
   return vim.fn.pumvisible() == 1 and '<C-y>' or '<CR>'
 end, { expr = true, desc = 'Accept completion with Enter' })
 vim.keymap.set('n', '<leader>cl', vim.lsp.codelens.run, { desc = 'Run code lens' })
+map('i', '<C-s>', vim.lsp.buf.signature_help, { desc = 'signature help' })

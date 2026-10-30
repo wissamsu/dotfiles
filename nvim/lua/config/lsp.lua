@@ -59,6 +59,13 @@ local function resolve_command(mason_name, system_names)
   return mason_path
 end
 
+--protobuf_lsp
+vim.lsp.config('buf_ls', {
+  cmd = { resolve_command('buf'), 'beta', 'lsp' },
+  filetypes = { 'proto' },
+  root_markers = { 'buf.yaml', 'buf.work.yaml', '.git' },
+})
+
 --cmake_lsp
 vim.lsp.config('neocmakelsp', {
   cmd = { resolve_command('neocmakelsp'), 'stdio' },
@@ -1522,5 +1529,6 @@ vim.lsp.enable({
   'basedpyright',
   'autotools_ls',
   'jsonls',
-  'kotlin_lsp'
+  'kotlin_lsp',
+  'buf_ls'
 })

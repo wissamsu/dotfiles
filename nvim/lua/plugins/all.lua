@@ -314,7 +314,7 @@ return {
       },
 
       completion = {
-        list = { max_items = 300 },
+        list = { max_items = 300, selection = { preselect = true, auto_insert = false }, },
         keyword = { range = 'full' },
         accept = { auto_brackets = { blocked_filetypes = { 'kotlin' } } },
 
@@ -444,6 +444,17 @@ return {
           --here
           lsp = {
             async = true,
+            transform_items = function(_, items)
+              for _, it in ipairs(items) do
+                if type(it.insertText) == 'string' then
+                  it.insertText = it.insertText:gsub('%s+$', '')
+                end
+                if type(it.textEdit) == 'table' and type(it.textEdit.newText) == 'string' then
+                  it.textEdit.newText = it.textEdit.newText:gsub('%s+$', '')
+                end
+              end
+              return items
+            end,
             override = {
               get_trigger_characters = function(self)
                 local chars = self:get_trigger_characters()
