@@ -1,0 +1,4 @@
+CompileFlags:
+  Add:
+    - -I/home/wiss/.sdkman/candidates/java/current/include
+    - -I/home/wiss/.sdkman/candidates/java/current/include/linux

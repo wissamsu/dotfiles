@@ -1517,6 +1517,18 @@ vim.api.nvim_create_autocmd('LspAttach', {
   end,
 })
 
+vim.api.nvim_create_user_command("JniHeader", function(opts)
+  local script = vim.fn.expand("~/.local/bin/jni-gen")
+  local cmd = { script, vim.fn.expand("%:p") }
+  if opts.args ~= "" then vim.list_extend(cmd, { "--out", opts.args }) end
+
+  vim.system(cmd, { text = true }, vim.schedule_wrap(function(res)
+    local msg = vim.trim((res.stdout or "") .. (res.stderr or ""))
+    vim.notify(msg, res.code == 0 and vim.log.levels.INFO or vim.log.levels.ERROR)
+  end))
+end, { nargs = "?", complete = "dir" })
+
+
 vim.lsp.enable({
   'lua_ls',
   'dockerls',
