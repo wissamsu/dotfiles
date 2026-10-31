@@ -813,7 +813,7 @@ return {
       { "<leader>ls", "<cmd>Leet submit<cr>", desc = "Submit LeetCode solution" },
     },
     config = function()
-      require("leetcode").setup { lang = "java" }
+      require("leetcode").setup { lang = "java", image_support = true, }
     end,
   },
   {
@@ -1590,24 +1590,14 @@ return {
   },
   {
     "3rd/image.nvim",
-    event = { "BufReadPre *.png,*.jpg,*.jpeg,*.webp,*.gif,*.svg" },
-    ft = { "markdown", "pandoc" },
-    build = false,
     opts = {
-      processor = "magick_cli", -- or "magick_rock" if using luarocks
+      backend = "ueberzug",
       integrations = {
         markdown = {
           enabled = true,
-        },
-        -- ADD THIS: enables rendering when opening image files directly
-        sys_files = {
-          enabled = true,
-          buffer_sync = true,
+          filetypes = { "markdown", "leetcode.nvim" },
         },
       },
-      max_width = 100,
-      max_height = 20,
-      max_height_window_percentage = 50,
     },
   },
   {
