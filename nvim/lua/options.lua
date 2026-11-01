@@ -621,23 +621,57 @@ vim.api.nvim_create_autocmd('FileType', {
 })
 
 -- re-close import folds whenever the number of import lines changes
-local import_counts = {}
+local import_filetypes = { kotlin = true, java = true }
+
+local function close_imports(buf)
+  if vim.api.nvim_get_current_buf() ~= buf then return end
+
+  local first, last
+  for i, l in ipairs(vim.api.nvim_buf_get_lines(buf, 0, 200, false)) do
+    if l:match('^import%s') then
+      first = first or i
+      last = i
+    end
+  end
+  if not first or first == last then return end
+
+  -- don't close it while the cursor is inside the imports (typing one by hand)
+  local row = vim.api.nvim_win_get_cursor(0)[1]
+  if row >= first and row <= last then return end
+
+  if vim.fn.foldclosed(first) == -1 then
+    vim.cmd(('silent! %dfoldclose'):format(first))
+  end
+end
+
+local import_counts, import_pending = {}, {}
 vim.api.nvim_create_autocmd({ 'TextChanged', 'TextChangedI', 'InsertLeave' }, {
   callback = function(a)
-    if vim.bo[a.buf].filetype ~= 'kotlin' then return end
+    local buf = a.buf
+    if not import_filetypes[vim.bo[buf].filetype] then return end
+
     local n = 0
-    for _, l in ipairs(vim.api.nvim_buf_get_lines(a.buf, 0, 200, false)) do
+    for _, l in ipairs(vim.api.nvim_buf_get_lines(buf, 0, 200, false)) do
       if l:match('^import%s') then n = n + 1 end
     end
-    if import_counts[a.buf] == n and a.event ~= 'InsertLeave' then return end
-    import_counts[a.buf] = n
-    vim.schedule(function()
-      if vim.api.nvim_get_current_buf() == a.buf then
-        local view = vim.fn.winsaveview()
-        vim.cmd('silent! normal! zX')
-        vim.fn.winrestview(view)
-      end
-    end)
+
+    if import_counts[buf] ~= n then
+      import_counts[buf] = n
+      import_pending[buf] = true
+      vim.schedule(function() close_imports(buf) end)
+    end
+
+    -- second pass on leaving insert, in case the fold reopened after the edit
+    if a.event == 'InsertLeave' and import_pending[buf] then
+      import_pending[buf] = nil
+      vim.schedule(function() close_imports(buf) end)
+    end
+  end,
+})
+
+vim.api.nvim_create_autocmd('BufWipeout', {
+  callback = function(a)
+    import_counts[a.buf], import_pending[a.buf] = nil, nil
   end,
 })
 --tabline

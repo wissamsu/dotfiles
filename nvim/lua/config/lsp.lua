@@ -469,7 +469,7 @@ vim.lsp.config('springls', {
       jar,
     }, dispatchers)
   end,
-  filetypes = { 'java', 'properties', 'jproperties', 'yaml', 'yml' },
+  filetypes = { 'properties', 'jproperties', 'yaml', 'yml' },
   get_language_id = function(_, filetype)
     if filetype == 'properties' or filetype == 'jproperties' then
       return 'spring-boot-properties'
@@ -1263,7 +1263,13 @@ local function jdtls_for_buffer()
   end
   return clients[1]
 end
-
+local function find_buf_by_name(name)
+  for _, b in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_get_name(b) == name then
+      return b
+    end
+  end
+end
 local function jdt_aware_definition()
   local params = vim.lsp.util.make_position_params(0, 'utf-8')
   vim.lsp.buf_request_all(0, 'textDocument/definition', params, function(results)
@@ -1304,16 +1310,33 @@ local function jdt_aware_definition()
           return
         end
 
-        local buf = vim.api.nvim_create_buf(true, true)
-        vim.api.nvim_buf_set_name(buf, uri)
-        vim.bo[buf].filetype = 'java'
-        vim.bo[buf].buftype = 'nofile'
-        vim.bo[buf].bufhidden = 'wipe'
-        vim.bo[buf].swapfile = false
-        vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(content_result, '\n'))
-        vim.bo[buf].modifiable = false
-        vim.bo[buf].readonly = true
-        vim.api.nvim_set_current_buf(buf)
+        local buf = find_buf_by_name(uri)
+
+        if buf and vim.api.nvim_buf_is_loaded(buf) then
+          -- already open: just switch to it
+          vim.api.nvim_set_current_buf(buf)
+        else
+          if buf then
+            -- stale, unloaded buffer with the same name: remove it first
+            pcall(vim.api.nvim_buf_delete, buf, { force = true })
+          end
+
+          buf = vim.api.nvim_create_buf(true, true)
+          vim.api.nvim_buf_set_name(buf, uri)
+          vim.bo[buf].buftype = 'nofile'
+          vim.bo[buf].bufhidden = 'wipe'
+          vim.bo[buf].swapfile = false
+          vim.bo[buf].filetype = 'java'
+          vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(content_result, '\n'))
+          vim.api.nvim_set_current_buf(buf)
+
+          if not vim.lsp.buf_attach_client(buf, client.id) then
+            vim.notify('Could not attach jdtls to ' .. uri, vim.log.levels.WARN)
+          end
+
+          vim.bo[buf].modifiable = false
+          vim.bo[buf].readonly = true
+        end
 
         local range = res.range or res.targetSelectionRange or res.targetRange
         if range then
