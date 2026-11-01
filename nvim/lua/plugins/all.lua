@@ -193,7 +193,7 @@ return {
   },
   {
     "rest-nvim/rest.nvim",
-    ft = "http",
+    event = { "BufReadPre *.http", "BufNewFile *.http" },
     cmd = "Rest",
     dependencies = {
       {
@@ -437,7 +437,7 @@ return {
   },
   {
     "nvim-treesitter/nvim-treesitter-context",
-    event = "VeryLazy",
+    event = { "BufReadPost", "BufNewFile" },
     opts = {
       enable = true,            -- Enable this plugin (Can be enabled/disabled later via commands)
       multiwindow = false,      -- Enable multiwindow support.
@@ -461,7 +461,6 @@ return {
         end,
         desc = "Jump to context (upwards)",
       },
-      { "<leader>ut", "<cmd>TSContextToggle<cr>", desc = "Toggle treesitter context" },
     },
   },
   {
@@ -755,6 +754,18 @@ return {
             },
           },
           --here
+        },
+      },
+      fuzzy = {
+        sorts = {
+          'exact',
+          'score',
+          function(a, b)
+            local la, lb = #(a.label or ''), #(b.label or '')
+            if la ~= lb then return la < lb end
+            return nil
+          end,
+          'sort_text',
         },
       },
     },

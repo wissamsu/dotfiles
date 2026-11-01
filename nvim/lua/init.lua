@@ -5,7 +5,7 @@ vim.g.loaded_ruby_provider = 0
 vim.g.loaded_python3_provider = 0
 vim.g.loaded_perl_provider = 0
 vim.g.loaded_node_provider = 0
-
+vim.g.loaded_shada_plugin = 1
 vim.o.shadafile = "NONE"
 vim.api.nvim_create_autocmd("UIEnter", {
   once = true,
@@ -74,6 +74,7 @@ local function load()
       notify = false,
       enabled = false,
     },
+    checker = { enabled = false },
     performance = {
       cache = { enabled = true },
       reset_packpath = true,
