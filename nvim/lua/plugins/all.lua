@@ -1590,6 +1590,7 @@ return {
   },
   {
     "3rd/image.nvim",
+    cmd = "Leet",
     opts = {
       backend = "ueberzug",
       integrations = {

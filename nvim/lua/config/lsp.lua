@@ -982,6 +982,26 @@ vim.lsp.config('jdtls', {
   },
 })
 
+--java_language_server
+vim.lsp.config('java_language_server', {
+  cmd = { resolve_command('java-language-server') },
+  filetypes = { 'java' },
+  root_markers = root_markers,
+  handlers = {
+    -- java-language-server sends a malformed registerCapability
+    -- (no `registrations` array), which crashes Neovim's default handler
+    ['client/registerCapability'] = function(err, result, ctx)
+      if type(result) ~= 'table' or type(result.registrations) ~= 'table' then
+        return vim.NIL
+      end
+      return vim.lsp.handlers['client/registerCapability'](err, result, ctx)
+    end,
+  },
+  settings = {
+    java = {},
+  },
+})
+
 local function jdtls_format_and_write(client, bufnr)
   if not vim.api.nvim_buf_is_valid(bufnr) then return end
   local tick = vim.api.nvim_buf_get_changedtick(bufnr)
@@ -1534,7 +1554,8 @@ vim.lsp.enable({
   'dockerls',
   'docker_compose_ls',
   'terraformls',
-  'jdtls',
+  -- 'jdtls',
+  'java_language_server',
   'springls',
   'clangd',
   'neocmakelsp',
