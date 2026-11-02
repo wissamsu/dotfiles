@@ -1558,7 +1558,7 @@ vim.lsp.enable({
   'docker_compose_ls',
   'terraformls',
   'jdtls',
-  'springls',
+  -- 'springls',
   'clangd',
   'neocmakelsp',
   -- 'lemminx',

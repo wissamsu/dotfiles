@@ -168,6 +168,19 @@ return {
     opts = {},
   },
   {
+    "JavaHello/spring-boot.nvim",
+    ft = { "java", "yaml", "jproperties" },
+    opts = {},
+    config = function(_, opts)
+      require("spring_boot").setup(opts)
+      vim.lsp.config("jdtls", {
+        init_options = {
+          bundles = require("spring_boot").java_extensions(),
+        },
+      })
+    end,
+  },
+  {
     "kevinhwang91/nvim-bqf",
     ft = "qf",
     config = function()
