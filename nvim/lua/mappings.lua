@@ -277,4 +277,3 @@ end
 
 vim.keymap.set("n", "gn", goto_native, { desc = "Jump between Java native method and JNI impl" })
 map("n", "gi", vim.lsp.buf.implementation, { desc = "Go to implementation" })
-vim.keymap.set("n", "p", "o<Esc>p", { desc = "Paste on new line below" })

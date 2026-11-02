@@ -70,6 +70,34 @@ end
 setup_hl()
 vim.api.nvim_create_autocmd("ColorScheme", { callback = setup_hl })
 
+local s = vim.diagnostic.severity
+vim.diagnostic.config({
+  signs = {
+    text = {
+      [s.ERROR] = ">>",
+      [s.WARN] = ">>",
+      [s.INFO] = ">>",
+      [s.HINT] = ">>",
+    },
+    numhl = {
+      [s.ERROR] = "DiagnosticSignError",
+      [s.WARN] = "DiagnosticSignWarn",
+      [s.INFO] = "DiagnosticSignInfo",
+      [s.HINT] = "DiagnosticSignHint",
+    },
+  },
+})
+
+local function set_diag_hl()
+  local set = vim.api.nvim_set_hl
+  set(0, "DiagnosticSignError", { fg = "#ff6188", bold = true }) -- red
+  set(0, "DiagnosticSignWarn", { fg = "#e6b673", bold = true })  -- yellow
+  set(0, "DiagnosticSignInfo", { fg = "#7aa2f7", bold = true })  -- blue
+  set(0, "DiagnosticSignHint", { fg = "#7aa2f7", bold = true })  -- blue
+end
+
+set_diag_hl()
+vim.api.nvim_create_autocmd("ColorScheme", { callback = set_diag_hl })
 local diagnostic_cache = {}
 local lsp_cache = {}
 
