@@ -386,47 +386,17 @@ return {
     },
   },
   {
-    "supermaven-inc/supermaven-nvim",
-    -- custom event, fired 4 seconds after the first insert in a real file
-    event = "User SupermavenLoad",
-
-    init = function()
-      vim.api.nvim_create_autocmd("InsertEnter", {
-        callback = function(a)
-          if vim.bo[a.buf].buftype == "" and not vim.bo[a.buf].filetype:match("^fff") then
-            vim.defer_fn(function()
-              vim.api.nvim_exec_autocmds("User", { pattern = "SupermavenLoad" })
-            end, 4000)
-            return true -- remove this autocmd, the timer is already scheduled
-          end
-        end,
-      })
-    end,
-
+    'Exafunction/codeium.vim',
+    event = 'BufEnter',
     config = function()
-      require("supermaven-nvim").setup({
-        -- same as codeium_no_map_tab + <C-g> accept
-        keymaps = {
-          accept_suggestion = "<C-g>",
-          clear_suggestion = "<C-]>",
-          accept_word = "<C-j>",
-        },
-        -- keep it quiet in fff buffers (replaces vim.b.codeium_enabled = false).
-        -- Returning true tells supermaven to stay off for the current buffer.
-        condition = function()
-          return vim.bo.filetype:match("^fff") ~= nil
-        end,
-        -- inline ghost text, equivalent to codeium_render
-        disable_inline_completion = false,
-      })
-
-      vim.api.nvim_create_autocmd("VimLeavePre", {
-        callback = function()
-          pcall(function() require("supermaven-nvim.api").stop() end)
-          os.execute("pkill -f sm-agent")
-        end,
-      })
-    end,
+      -- Change '<C-g>' to any keycode you like.
+      vim.keymap.set('i', '<C-g>', function() return vim.fn['codeium#Accept']() end, { expr = true, silent = true })
+      vim.keymap.set('i', '<c-;>', function() return vim.fn['codeium#CycleCompletions'](1) end,
+        { expr = true, silent = true })
+      vim.keymap.set('i', '<c-,>', function() return vim.fn['codeium#CycleCompletions'](-1) end,
+        { expr = true, silent = true })
+      vim.keymap.set('i', '<c-x>', function() return vim.fn['codeium#Clear']() end, { expr = true, silent = true })
+    end
   },
   {
     'windwp/nvim-autopairs',
