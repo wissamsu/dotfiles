@@ -113,7 +113,6 @@ vim.keymap.set('i', '<CR>', function()
   return vim.fn.pumvisible() == 1 and '<C-y>' or '<CR>'
 end, { expr = true, desc = 'Accept completion with Enter' })
 vim.keymap.set('n', '<leader>cl', vim.lsp.codelens.run, { desc = 'Run code lens' })
-map('i', '<C-s>', vim.lsp.buf.signature_help, { desc = 'signature help' })
 
 -- JNI navigation: gn jumps between a Java native method and its C/C++ implementation
 
@@ -274,7 +273,24 @@ local function goto_native()
     native_to_java()
   end
 end
-
+vim.keymap.set('n', 'grt', function()
+  vim.lsp.buf.type_definition({
+    on_list = function(opts)
+      local item = opts.items[1]
+      if #opts.items == 1 then
+        local bufnr = item.bufnr or vim.fn.bufadd(item.filename)
+        vim.fn.bufload(bufnr)
+        vim.bo[bufnr].buflisted = true
+        vim.api.nvim_win_set_buf(0, bufnr)
+        local last = vim.api.nvim_buf_line_count(bufnr)
+        vim.api.nvim_win_set_cursor(0, { math.min(item.lnum, last), item.col - 1 })
+      else
+        vim.fn.setqflist({}, ' ', opts)
+        vim.cmd('copen')
+      end
+    end,
+  })
+end)
 vim.keymap.set("n", "gn", goto_native, { desc = "Jump between Java native method and JNI impl" })
 map("n", "gi", vim.lsp.buf.implementation, { desc = "Go to implementation" })
 vim.keymap.set("n", "p", "o<Esc>p", { desc = "Paste on new line below" })
