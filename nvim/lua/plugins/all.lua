@@ -1378,7 +1378,7 @@ return {
     opts = {
       kind = "split_left_most",
       integrations = { icon = "nvim_web_devicons" },
-      extensions = { trash = { enabled = true } },
+      extensions = { trash = { enabled = true }, watcher = { enabled = true } },
       mappings = {
         n = {
           ["q"] = { action = "close", desc = "Close finder" },
@@ -1668,7 +1668,7 @@ return {
 
       -- Skip the "Want to continue?" popup: auto-confirm every mutation.
       require("fyler.input").get_confirmation = function(_, _, callback)
-        callback(true)
+        vim.schedule(function() callback(true) end)
       end
     end,
   },

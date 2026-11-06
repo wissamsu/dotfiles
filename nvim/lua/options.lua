@@ -1000,3 +1000,9 @@ vim.keymap.set("n", "<leader>/", "gcc", { remap = true, desc = "Toggle comment" 
 vim.keymap.set("x", "<leader>/", "gc", { remap = true, desc = "Toggle comment" })
 --lspstuff
 vim.opt.completeopt = { 'menu', 'menuone', 'noinsert', 'fuzzy' }
+vim.schedule(function()
+  vim.filetype.add({ extension = { drl = 'drools' } })
+  if vim.bo.filetype == '' then
+    vim.cmd('filetype detect')
+  end
+end)

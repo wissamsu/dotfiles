@@ -20,6 +20,31 @@ vim.lsp.config('lua_ls', {
   },
 })
 
+vim.lsp.config('drools_lsp', {
+  cmd = {
+    'java', '-jar',
+    vim.fn.stdpath('data') .. '/mason/packages/drools-lsp/drools-lsp-server-jar-with-dependencies.jar',
+  },
+  filetypes = { 'drools' },
+  root_markers = { 'pom.xml', 'kmodule.xml', '.git' },
+  settings = {
+    drools = {
+      lsp = {
+        logLevel = 'INFO',
+        lint = {
+          missingEnd = 'warning',
+          missingSeparator = 'warning',
+          missingSemicolon = 'warning',
+          unbalancedParens = 'warning',
+          mvelPropertyAccess = 'off',
+        },
+        inlayHints = { enabled = true },
+        maven = { pomPath = '' },
+      },
+    },
+  },
+})
+
 --json_lsp
 vim.lsp.config('jsonls', {
   cmd = { vim.fn.stdpath("data") .. "/mason/bin/vscode-json-language-server", '--stdio' },
@@ -1566,5 +1591,6 @@ vim.lsp.enable({
   'autotools_ls',
   'jsonls',
   'kotlin_lsp',
-  'buf_ls'
+  'buf_ls',
+  'drools_lsp',
 })

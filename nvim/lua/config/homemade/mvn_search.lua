@@ -1,5 +1,7 @@
 local pickers = require("telescope.pickers")
 local finders = require("telescope.finders")
+local previewers = require("telescope.previewers")
+local entry_display = require("telescope.pickers.entry_display")
 local conf = require("telescope.config").values
 local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
@@ -8,6 +10,7 @@ local curl = require("plenary.curl")
 local M = {}
 
 local URL = "https://search.maven.org/solrsearch/select"
+local DEPS_URL = "https://api.deps.dev" -- stars / dependents / license / advisories
 local SCOPES = { "compile", "test", "provided", "runtime" }
 local ATTEMPTS = 10
 local cache = {} -- query -> docs, lasts until Neovim restarts
@@ -24,6 +27,10 @@ local function snippet(s)
   return #s > 200 and (s:sub(1, 200) .. "...") or s
 end
 
+local function coords(d)
+  return ("%s:%s:%s"):format(d.g, d.a, d.latestVersion or "?")
+end
+
 -- Build the dependency as a list of lines, indented with `indent`/`unit`
 local function dep_lines(d, scope, indent, unit)
   local lines = {
@@ -38,6 +45,34 @@ local function dep_lines(d, scope, indent, unit)
   end
   table.insert(lines, indent .. "</dependency>")
   return lines
+end
+
+---------------------------------------------------------------------------
+-- Formatting helpers
+---------------------------------------------------------------------------
+
+-- "today", "5d ago", "3mo ago", "2.4y ago" from a Unix time in milliseconds
+local function ago(ms)
+  if type(ms) ~= "number" then return "?" end
+  local days = math.floor((os.time() - ms / 1000) / 86400)
+  if days < 1 then return "today" end
+  if days < 30 then return days .. "d ago" end
+  if days < 365 then return math.floor(days / 30) .. "mo ago" end
+  return ("%.1fy ago"):format(days / 365)
+end
+
+-- 1234 -> "1.2k", 2500000 -> "2.5M"
+local function human(n)
+  if type(n) ~= "number" then return "?" end
+  if n >= 1e6 then return ("%.1fM"):format(n / 1e6) end
+  if n >= 1e3 then return ("%.1fk"):format(n / 1e3) end
+  return ("%d"):format(n)
+end
+
+local function urlenc(s)
+  return (tostring(s):gsub("[^%w%-%._~]", function(c)
+    return ("%%%02X"):format(c:byte())
+  end))
 end
 
 ---------------------------------------------------------------------------
@@ -198,6 +233,225 @@ local function fetch(query, attempt, on_done)
   })
 end
 
+---------------------------------------------------------------------------
+-- Popularity / health stats (deps.dev)
+--
+-- Maven Central itself only tells us when the latest version was released
+-- and how many versions exist (both already in the search response). Stars,
+-- usage and the rest come from deps.dev, fetched lazily for whichever entry
+-- is highlighted and cached for the rest of the session.
+---------------------------------------------------------------------------
+
+local stats_cache = {}   -- "g:a:version" -> stats table
+local stats_waiting = {} -- same key -> callbacks waiting on an in-flight lookup
+
+-- GET a JSON document. cb(data) on success, cb(nil, status) otherwise.
+-- status is the HTTP code, or nil for transport/parse errors.
+local function get_json(url, cb)
+  curl.get(url, {
+    headers = { accept = "application/json" },
+    raw = { "--ipv4", "--connect-timeout", "3", "--max-time", "6" },
+    on_error = vim.schedule_wrap(function()
+      cb(nil, nil)
+    end),
+    callback = vim.schedule_wrap(function(res)
+      if not res or res.status ~= 200 then
+        return cb(nil, res and res.status)
+      end
+      local ok, data = pcall(vim.json.decode, res.body)
+      if not ok or type(data) ~= "table" then
+        return cb(nil, nil)
+      end
+      cb(data)
+    end),
+  })
+end
+
+-- Prefer the SOURCE_REPO project, fall back to whatever project is listed
+local function pick_repo(projects)
+  local fallback
+  for _, p in ipairs(projects or {}) do
+    local id = p.projectKey and p.projectKey.id
+    if id then
+      if p.relationType == "SOURCE_REPO" then return id end
+      fallback = fallback or id
+    end
+  end
+  return fallback
+end
+
+local function load_stats(d, cb)
+  local ver = d.latestVersion
+  if not ver then return cb({ not_found = true }) end
+
+  local key = coords(d)
+  if stats_cache[key] then return cb(stats_cache[key]) end
+  if stats_waiting[key] then
+    table.insert(stats_waiting[key], cb)
+    return
+  end
+  stats_waiting[key] = { cb }
+
+  local st = {}
+  local pending = 2
+  local function done()
+    pending = pending - 1
+    if pending > 0 then return end
+    -- don't cache lookups that hit network trouble, so the next view retries
+    if not st.network_error then stats_cache[key] = st end
+    local waiting = stats_waiting[key]
+    stats_waiting[key] = nil
+    for _, f in ipairs(waiting) do f(st) end
+  end
+
+  local pkg = urlenc(d.g .. ":" .. d.a)
+  local version_url = ("%s/v3/systems/maven/packages/%s/versions/%s"):format(DEPS_URL, pkg, urlenc(ver))
+
+  -- 1) version details -> source repo -> project stats (stars, forks, ...)
+  get_json(version_url, function(v, status)
+    if not v then
+      if status == 404 then st.not_found = true else st.network_error = true end
+      return done()
+    end
+    st.licenses = v.licenses
+    st.advisories = type(v.advisoryKeys) == "table" and #v.advisoryKeys or 0
+    st.deprecated = v.isDeprecated
+    local repo = pick_repo(v.relatedProjects)
+    if not repo then return done() end
+    st.repo = repo
+    get_json(DEPS_URL .. "/v3/projects/" .. urlenc(repo), function(p, pstatus)
+      if p then
+        st.stars, st.forks, st.issues = p.starsCount, p.forksCount, p.openIssuesCount
+        st.score = p.scorecard and p.scorecard.overallScore
+      elseif pstatus ~= 404 then
+        st.network_error = true
+      end
+      done()
+    end)
+  end)
+
+  -- 2) dependents: how many other packages depend on this one.
+  -- This lives in deps.dev's v3alpha API (not in the stable v3 docs), so treat
+  -- it as best-effort: if it's missing or fails, the row is simply left out.
+  local dependents_url = ("%s/v3alpha/systems/maven/packages/%s/versions/%s:dependents")
+      :format(DEPS_URL, pkg, urlenc(ver))
+  get_json(dependents_url, function(x)
+    if x then
+      st.dependents = x.dependentCount
+      st.direct_dependents = x.directDependentCount
+    end
+    done()
+  end)
+end
+
+local function add_row(lines, label, value)
+  if value ~= nil and value ~= "" then
+    table.insert(lines, ("%-14s %s"):format(label .. ":", value))
+  end
+end
+
+-- st == nil means "still loading"
+local function preview_lines(d, st)
+  local lines = { ("%s:%s"):format(d.g, d.a), "" }
+
+  add_row(lines, "Latest", ("%s (%s)"):format(d.latestVersion or "?", ago(d.timestamp)))
+  if type(d.timestamp) == "number" then
+    add_row(lines, "Released", os.date("%Y-%m-%d", math.floor(d.timestamp / 1000)))
+  end
+  add_row(lines, "Versions", d.versionCount and human(d.versionCount))
+  add_row(lines, "Packaging", d.p)
+  table.insert(lines, "")
+
+  if not st then
+    table.insert(lines, "Loading from deps.dev ...")
+    return lines
+  end
+
+  if st.not_found then
+    table.insert(lines, "Not indexed by deps.dev (no stars/usage data).")
+    return lines
+  end
+
+  add_row(lines, "Stars", st.stars and human(st.stars))
+  add_row(lines, "Forks", st.forks and human(st.forks))
+  add_row(lines, "Open issues", st.issues and human(st.issues))
+  if st.dependents then
+    local s = human(st.dependents)
+    if st.direct_dependents then
+      s = s .. (" (%s direct)"):format(human(st.direct_dependents))
+    end
+    add_row(lines, "Dependents", s)
+  end
+  add_row(lines, "OpenSSF score", type(st.score) == "number" and ("%.1f / 10"):format(st.score) or nil)
+  add_row(lines, "License",
+    type(st.licenses) == "table" and #st.licenses > 0 and table.concat(st.licenses, ", ") or nil)
+  if st.advisories ~= nil then
+    add_row(lines, "Advisories", st.advisories == 0 and "none known for this version"
+      or ("%d known for this version"):format(st.advisories))
+  end
+  if st.deprecated then add_row(lines, "Deprecated", "yes") end
+  add_row(lines, "Source", st.repo)
+
+  if not st.repo then
+    table.insert(lines, "")
+    table.insert(lines, "No linked source repo, so no star/fork data.")
+  end
+  if st.network_error then
+    table.insert(lines, "")
+    table.insert(lines, "deps.dev was unreachable for part of this; data may be incomplete.")
+  end
+  return lines
+end
+
+local function stats_previewer()
+  return previewers.new_buffer_previewer({
+    title = "Details",
+    define_preview = function(self, entry)
+      local bufnr = self.state.bufnr -- a fresh buffer per entry, wiped when you move on
+      local d = entry.value
+      local function render(st)
+        if vim.api.nvim_buf_is_valid(bufnr) then
+          pcall(vim.api.nvim_buf_set_lines, bufnr, 0, -1, false, preview_lines(d, st))
+        end
+      end
+      render(nil)
+      load_stats(d, render)
+    end,
+  })
+end
+
+---------------------------------------------------------------------------
+-- Picker
+---------------------------------------------------------------------------
+
+local function make_entry_maker(docs)
+  local width = 20
+  for _, d in ipairs(docs) do
+    width = math.max(width, #coords(d))
+  end
+  width = math.min(width, 70)
+
+  local displayer = entry_display.create({
+    separator = "  ",
+    items = { { width = width }, { width = 9 }, { remaining = true } },
+  })
+
+  return function(d)
+    local c = coords(d)
+    return {
+      value = d,
+      ordinal = c,
+      display = function()
+        return displayer({
+          c,
+          { ago(d.timestamp),                              "Comment" },
+          { ("%s versions"):format(human(d.versionCount)), "Comment" },
+        })
+      end,
+    }
+  end
+end
+
 local function show_picker(query, docs)
   if #docs == 0 then
     return vim.notify("MvnSearch: no results for '" .. query .. "'", vim.log.levels.WARN)
@@ -207,12 +461,10 @@ local function show_picker(query, docs)
     prompt_title = "Maven: " .. query,
     finder = finders.new_table({
       results = docs,
-      entry_maker = function(d)
-        local s = ("%s:%s:%s"):format(d.g, d.a, d.latestVersion or "?")
-        return { value = d, display = s, ordinal = s }
-      end,
+      entry_maker = make_entry_maker(docs),
     }),
     sorter = conf.generic_sorter({}),
+    previewer = stats_previewer(),
     attach_mappings = function(bufnr)
       actions.select_default:replace(function()
         local sel = action_state.get_selected_entry()

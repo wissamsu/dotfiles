@@ -25,7 +25,6 @@ if vim.fn.isdirectory(undodir) == 0 then
 end
 
 vim.go.loadplugins = false
-
 local early_events = {}
 local replay_group = vim.api.nvim_create_augroup("DeferredStartupReplay", { clear = true })
 for _, event in ipairs({ "BufReadPre", "BufReadPost", "BufNewFile", "FileType", "BufEnter" }) do
