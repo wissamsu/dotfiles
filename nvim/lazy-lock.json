@@ -9,6 +9,7 @@
   "csvview.nvim": { "branch": "main", "commit": "f190de76d2eca0380ddcb2425cd582d740699b55" },
   "delombok.nvim": { "branch": "master", "commit": "31037d586f58c92c33d70eab60d4ff2931d43a01" },
   "diffview.nvim": { "branch": "main", "commit": "4516612fe98ff56ae0415a259ff6361a89419b0a" },
+  "dockyard.nvim": { "branch": "main", "commit": "422ba43755fdf0940502bd69fb5cd48ba6b43311" },
   "fff.nvim": { "branch": "main", "commit": "d1c7dd47130ca670ab71e7466a1a3b4a57d5348d" },
   "flash.nvim": { "branch": "main", "commit": "5f0f270fdc7c5b0c21d903ee85b9cb06f2ac636a" },
   "friendly-snippets": { "branch": "main", "commit": "b2ea5c41a150ba72fb656eedb4ed0a86d138d945" },

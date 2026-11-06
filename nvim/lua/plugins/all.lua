@@ -323,6 +323,59 @@ return {
     },
   },
   {
+    "emrearmagan/dockyard.nvim",
+    cmd = { "Dockyard", "DockyardFloat", "DockyardRun" },
+    keys = {
+      {
+        "<leader>dy",
+        "<cmd>DockyardFloat<cr>",
+        desc = "Docker Yard Float",
+      },
+      {
+        "<leader>dr",
+        function()
+          local names = { "docker-compose.yaml", "docker-compose.yml", "compose.yaml", "compose.yml" }
+
+          -- start from the current file, or the cwd if the buffer isn't a real file (e.g. fyler)
+          local start = vim.api.nvim_buf_get_name(0)
+          if start == "" or start:match("^%a+://") then
+            start = vim.fn.getcwd()
+          end
+
+          local root = vim.fs.root(start, names)
+          if not root then
+            vim.notify("No compose file found above " .. start, vim.log.levels.WARN)
+            return
+          end
+
+          local compose
+          for _, name in ipairs(names) do
+            local path = root .. "/" .. name
+            if vim.uv.fs_stat(path) then
+              compose = path
+              break
+            end
+          end
+
+          local origin = vim.api.nvim_get_current_buf()
+          vim.cmd("edit " .. vim.fn.fnameescape(compose))
+          vim.cmd("DockyardRun")
+          vim.cmd("buffer " .. origin)
+        end,
+        desc = "Docker Run (compose)",
+      },
+    },
+    config = function()
+      require("dockyard").setup({
+        keymaps = {
+          ui = {
+            open_panel = { "p", "l" }, -- keep p, add l
+          },
+        },
+      })
+    end,
+  },
+  {
     "NickvanDyke/opencode.nvim",
     keys = {
       { "<C-o>", function() require("opencode").ask("@this: ", { submit = true }) end, mode = { "n", "x" }, desc = "Ask opencode…" },
@@ -1062,8 +1115,6 @@ return {
         end,
         desc = "Debug: stop",
       },
-      { "<leader>dr",  function() require('dap').repl.open() end, desc = "Debug: open repl" },
-      { "<leader>dui", function() require('dapui').toggle() end,  desc = "Debug: toggle UI" },
     },
     config = function()
       local dap = require("dap")
