@@ -127,7 +127,7 @@ local function replay_startup_events()
   early_events = nil
 end
 
-if vim.env.NVIM_SYNC_STARTUP == "1" then
+if vim.env.NVIM_ASYNC_STARTUP == "1" then
   load()
   vim.api.nvim_clear_autocmds({ group = replay_group })
 else
