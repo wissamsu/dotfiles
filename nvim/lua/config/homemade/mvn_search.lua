@@ -11,7 +11,7 @@ local M = {}
 
 local URL = "https://search.maven.org/solrsearch/select"
 local DEPS_URL = "https://api.deps.dev" -- stars / dependents / license / advisories
-local SCOPES = { "compile", "test", "provided", "runtime" }
+local SCOPES = { "compile", "test", "provided", "runtime", "import" }
 local ATTEMPTS = 10
 local cache = {} -- query -> docs, lasts until Neovim restarts
 

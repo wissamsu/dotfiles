@@ -165,6 +165,7 @@ return {
     "JavaHello/lemminx-maven.nvim",
     ft = { "xml", "xsd", "xsl", "xslt", "svg" },
     cmd = "LemminxMavenInstall",
+    build = ":LemminxMavenInstall",
     opts = {},
   },
   {
@@ -268,6 +269,8 @@ return {
   },
   {
     'nvim-treesitter/nvim-treesitter',
+    lazy = true,
+    build = ":TSUpdate",
     cmd = { "TSUpdate", "TSInstall" },
   },
   {
@@ -1282,12 +1285,42 @@ return {
     end,
   },
   {
-    "williamboman/mason.nvim",
+    "mason-org/mason.nvim",
+    build = ":MasonInstall "
+        .. table.concat({
+          "autotools-language-server",
+          "actionlint",
+          "basedpyright",
+          "bash-language-server",
+          "buf",
+          "clang-format",
+          "clangd",
+          "codelldb",
+          "docker-compose-language-service",
+          "docker-language-server",
+          "dockerfile-language-server",
+          "drools-lsp",
+          "java-debug-adapter",
+          "java-language-server",
+          "java-test",
+          "jdtls",
+          "json-lsp",
+          "kotlin-debug-adapter",
+          "kotlin-language-server",
+          "lemminx",
+          "lua-language-server",
+          "neocmakelsp",
+          "pyright",
+          "shellcheck",
+          "shfmt",
+          "stylua",
+          "terraform-ls",
+          "vscode-spring-boot-tools",
+        }, " "),
     lazy = true,
     cmd = {
       "Mason",
       "MasonInstall",
-      "MasonInstallAll",
       "MasonUninstall",
       "MasonUninstallAll",
       "MasonLog",
@@ -1296,15 +1329,6 @@ return {
     opts = {},
     config = function(_, opts)
       require("mason").setup(opts)
-
-      -- Automatically install jdtls if it's not already installed
-      local registry = require("mason-registry")
-      registry.refresh(function()
-        local ok, pkg = pcall(registry.get_package, "jdtls")
-        if ok and not pkg:is_installed() then
-          pkg:install()
-        end
-      end)
     end,
   },
   {

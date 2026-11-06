@@ -1,5 +1,18 @@
 local mason_bin = vim.fn.stdpath('data') .. '/mason/bin/'
 
+vim.lsp.config('bashls', {
+  cmd = { vim.fn.stdpath('data') .. '/mason/bin/bash-language-server', 'start' },
+  filetypes = { 'sh', 'bash' },
+  root_markers = { '.git' },
+  settings = {
+    bashIde = {
+      globPattern = '*@(.sh|.inc|.bash|.command)',
+      shellcheckPath = vim.fn.stdpath('data') .. '/mason/bin/shellcheck',
+      shfmt = { path = vim.fn.stdpath('data') .. '/mason/bin/shfmt', },
+    },
+  },
+})
+
 --lua_lsp
 vim.lsp.config('lua_ls', {
   cmd = { vim.fn.stdpath('data') .. '/mason/bin/lua-language-server' },
@@ -1593,4 +1606,5 @@ vim.lsp.enable({
   'kotlin_lsp',
   'buf_ls',
   'drools_lsp',
+  'bashls',
 })

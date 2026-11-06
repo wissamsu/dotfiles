@@ -558,13 +558,48 @@ vim.api.nvim_create_autocmd("WinClosed", {
   end,
 })
 
---treesitter
-local treesitter_filetypes = {
-  "c", "cpp", "css", "cmake", "go", "html", "java", "javascript",
-  "javascriptreact", "json", "lua", "python", "scss", "tsx", "typescript",
-  "typescriptreact", "xml", "yaml", "yml",
-}
+-- treesitter
 local max_treesitter_lines = 10000
+
+-- Filetypes that never have a parser, skipped so nvim-treesitter doesn't load just to check.
+-- Add more here if you notice the plugin loading needlessly.
+local skip_filetypes = { [""] = true, text = true, conf = true, log = true }
+
+-- Filetypes we already tried to resolve/install this session (avoids retry loops)
+local attempted = {}
+
+local function parser_installed(lang)
+  return #vim.api.nvim_get_runtime_file("parser/" .. lang .. ".*", false) > 0
+end
+
+-- Calls cb(true) if a parser is available for the buffer, cb(false) otherwise.
+-- Installs the parser first if it's missing.
+local function ensure_parser(buf, cb)
+  local ft = vim.bo[buf].filetype
+  local lang = vim.treesitter.language.get_lang(ft)
+  if lang and parser_installed(lang) then return cb(true) end
+  if attempted[ft] then return cb(false) end
+  attempted[ft] = true
+
+  local loaded, ts = pcall(function()
+    require("lazy").load({ plugins = { "nvim-treesitter" } })
+    return require("nvim-treesitter")
+  end)
+  if not loaded then return cb(false) end
+
+  -- the plugin registers filetype aliases (e.g. javascriptreact -> javascript), so resolve again
+  lang = vim.treesitter.language.get_lang(ft)
+  if not lang then return cb(false) end
+  if parser_installed(lang) then return cb(true) end
+
+  local okc, available = pcall(ts.get_available)
+  if not okc or not vim.list_contains(available, lang) then return cb(false) end
+
+  vim.notify("Installing treesitter parser: " .. lang)
+  ts.install({ lang }):await(function()
+    vim.schedule(function() cb(parser_installed(lang)) end)
+  end)
+end
 
 -- BLOCK 1: fold the import block
 local function fold_imports(buf)
@@ -593,13 +628,18 @@ local function fold_imports(buf)
 end
 
 vim.api.nvim_create_autocmd("FileType", {
-  pattern = treesitter_filetypes,
+  pattern = "*",
   callback = function(args)
     local buf = args.buf
+    local ft = vim.bo[buf].filetype
+    if skip_filetypes[ft] then return end
+
     local is_diffview_buf = vim.api.nvim_buf_get_name(buf):match('^diffview://') ~= nil
 
     if vim.bo[buf].buftype ~= "" or vim.api.nvim_buf_line_count(buf) > max_treesitter_lines then
-      if not is_diffview_buf then
+      -- only touch folds for filetypes that treesitter would otherwise handle
+      local lang = vim.treesitter.language.get_lang(ft)
+      if not is_diffview_buf and lang and parser_installed(lang) then
         vim.opt_local.foldmethod = "manual"
       end
       return
@@ -609,25 +649,33 @@ vim.api.nvim_create_autocmd("FileType", {
       if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
         return
       end
-      local ok = pcall(vim.treesitter.start, buf)
-      for _, win in ipairs(vim.fn.win_findbuf(buf)) do
-        local tab = vim.api.nvim_win_get_tabpage(win)
-        if not is_diffview_buf and not vim.t[tab].diffview_view_initialized then
-          if ok then
-            vim.wo[win].foldmethod = "expr"
-            vim.wo[win].foldexpr = "v:lua.vim.treesitter.foldexpr()"
-            vim.wo[win].foldenable = true
-            vim.wo[win].foldlevel = 99
-          else
-            vim.wo[win].foldmethod = "manual"
+
+      ensure_parser(buf, function(available)
+        if not available then return end -- no parser: leave folds and options untouched
+        if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
+          return
+        end
+
+        local ok = pcall(vim.treesitter.start, buf)
+        for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+          local tab = vim.api.nvim_win_get_tabpage(win)
+          if not is_diffview_buf and not vim.t[tab].diffview_view_initialized then
+            if ok then
+              vim.wo[win].foldmethod = "expr"
+              vim.wo[win].foldexpr = "v:lua.vim.treesitter.foldexpr()"
+              vim.wo[win].foldenable = true
+              vim.wo[win].foldlevel = 99
+            else
+              vim.wo[win].foldmethod = "manual"
+            end
           end
         end
-      end
 
-      -- BLOCK 2: fold imports for Java right after the fold setup
-      if vim.bo[buf].filetype == 'java' and not is_diffview_buf then
-        fold_imports(buf)
-      end
+        -- BLOCK 2: fold imports for Java right after the fold setup
+        if ft == 'java' and not is_diffview_buf then
+          fold_imports(buf)
+        end
+      end)
     end, 30)
   end,
 })
