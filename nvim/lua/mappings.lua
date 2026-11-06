@@ -294,3 +294,82 @@ end)
 vim.keymap.set("n", "gn", goto_native, { desc = "Jump between Java native method and JNI impl" })
 map("n", "gi", vim.lsp.buf.implementation, { desc = "Go to implementation" })
 vim.keymap.set("n", "p", "o<Esc>p", { desc = "Paste on new line below" })
+local function hub_url(name)
+  if name:find("/", 1, true) then
+    return "https://hub.docker.com/r/" .. name
+  end
+  return "https://hub.docker.com/_/" .. name
+end
+
+vim.api.nvim_create_user_command("DockerSearch", function(opts)
+  local out = vim.fn.systemlist({ "docker", "search", "--limit", "25", opts.args })
+  if vim.v.shell_error ~= 0 then
+    vim.notify(table.concat(out, "\n"), vim.log.levels.ERROR)
+    return
+  end
+
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, out)
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].bufhidden = "wipe"
+
+  -- highlight the header row
+  vim.api.nvim_buf_set_extmark(buf, vim.api.nvim_create_namespace("DockerSearch"), 0, 0, {
+    line_hl_group = "Title",
+  })
+
+  local width = math.floor(vim.o.columns * 0.85)
+  local height = math.min(#out, math.floor(vim.o.lines * 0.8))
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative = "editor",
+    width = width,
+    height = height,
+    row = math.floor((vim.o.lines - height) / 2),
+    col = math.floor((vim.o.columns - width) / 2),
+    style = "minimal",
+    border = "rounded",
+    title = " Docker Hub: " .. opts.args .. " ",
+    title_pos = "center",
+    footer = " <CR> copy name · o open in browser · q close ",
+    footer_pos = "center",
+  })
+  vim.wo[win].cursorline = true
+  vim.wo[win].wrap = false
+  if #out > 1 then
+    vim.api.nvim_win_set_cursor(win, { 2, 0 }) -- skip the header
+  end
+
+  local close = function()
+    if vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_close(win, true)
+    end
+  end
+
+  -- name of the image on the current line (nil on the header row)
+  local function current_name()
+    local row = vim.api.nvim_win_get_cursor(win)[1]
+    if row == 1 then
+      return nil
+    end
+    return vim.api.nvim_get_current_line():match("^(%S+)")
+  end
+
+  vim.keymap.set("n", "q", close, { buffer = buf, nowait = true })
+  vim.keymap.set("n", "<Esc>", close, { buffer = buf, nowait = true })
+
+  vim.keymap.set("n", "<CR>", function()
+    local name = current_name()
+    if name then
+      vim.fn.setreg("+", name)
+      vim.notify("Copied " .. name)
+      close()
+    end
+  end, { buffer = buf, nowait = true })
+
+  vim.keymap.set("n", "o", function()
+    local name = current_name()
+    if name then
+      vim.ui.open(hub_url(name))
+    end
+  end, { buffer = buf, nowait = true })
+end, { nargs = 1 })
