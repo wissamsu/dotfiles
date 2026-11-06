@@ -1051,6 +1051,6 @@ vim.opt.completeopt = { 'menu', 'menuone', 'noinsert', 'fuzzy' }
 vim.schedule(function()
   vim.filetype.add({ extension = { drl = 'drools' } })
   if vim.bo.filetype == '' then
-    vim.cmd('filetype detect')
+    vim.cmd('silent! filetype detect')
   end
 end)

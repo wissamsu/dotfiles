@@ -7,6 +7,10 @@ vim.g.loaded_perl_provider = 0
 vim.g.loaded_node_provider = 0
 vim.g.loaded_shada_plugin = 1
 vim.o.shadafile = "NONE"
+
+-- Keep filetype detection (ftplugins, treesitter, syntax) off the startup
+-- path. It is re-enabled right after the first paint.
+vim.g.did_load_filetypes = 1
 vim.api.nvim_create_autocmd("UIEnter", {
   once = true,
   callback = function()
@@ -136,6 +140,18 @@ else
     replay_startup_events()
   end)
 end
+
+vim.api.nvim_create_autocmd("VimEnter", {
+  once = true,
+  callback = function()
+    vim.schedule(function()
+      vim.g.did_load_filetypes = nil
+      vim.cmd("filetype plugin indent on")
+      vim.cmd("filetype detect")
+      vim.cmd("doautoall filetypedetect BufRead")
+    end)
+  end,
+})
 
 vim.opt.foldmethod = "manual"
 vim.opt.foldenable = true
