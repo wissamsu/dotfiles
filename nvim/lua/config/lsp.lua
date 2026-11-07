@@ -1650,6 +1650,19 @@ vim.api.nvim_create_user_command("JniHeader", function(opts)
   end))
 end, { nargs = "?", complete = "dir" })
 
+local announced = {}
+vim.api.nvim_create_autocmd('LspProgress', {
+  pattern = 'end',
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if not client or announced[client.name] then return end
+    vim.defer_fn(function()
+      if announced[client.name] or vim.lsp.status() ~= '' then return end
+      announced[client.name] = true
+      vim.notify(client.name .. ' ready')
+    end, 500)
+  end,
+})
 
 vim.lsp.enable({
   'lua_ls',
