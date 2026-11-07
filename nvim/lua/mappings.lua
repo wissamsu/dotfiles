@@ -373,3 +373,9 @@ vim.api.nvim_create_user_command("DockerSearch", function(opts)
     end
   end, { buffer = buf, nowait = true })
 end, { nargs = 1 })
+vim.keymap.set('n', 'n', function()
+  local ok = pcall(vim.cmd, 'normal! ' .. vim.v.count1 .. 'n')
+  if not ok then
+    vim.cmd('normal %') -- no `!` so matchit's % (tags, if/end) works too
+  end
+end, { desc = 'Next search match, or matching pair if none' })

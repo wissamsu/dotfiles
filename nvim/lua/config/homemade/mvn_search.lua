@@ -211,7 +211,7 @@ local function fetch(query, attempt, on_done)
   end
 
   curl.get(URL, {
-    query = { q = query, rows = 30, wt = "json" },
+    query = { q = query, rows = 100, wt = "json" },
     headers = { accept = "application/json" },
     raw = { "--ipv4", "--connect-timeout", "2", "--max-time", "3" },
     on_error = vim.schedule_wrap(function(e)
@@ -490,6 +490,9 @@ function M.search(query)
 
   vim.notify("MvnSearch: searching '" .. query .. "'...")
   fetch(query, 1, function(docs)
+    table.sort(docs, function(a, b)
+      return (a.versionCount or 0) > (b.versionCount or 0)
+    end)
     cache[query] = docs
     show_picker(query, docs)
   end)

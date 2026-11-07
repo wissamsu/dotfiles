@@ -85,7 +85,7 @@ local function load()
         disabled_plugins = {
           "gzip",
           "matchit",
-          "matchparen",
+          -- "matchparen",
           "netrwPlugin",
           "tarPlugin",
           "tohtml",

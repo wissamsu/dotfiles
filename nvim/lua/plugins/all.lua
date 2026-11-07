@@ -270,7 +270,7 @@ return {
   {
     'nvim-treesitter/nvim-treesitter',
     lazy = true,
-    build = ":TSUpdate",
+    build = ":TSUpdate | TSInstall http",
     cmd = { "TSUpdate", "TSInstall" },
   },
   {
@@ -378,6 +378,13 @@ return {
       })
     end,
   },
+
+  -- {
+  --   "tris203/precognition.nvim",
+  --   opts = {
+  --     targetedMotionHints = { enabled = false },
+  --   },
+  -- },
   {
     "NickvanDyke/opencode.nvim",
     keys = {
