@@ -97,6 +97,67 @@ local function resolve_command(mason_name, system_names)
   return mason_path
 end
 
+--html_lsp
+vim.lsp.config('html', {
+  cmd = { resolve_command('vscode-html-language-server'), '--stdio' },
+  filetypes = { 'html' },
+  root_markers = { 'package.json', '.git' },
+  init_options = {
+    provideFormatter = true,
+    embeddedLanguages = { css = true, javascript = true },
+    configurationSection = { 'html', 'css', 'javascript' },
+  },
+})
+
+--css_lsp
+vim.lsp.config('cssls', {
+  cmd = { resolve_command('vscode-css-language-server'), '--stdio' },
+  filetypes = { 'css', 'scss', 'less' },
+  root_markers = { 'package.json', '.git' },
+  init_options = { provideFormatter = true },
+  settings = {
+    css = { validate = true },
+    scss = { validate = true },
+    less = { validate = true },
+  },
+})
+
+--typescript_lsp
+vim.lsp.config('ts_ls', {
+  cmd = { resolve_command('typescript-language-server'), '--stdio' },
+  filetypes = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact' },
+  root_markers = { 'tsconfig.json', 'jsconfig.json', 'package.json', '.git' },
+  init_options = { hostInfo = 'neovim' },
+})
+
+--angular_lsp
+local function angular_cmd(dispatchers, config)
+  local root = (config and config.root_dir) or vim.fn.getcwd()
+  local probes = {}
+  for _, p in ipairs({
+    root .. '/node_modules',
+    vim.fn.stdpath('data') .. '/mason/packages/angular-language-server/node_modules',
+  }) do
+    if vim.uv.fs_stat(p) then probes[#probes + 1] = p end
+  end
+  local ng_probes = vim.tbl_map(function(p)
+    return p .. '/@angular/language-server/node_modules'
+  end, probes)
+
+  return vim.lsp.rpc.start({
+    resolve_command('ngserver'), '--stdio',
+    '--tsProbeLocations', table.concat(probes, ','),
+    '--ngProbeLocations', table.concat(ng_probes, ','),
+  }, dispatchers)
+end
+
+vim.lsp.config('angularls', {
+  cmd = angular_cmd,
+  filetypes = { 'typescript', 'html', 'typescriptreact', 'htmlangular' },
+  root_markers = { 'angular.json', 'nx.json' },
+  workspace_required = true,
+})
+
 --protobuf_lsp
 vim.lsp.config('buf_ls', {
   cmd = { resolve_command('buf'), 'beta', 'lsp' },
@@ -1607,4 +1668,8 @@ vim.lsp.enable({
   'buf_ls',
   'drools_lsp',
   'bashls',
+  'html',
+  'cssls',
+  'ts_ls',
+  'angularls',
 })

@@ -1289,7 +1289,11 @@ return {
     build = ":MasonInstall "
         .. table.concat({
           "autotools-language-server",
+          "angular-language-server",
+          "html-lsp",
           "actionlint",
+          "css-lsp",
+          "typescript-language-server",
           "basedpyright",
           "bash-language-server",
           "buf",
