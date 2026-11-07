@@ -57,7 +57,29 @@ vim.lsp.config('drools_lsp', {
     },
   },
 })
+local drools_fmt = vim.fn.stdpath('config') .. '/drools_fmt.py'
 
+vim.api.nvim_create_autocmd('BufWritePre', {
+  pattern = '*.drl',
+  callback = function(args)
+    if vim.fn.executable('python3') == 0 or vim.fn.filereadable(drools_fmt) == 0 then
+      return
+    end
+    local lines = vim.api.nvim_buf_get_lines(args.buf, 0, -1, false)
+    local res = vim.system(
+      { 'python3', drools_fmt },
+      { stdin = table.concat(lines, '\n') .. '\n' }
+    ):wait()
+    if res.code ~= 0 or res.stdout == '' then return end
+    local new = vim.split(res.stdout, '\n', { plain = true })
+    if new[#new] == '' then table.remove(new) end
+    if not vim.deep_equal(new, lines) then
+      local view = vim.fn.winsaveview()
+      vim.api.nvim_buf_set_lines(args.buf, 0, -1, false, new)
+      vim.fn.winrestview(view)
+    end
+  end,
+})
 --json_lsp
 vim.lsp.config('jsonls', {
   cmd = { vim.fn.stdpath("data") .. "/mason/bin/vscode-json-language-server", '--stdio' },
@@ -425,7 +447,12 @@ vim.api.nvim_create_autocmd('LspProgress', {
     end)
   end,
 })
-
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "drools",
+  callback = function()
+    vim.treesitter.start(0, "java")
+  end,
+})
 vim.api.nvim_create_autocmd('LspAttach', {
   group = vim.api.nvim_create_augroup('KotlinCompletionSeedOnAttach', { clear = true }),
   callback = function(args)
@@ -490,11 +517,16 @@ vim.lsp.config('basedpyright', {
 --     xml = {
 --       format = {
 --         enabled = true,
---         splitAttributes = 'preserve', -- don't rewrap attributes onto separate lines
+--         splitAttributes = 'preserve',
 --         maxLineWidth = 120,
 --       },
 --       validation = { enabled = true },
---       -- downloading remote XSD/DTD schemas for validation; set false to stay offline
+--       fileAssociations = {
+--         {
+--           pattern = '**/kmodule.xml',
+--           systemId = vim.uri_from_fname(vim.fn.stdpath('config') .. '/schemas/kmodule.xsd'),
+--         },
+--       },
 --       server = { workDir = vim.fn.stdpath('cache') .. '/lemminx' },
 --     },
 --   },
@@ -1695,7 +1727,12 @@ vim.api.nvim_create_autocmd('LspProgress', {
     end, 500)
   end,
 })
-
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "drools",
+  callback = function()
+    vim.treesitter.start(0, "java")
+  end,
+})
 vim.lsp.enable({
   'lua_ls',
   'dockerls',

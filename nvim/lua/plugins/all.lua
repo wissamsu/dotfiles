@@ -680,12 +680,21 @@ return {
           lsp = {
             async = true,
             transform_items = function(_, items)
+              local Snippet = vim.lsp.protocol.InsertTextFormat.Snippet
+              local PlainText = vim.lsp.protocol.InsertTextFormat.PlainText
               for _, it in ipairs(items) do
                 if type(it.insertText) == 'string' then
                   it.insertText = it.insertText:gsub('%s+$', '')
                 end
                 if type(it.textEdit) == 'table' and type(it.textEdit.newText) == 'string' then
                   it.textEdit.newText = it.textEdit.newText:gsub('%s+$', '')
+                end
+
+                -- lemminx-maven sends Maven properties like ${drools.version} flagged as
+                -- snippets; the dot makes them invalid snippet syntax, so insert as plain text
+                local text = (type(it.textEdit) == 'table' and it.textEdit.newText) or it.insertText or ''
+                if it.insertTextFormat == Snippet and text:find('%${[%w_%-]*%.[^}]*}') then
+                  it.insertTextFormat = PlainText
                 end
               end
               return items
