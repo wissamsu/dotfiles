@@ -193,6 +193,15 @@ return {
     end,
   },
   {
+    "nvim-tree/nvim-web-devicons",
+    opts = {
+      override_by_extension = {
+        properties = { icon = "\u{f013}", color = "#6d8086", name = "Properties" },
+        graphqls   = { icon = "\u{e662}", color = "#e535ab", name = "GraphQLSchema" },
+      },
+    },
+  },
+  {
     "rest-nvim/rest.nvim",
     event = { "BufReadPre *.http", "BufNewFile *.http" },
     cmd = "Rest",
@@ -956,6 +965,19 @@ return {
         end,
         desc = 'Live fffuzy grep word',
       },
+      {
+        "<leader>fe",
+        function()
+          local files = vim.fn.systemlist({
+            "rg", "--files", "--hidden", "--no-ignore",
+            "-g", ".env*", "-g", "!{.git,node_modules}",
+          })
+          vim.ui.select(files, { prompt = "Env files" }, function(f)
+            if f then vim.cmd("edit " .. vim.fn.fnameescape(f)) end
+          end)
+        end,
+        desc = "Find .env files",
+      },
     },
   },
   {
@@ -1296,6 +1318,7 @@ return {
     build = ":MasonInstall "
         .. table.concat({
           "autotools-language-server",
+          "graphql-language-service-cli",
           "angular-language-server",
           "html-lsp",
           "actionlint",

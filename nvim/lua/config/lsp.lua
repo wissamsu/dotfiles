@@ -97,6 +97,38 @@ local function resolve_command(mason_name, system_names)
   return mason_path
 end
 
+--graphql_lsp
+vim.lsp.config('graphql', {
+  filetypes = { 'graphql' },
+  root_dir = function(bufnr, on_dir)
+    local root = vim.fs.root(bufnr, {
+      '.graphqlrc', '.graphqlrc.yml', '.graphqlrc.yaml', '.graphqlrc.json',
+      'graphql.config.js', 'graphql.config.ts', 'graphql.config.yml',
+      'pom.xml', 'build.gradle', 'build.gradle.kts', 'package.json', '.git',
+    })
+    on_dir(root or vim.fs.dirname(vim.api.nvim_buf_get_name(bufnr)))
+  end,
+  cmd = function(dispatchers, config)
+    local root = config.root_dir
+    local cmd = { resolve_command('graphql-lsp'), 'server', '-m', 'stream' }
+
+    -- only generate a config if the project doesn't already have one
+    local has_config = vim.fn.glob(root .. '/.graphqlrc*') ~= ''
+        or vim.fn.glob(root .. '/graphql.config.*') ~= ''
+    if not has_config then
+      local dir = vim.fn.stdpath('cache') .. '/graphql-lsp/' .. vim.fn.sha256(root):sub(1, 12)
+      vim.fn.mkdir(dir, 'p')
+      vim.fn.writefile(
+        { "schema: '" .. root .. "/src/**/*.{graphql,graphqls}'" },
+        dir .. '/.graphqlrc.yml'
+      )
+      vim.list_extend(cmd, { '-c', dir })
+    end
+
+    return vim.lsp.rpc.start(cmd, dispatchers, { cwd = root })
+  end,
+})
+
 --html_lsp
 vim.lsp.config('html', {
   cmd = { resolve_command('vscode-html-language-server'), '--stdio' },
@@ -1685,4 +1717,5 @@ vim.lsp.enable({
   'cssls',
   'ts_ls',
   'angularls',
+  'graphql',
 })
