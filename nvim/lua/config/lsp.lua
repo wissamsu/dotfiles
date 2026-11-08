@@ -48,6 +48,7 @@ vim.lsp.config('drools_lsp', {
     '-Ddrools.lsp.lint.unbalancedParens=warning',
     '-Ddrools.lsp.lint.unknownTypes=warning',
     '-Ddrools.lsp.lint.unknownImports=warning',
+    '-Ddrools.lsp.lint.unknownMembers=warning',
     '-Ddrools.lsp.lint.mvelPropertyAccess=off',
     '-jar',
     drools_lsp_jar,

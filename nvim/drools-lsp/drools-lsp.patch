@@ -97,10 +97,10 @@ index 97940a4..cc476ec 100644
          List<String> result = new ArrayList<>();
          for (Map.Entry<String, List<String>> entry : index.entrySet()) {
 diff --git a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/ClassMemberIndex.java b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/ClassMemberIndex.java
-index 8dc6e68..3775923 100644
+index 8dc6e68..811a5df 100644
 --- a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/ClassMemberIndex.java
 +++ b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/ClassMemberIndex.java
-@@ -348,6 +348,42 @@ public final class ClassMemberIndex implements AutoCloseable {
+@@ -348,6 +348,113 @@ public final class ClassMemberIndex implements AutoCloseable {
          }
      }
  
@@ -140,10 +140,81 @@ index 8dc6e68..3775923 100644
 +        }
 +    }
 +
++    /**
++     * The declared type of instance member {@code name} on {@code fqcn} as a
++     * fully-qualified name: a public field, a record component, or a
++     * bean-property getter's return type. Returns {@code null} when the member
++     * is not an instance member (a static field, for example) or cannot be
++     * resolved. A {@code null} with a non-null {@link #memberNames(String)}
++     * means the member genuinely does not exist; a {@code null} with a null
++     * member-name set means the type could not be verified.
++     */
++    public String memberTypeOf(String fqcn, String name) {
++        if (fqcn == null || fqcn.isEmpty() || name == null || name.isEmpty()) {
++            return null;
++        }
++        Class<?> clazz = tryLoad(fqcn);
++        if (clazz == null) {
++            JavaMemberSource f = fallback;
++            return f != null ? f.memberTypeOf(fqcn, name) : null;
++        }
++        try {
++            if (clazz.isRecord()) {
++                for (java.lang.reflect.RecordComponent rc : clazz.getRecordComponents()) {
++                    if (rc.getName().equals(name)) {
++                        return rc.getType().getName();
++                    }
++                }
++            }
++            try {
++                java.lang.reflect.Field field = clazz.getField(name);
++                if (!Modifier.isStatic(field.getModifiers())) {
++                    return field.getType().getName();
++                }
++            } catch (NoSuchFieldException ignored) {
++                // Not a public instance field; a bean property may still answer.
++            }
++            for (Method m : clazz.getMethods()) {
++                if (name.equals(propertyNameOf(m))) {
++                    return m.getReturnType().getName();
++                }
++            }
++            return null;
++        } catch (Throwable t) {
++            logger.log(Level.FINE, "Failed to resolve member type of " + fqcn + "." + name, t);
++            return null;
++        }
++    }
++
++    /**
++     * The declared type of public static field {@code name} on {@code fqcn} as
++     * a fully-qualified name, or {@code null} when it is not a static field or
++     * cannot be resolved.
++     */
++    public String staticFieldTypeOf(String fqcn, String name) {
++        if (fqcn == null || fqcn.isEmpty() || name == null || name.isEmpty()) {
++            return null;
++        }
++        Class<?> clazz = tryLoad(fqcn);
++        if (clazz == null) {
++            JavaMemberSource f = fallback;
++            return f != null ? f.staticFieldTypeOf(fqcn, name) : null;
++        }
++        try {
++            java.lang.reflect.Field field = clazz.getField(name);
++            return Modifier.isStatic(field.getModifiers()) ? field.getType().getName() : null;
++        } catch (NoSuchFieldException e) {
++            return null;
++        } catch (Throwable t) {
++            logger.log(Level.FINE, "Failed to resolve static field type of " + fqcn + "." + name, t);
++            return null;
++        }
++    }
++
      /**
       * Attempts to load {@code fqcn} without running static initializers.
       * Returns {@code null} (rather than throwing) when the loader is absent
-@@ -390,6 +426,15 @@ public final class ClassMemberIndex implements AutoCloseable {
+@@ -390,6 +497,15 @@ public final class ClassMemberIndex implements AutoCloseable {
                      }
                  }
              }
@@ -160,10 +231,308 @@ index 8dc6e68..3775923 100644
                  String property = propertyNameOf(m);
                  if (property != null) {
 diff --git a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/DRLCompletionHelper.java b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/DRLCompletionHelper.java
-index 21eeb3c..78197fe 100644
+index 21eeb3c..b841238 100644
 --- a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/DRLCompletionHelper.java
 +++ b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/DRLCompletionHelper.java
-@@ -454,7 +454,14 @@ public class DRLCompletionHelper {
+@@ -29,6 +29,8 @@ import java.util.Objects;
+ import java.util.Set;
+ import java.util.logging.Level;
+ import java.util.logging.Logger;
++import java.util.regex.Matcher;
++import java.util.regex.Pattern;
+ import java.util.stream.Collectors;
+ import java.util.stream.Stream;
+ 
+@@ -92,6 +94,14 @@ public class DRLCompletionHelper {
+             DRL10Parser.DRL_TIMER, DRL10Parser.DRL_DURATION
+     );
+ 
++    /** RHS built-ins the consequence grammar cannot predict because it lexes Java as opaque chunks. */
++    private static final List<String> RHS_BUILTINS = List.of(
++            "modify", "insert", "insertLogical", "update", "delete", "retract", "drools", "kcontext");
++
++    private static final Pattern RHS_RULE_START = Pattern.compile("(?is)\\b(rule|query)\\b");
++    private static final Pattern RHS_THEN = Pattern.compile("(?is)\\bthen\\b");
++    private static final Pattern RHS_END = Pattern.compile("(?is)\\bend\\b");
++
+     private DRLCompletionHelper() {
+     }
+ 
+@@ -152,6 +162,19 @@ public class DRLCompletionHelper {
+             }
+         }
+ 
++        // A partial segment after a dot (`System.out.pr|`) is the same member
++        // position: answer with the whole member set and let the client filter
++        // by the typed prefix. Without this, c3 sees only an opaque RHS chunk.
++        String[] partialChain = dottedChainBeforePartial(text, caretPosition);
++        if (partialChain != null) {
++            List<CompletionItem> members = memberItemsForChain(partialChain, text, caretPosition,
++                    compilationUnit, caretTokenIndex, classIndex, memberIndex, documentPath, openFiles);
++            if (members != null) {
++                addNearMatchFilterText(members, wordPrefixBeforeCaret(text, caretPosition));
++                return members;
++            }
++        }
++
+         // Right after '(' the matched token is the paren itself, for which c3
+         // yields no candidates; look one token ahead for the constraint, but
+         // keep the paren's index to resolve the pattern type (its span ends at
+@@ -162,7 +185,30 @@ public class DRLCompletionHelper {
+             candidatesIndex = caretTokenIndex + 1;
+         }
+ 
+-        return getCompletionItems(drlParser, candidatesIndex, caretTokenIndex, compilationUnit, classIndex, prefix, memberIndex, documentPath, openFiles);
++        List<CompletionItem> items = new ArrayList<>(getCompletionItems(
++                drlParser, candidatesIndex, caretTokenIndex, compilationUnit, classIndex, prefix,
++                memberIndex, documentPath, openFiles));
++
++        // The RHS is lexed as opaque chunks, so c3 cannot predict DRL's
++        // consequence built-ins. Add the ones matching the word being typed;
++        // uppercase words get classpath types, mirroring the pattern position.
++        if (isInConsequence(text, caretPosition)) {
++            String word = wordPrefixBeforeCaret(text, caretPosition);
++            if (!word.isEmpty()) {
++                Set<String> labels = items.stream().map(CompletionItem::getLabel)
++                        .filter(Objects::nonNull).collect(Collectors.toSet());
++                if (Character.isLowerCase(word.charAt(0))) {
++                    for (String builtin : RHS_BUILTINS) {
++                        if (builtin.startsWith(word) && !labels.contains(builtin)) {
++                            items.add(rhsBuiltinItem(builtin));
++                        }
++                    }
++                } else if (Character.isUpperCase(word.charAt(0))) {
++                    items.addAll(getClassCompletionItems(compilationUnit, classIndex, word));
++                }
++            }
++        }
++        return items;
+     }
+ 
+     static List<CompletionItem> getCompletionItems(DRL10Parser drlParser, int nodeIndex) {
+@@ -286,6 +332,185 @@ public class DRLCompletionHelper {
+         return Character.isLetterOrDigit(c) || c == '_' || c == '$' || c == '.';
+     }
+ 
++    private static boolean isIdentifierPart(char c) {
++        return Character.isLetterOrDigit(c) || c == '_' || c == '$';
++    }
++
++    /**
++     * The chain preceding a partially-typed member segment: for
++     * {@code System.out.pr|} this is {@code [System, out]}. Returns {@code null}
++     * when the caret is not in a member segment after a dot, or when the dot
++     * sits inside a comment or string literal. The client filters the returned
++     * members by the typed prefix.
++     */
++    private static String[] dottedChainBeforePartial(String text, Position caret) {
++        if (text == null || caret == null) {
++            return null;
++        }
++        String[] lines = text.split("\r?\n", -1);
++        int row = caret.getLine();
++        if (row < 0 || row >= lines.length) {
++            return null;
++        }
++        String line = lines[row];
++        String masked = LhsBindingResolver.maskCommentsAndStrings(line);
++        int col = Math.min(caret.getCharacter(), line.length());
++        int start = col;
++        while (start > 0 && isIdentifierPart(line.charAt(start - 1))) {
++            start--;
++        }
++        if (start == col || start == 0 || line.charAt(start - 1) != '.') {
++            return null;
++        }
++        if (masked.charAt(start) == ' ' || masked.charAt(start - 1) != '.') {
++            return null;
++        }
++        int dot = start - 1;
++        int pathStart = dot;
++        while (pathStart > 0 && isChainChar(masked.charAt(pathStart - 1))) {
++            pathStart--;
++        }
++        String path = masked.substring(pathStart, dot);
++        if (path.isEmpty() || path.endsWith(".") || Character.isDigit(path.charAt(0))) {
++            return null;
++        }
++        return path.split("\\.", -1);
++    }
++
++    /**
++     * Whether {@code caret} sits in a rule/query consequence (between
++     * {@code then} and the rule's closing {@code end}), scanned over masked text
++     * so keywords in strings/comments do not count.
++     */
++    private static boolean isInConsequence(String text, Position caret) {
++        if (text == null || caret == null) {
++            return false;
++        }
++        int offset = DRLHoverHelper.positionToOffset(text, caret);
++        String masked = LhsBindingResolver.maskCommentsAndStrings(text);
++        Matcher rule = RHS_RULE_START.matcher(masked);
++        int ruleStart = -1;
++        while (rule.find()) {
++            if (rule.start() > offset) {
++                break;
++            }
++            ruleStart = rule.start();
++        }
++        if (ruleStart < 0) {
++            return false;
++        }
++        Matcher then = RHS_THEN.matcher(masked);
++        then.region(ruleStart, masked.length());
++        if (!then.find()) {
++            return false;
++        }
++        int bodyStart = then.end();
++        if (offset <= bodyStart) {
++            return false;
++        }
++        Matcher end = RHS_END.matcher(masked);
++        end.region(bodyStart, masked.length());
++        return !end.find() || offset < end.start();
++    }
++
++    /** The Java identifier ending at the caret, or {@code ""}. */
++    private static String wordPrefixBeforeCaret(String text, Position caret) {
++        if (text == null || caret == null) {
++            return "";
++        }
++        String[] lines = text.split("\r?\n", -1);
++        int row = caret.getLine();
++        if (row < 0 || row >= lines.length) {
++            return "";
++        }
++        String line = lines[row];
++        int end = Math.min(caret.getCharacter(), line.length());
++        int start = end;
++        while (start > 0 && isIdentifierPart(line.charAt(start - 1))) {
++            start--;
++        }
++        return line.substring(start, end);
++    }
++
++    /**
++     * Lets a near-miss in a partially-typed member still be offered: a client
++     * filters by the typed text, so {@code printn} would hide {@code println}
++     * even though it is the obvious correction. Setting {@code filterText} to
++     * the typed prefix makes the candidate survive client-side filtering; the
++     * insert text remains the real member name.
++     */
++    private static void addNearMatchFilterText(List<CompletionItem> items, String prefix) {
++        if (prefix == null || prefix.length() < 2) {
++            return;
++        }
++        for (CompletionItem item : items) {
++            String label = item.getLabel();
++            if (label == null || label.isEmpty() || label.startsWith(prefix)) {
++                continue;
++            }
++            if (levenshteinDistanceAtMost(prefix, label, 2) >= 0) {
++                item.setFilterText(prefix);
++            }
++        }
++    }
++
++    private static int levenshteinDistanceAtMost(String a, String b, int max) {
++        if (a == null || b == null) {
++            return -1;
++        }
++        int n = a.length();
++        int m = b.length();
++        if (Math.abs(n - m) > max) {
++            return -1;
++        }
++        if (n == 0) {
++            return m <= max ? m : -1;
++        }
++        if (m == 0) {
++            return n <= max ? n : -1;
++        }
++        if (n > m) {
++            String tmp = a;
++            a = b;
++            b = tmp;
++            n = a.length();
++            m = b.length();
++        }
++        int[] prev = new int[n + 1];
++        int[] cur = new int[n + 1];
++        for (int i = 0; i <= n; i++) {
++            prev[i] = i;
++        }
++        for (int j = 1; j <= m; j++) {
++            char bj = b.charAt(j - 1);
++            cur[0] = j;
++            int rowMin = cur[0];
++            for (int i = 1; i <= n; i++) {
++                int cost = a.charAt(i - 1) == bj ? 0 : 1;
++                cur[i] = Math.min(prev[i] + 1, Math.min(cur[i - 1] + 1, prev[i - 1] + cost));
++                if (cur[i] < rowMin) {
++                    rowMin = cur[i];
++                }
++            }
++            if (rowMin > max) {
++                return -1;
++            }
++            int[] swap = prev;
++            prev = cur;
++            cur = swap;
++        }
++        return prev[n] <= max ? prev[n] : -1;
++    }
++
++    private static CompletionItem rhsBuiltinItem(String label) {
++        CompletionItem item = new CompletionItem();
++        item.setLabel(label);
++        item.setInsertText(label);
++        item.setDetail("DRL consequence");
++        item.setKind(CompletionItemKind.Function);
++        return item;
++    }
++
+     /**
+      * Member items for a dotted path the caret sits at the end of. The head is a
+      * binding ({@code $p.}), a field of the enclosing pattern's type ({@code ref.}
+@@ -344,22 +569,30 @@ public class DRLCompletionHelper {
+         if (typeReference) {
+             List<Field> statics;
+             List<String> staticMethods;
++            String staticOwnerFqcn = null;
+             DeclaredType declared = typeIndex.get(rootType);
+             if (declared != null) {
+                 statics = declared.enumConstants();
+                 staticMethods = List.of();
+             } else {
+-                String fqcn = resolveFqcn(rootType, simpleNameOf(rootType), compilationUnit, classIndex);
+-                if (fqcn == null) {
++                staticOwnerFqcn = resolveFqcn(rootType, simpleNameOf(rootType), compilationUnit, classIndex);
++                if (staticOwnerFqcn == null) {
+                     return List.of();
+                 }
+-                statics = memberIndex.staticFieldsOf(fqcn);
+-                staticMethods = memberIndex.staticMethodsOf(fqcn);
++                statics = memberIndex.staticFieldsOf(staticOwnerFqcn);
++                staticMethods = memberIndex.staticMethodsOf(staticOwnerFqcn);
+             }
+             if (firstFieldSegment >= chain.length) {
+                 return staticItems(statics, staticMethods);
+             }
+-            String hopType = typeOfStatic(statics, chain[firstFieldSegment]);
++            // Reflection knows the field's fully-qualified type, which lets the
++            // walk continue into JDK types absent from the project class index
++            // (System.out -> java.io.PrintStream).
++            String hopType = staticOwnerFqcn == null ? null
++                    : memberIndex.staticFieldTypeOf(staticOwnerFqcn, chain[firstFieldSegment]);
++            if (hopType == null) {
++                hopType = typeOfStatic(statics, chain[firstFieldSegment]);
++            }
+             if (hopType == null) {
+                 return List.of();
+             }
+@@ -454,7 +687,14 @@ public class DRLCompletionHelper {
       */
      private static List<CompletionItem> staticItems(List<Field> staticFields, List<String> staticMethods) {
          List<CompletionItem> items = new ArrayList<>(fieldItems(staticFields));
@@ -179,7 +548,7 @@ index 21eeb3c..78197fe 100644
              int paren = signature.indexOf('(');
              CompletionItem item = new CompletionItem();
              item.setLabel(paren < 0 ? signature : signature.substring(0, paren));
-@@ -479,7 +486,9 @@ public class DRLCompletionHelper {
+@@ -479,7 +719,9 @@ public class DRLCompletionHelper {
          if (fqcn == null) {
              return List.of();
          }
@@ -191,26 +560,64 @@ index 21eeb3c..78197fe 100644
  
      private static List<CompletionItem> fieldItems(List<Field> fields) {
 diff --git a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/DRLLintHelper.java b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/DRLLintHelper.java
-index 921820f..f9eb708 100644
+index 921820f..e925dfc 100644
 --- a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/DRLLintHelper.java
 +++ b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/DRLLintHelper.java
-@@ -57,6 +57,7 @@ import org.eclipse.lsp4j.TextEdit;
+@@ -25,15 +25,19 @@ import java.util.Collection;
+ import java.util.Collections;
+ import java.util.HashMap;
+ import java.util.HashSet;
++import java.util.LinkedHashSet;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.Set;
+ import java.util.regex.Matcher;
+ import java.util.regex.Pattern;
+ 
++import org.antlr.v4.runtime.CharStreams;
++import org.antlr.v4.runtime.CommonTokenStream;
+ import org.antlr.v4.runtime.Token;
+ import org.antlr.v4.runtime.tree.ParseTree;
+ import org.drools.drl.parser.antlr4.DRL10Parser;
++import org.drools.drl.parser.antlr4.JavaLexer;
+ import org.eclipse.lsp4j.Diagnostic;
+ import org.eclipse.lsp4j.DiagnosticSeverity;
+ import org.eclipse.lsp4j.Position;
+@@ -57,6 +61,8 @@ import org.eclipse.lsp4j.TextEdit;
   *   drools.lsp.lint.missingSemicolon   = off | hint | info | warning | error
   *   drools.lsp.lint.unbalancedParens   = off | hint | info | warning | error
   *   drools.lsp.lint.unknownTypes       = off | hint | info | warning | error
 + *   drools.lsp.lint.unknownImports     = off | hint | info | warning | error
++ *   drools.lsp.lint.unknownMembers     = off | hint | info | warning | error
   *   drools.lsp.lint.mvelPropertyAccess = off | hint | info | warning | error
   * </pre>
   *
-@@ -80,6 +81,7 @@ public final class DRLLintHelper {
+@@ -80,11 +86,24 @@ public final class DRLLintHelper {
      private static final String PROP_MISSING_SEMICOLON    = "drools.lsp.lint.missingSemicolon";
      private static final String PROP_UNBALANCED_PARENS    = "drools.lsp.lint.unbalancedParens";
      private static final String PROP_UNKNOWN_TYPES        = "drools.lsp.lint.unknownTypes";
 +    private static final String PROP_UNKNOWN_IMPORTS      = "drools.lsp.lint.unknownImports";
++    private static final String PROP_UNKNOWN_MEMBERS      = "drools.lsp.lint.unknownMembers";
      private static final String PROP_MVEL_PROPERTY_ACCESS = "drools.lsp.lint.mvelPropertyAccess";
  
      private static final int MAX_DIAGNOSTICS_PER_PASS = 20;
-@@ -848,6 +850,116 @@ public final class DRLLintHelper {
+     private static final int MAX_UNKNOWN_TYPE_DIAGNOSTICS = 50;
+ 
++    /** Methods every type inherits from {@code Object}; reflection omits them from the instance view. */
++    private static final Set<String> OBJECT_METHODS = Set.of(
++            "equals", "hashCode", "toString", "getClass", "wait", "notify", "notifyAll", "clone");
++
++    /** DRL consequence built-ins that are bare calls, not receivers to resolve. */
++    private static final Set<String> RHS_DRL_FUNCTIONS = Set.of(
++            "modify", "insert", "insertLogical", "update", "delete", "retract");
++
++    private static final Pattern RULE_START = Pattern.compile("(?is)\\b(rule|query)\\b");
++    private static final Pattern DIALECT_MVEL = Pattern.compile("(?is)\\bdialect\\s*[\"']mvel[\"']");
++
+     private static final Pattern THEN_END_BLOCK =
+             Pattern.compile("(?is)\\bthen\\b(.*?)\\bend\\b");
+     private static final Pattern THEN_NEW_TYPE =
+@@ -848,6 +867,531 @@ public final class DRLLintHelper {
          return out;
      }
  
@@ -293,6 +700,421 @@ index 921820f..f9eb708 100644
 +        return out;
 +    }
 +
++    // ── unknown methods and fields in consequences ───────────────────────
++
++    /**
++     * Flags calls to methods that do not exist on the receiver's type in a
++     * rule consequence. The RHS is lexed into opaque chunks by the DRL grammar,
++     * so this pass tokenizes it with the Java lexer and resolves receiver
++     * chains through the same class/member indexes completion uses.
++     *
++     * <p>Covered shapes:
++     * <ul>
++     *   <li>{@code modify($fact) { setFoo(1) }} — bare methods in the block are
++     *       checked against the bound fact's type;</li>
++     *   <li>{@code System.out.printn(...)} — type → static field → instance
++     *       method chains, including JDK types such as {@code PrintStream};</li>
++     *   <li>{@code $fact.setDiscountPercent(5)} and field paths such as
++     *       {@code $fact.discountPercent}.</li>
++     * </ul>
++     *
++     * <p>Only confidently-resolved receivers are checked: a binding whose type
++     * is a DRL {@code declare}, a local variable, a statically-imported bare
++     * function, or a type the member index cannot load is left alone. Rules
++     * with {@code dialect "mvel"} are skipped because their consequences are not
++     * Java. Runs only once the dependency classpath has resolved, and is gated
++     * by {@code drools.lsp.lint.unknownMembers} (default {@code warning}).
++     */
++    public static List<Diagnostic> lintUnknownMembers(String text, DRL10Parser.CompilationUnitContext cu,
++                                                      Path documentPath, Map<Path, String> openFiles,
++                                                      ClassIndex classIndex, ClassMemberIndex memberIndex,
++                                                      boolean classpathResolved) {
++        if (text == null || text.isEmpty() || cu == null || !classpathResolved) {
++            return Collections.emptyList();
++        }
++        DiagnosticSeverity severity = severityFor(PROP_UNKNOWN_MEMBERS, "warning");
++        if (severity == null) {
++            return Collections.emptyList();
++        }
++        String sanitized = sanitize(text);
++        Map<String, DeclaredType> typeIndex = DRLWorkspaceTypeIndex.build(
++                DRLDeclaredTypeParser.extractFromCompilationUnit(cu), documentPath, openFiles);
++        List<Diagnostic> out = new ArrayList<>();
++        Matcher then = THEN_END_BLOCK.matcher(sanitized);
++        while (then.find() && out.size() < MAX_UNKNOWN_TYPE_DIAGNOSTICS) {
++            int ruleStart = lastRuleStart(sanitized, then.start());
++            if (ruleStart < 0) {
++                continue;
++            }
++            String header = sanitized.substring(ruleStart, then.start());
++            if (DIALECT_MVEL.matcher(header).find()) {
++                continue;
++            }
++            int bodyStart = then.start(1);
++            int bodyEnd = then.end(1);
++            if (bodyStart < 0 || bodyEnd <= bodyStart || bodyEnd > text.length()) {
++                continue;
++            }
++            String rhs = text.substring(bodyStart, bodyEnd);
++            Map<String, String> bindings = LhsBindingResolver.resolveAt(text, bodyStart, typeIndex);
++            List<Token> tokens = javaTokens(rhs);
++            scanRhsChains(tokens, text, bodyStart, bindings, typeIndex, cu, classIndex,
++                          memberIndex, severity, out);
++            scanModifyBlocks(tokens, text, bodyStart, bindings, typeIndex, cu, classIndex,
++                             memberIndex, severity, out);
++        }
++        return out;
++    }
++
++    private static int lastRuleStart(String sanitized, int before) {
++        Matcher matcher = RULE_START.matcher(sanitized);
++        matcher.region(0, Math.max(0, Math.min(before, sanitized.length())));
++        int last = -1;
++        while (matcher.find()) {
++            last = matcher.start();
++        }
++        return last;
++    }
++
++    private static List<Token> javaTokens(String source) {
++        JavaLexer lexer = new JavaLexer(CharStreams.fromString(source));
++        CommonTokenStream stream = new CommonTokenStream(lexer);
++        stream.fill();
++        List<Token> tokens = new ArrayList<>();
++        for (Token token : stream.getTokens()) {
++            if (token.getType() != Token.EOF && token.getChannel() == Token.DEFAULT_CHANNEL) {
++                tokens.add(token);
++            }
++        }
++        return tokens;
++    }
++
++    private static void scanRhsChains(List<Token> tokens, String text, int base,
++                                      Map<String, String> bindings,
++                                      Map<String, DeclaredType> typeIndex,
++                                      DRL10Parser.CompilationUnitContext cu, ClassIndex classIndex,
++                                      ClassMemberIndex memberIndex, DiagnosticSeverity severity,
++                                      List<Diagnostic> out) {
++        for (int i = 0; i < tokens.size() && out.size() < MAX_UNKNOWN_TYPE_DIAGNOSTICS; i++) {
++            Token token = tokens.get(i);
++            if (token.getType() != JavaLexer.IDENTIFIER) {
++                continue;
++            }
++            Token previous = i > 0 ? tokens.get(i - 1) : null;
++            if (previous != null && (previous.getType() == JavaLexer.DOT
++                    || previous.getType() == JavaLexer.NEW)) {
++                continue;
++            }
++            if (RHS_DRL_FUNCTIONS.contains(token.getText())) {
++                continue;
++            }
++            Chain chain = parseChain(tokens, i);
++            if (chain == null || chain.segments.size() < 2) {
++                continue;
++            }
++            checkChain(chain, text, base, bindings, typeIndex, cu, classIndex, memberIndex,
++                       severity, out);
++        }
++    }
++
++    private static Chain parseChain(List<Token> tokens, int start) {
++        List<Segment> segments = new ArrayList<>();
++        int i = start;
++        while (i < tokens.size()) {
++            Token token = tokens.get(i);
++            if (token.getType() != JavaLexer.IDENTIFIER && token.getType() != JavaLexer.THIS) {
++                break;
++            }
++            String name = token.getText();
++            i++;
++            boolean call = false;
++            if (i < tokens.size() && tokens.get(i).getType() == JavaLexer.LPAREN) {
++                call = true;
++                int close = matchingToken(tokens, i, JavaLexer.LPAREN, JavaLexer.RPAREN);
++                if (close < 0) {
++                    return null;
++                }
++                i = close + 1;
++            }
++            segments.add(new Segment(name, call, token));
++            if (i < tokens.size() && tokens.get(i).getType() == JavaLexer.DOT) {
++                i++;
++                continue;
++            }
++            break;
++        }
++        return segments.isEmpty() ? null : new Chain(segments);
++    }
++
++    private static void checkChain(Chain chain, String text, int base,
++                                   Map<String, String> bindings,
++                                   Map<String, DeclaredType> typeIndex,
++                                   DRL10Parser.CompilationUnitContext cu, ClassIndex classIndex,
++                                   ClassMemberIndex memberIndex, DiagnosticSeverity severity,
++                                   List<Diagnostic> out) {
++        List<Segment> segments = chain.segments;
++        Segment head = segments.get(0);
++        String currentType;
++        boolean staticContext;
++        int index;
++        if (head.name.startsWith("$")) {
++            String bound = bindings.get(head.name.substring(1));
++            if (bound == null) {
++                return;
++            }
++            String simple = simpleName(bound);
++            if (typeIndex.containsKey(simple)) {
++                return; // DRL-declared facts have no reflective method view
++            }
++            currentType = resolveTypeName(bound, cu, classIndex);
++            if (currentType == null) {
++                return;
++            }
++            staticContext = false;
++            index = 1;
++        } else {
++            int prefixEnd = -1;
++            String prefixFqcn = null;
++            StringBuilder candidate = new StringBuilder();
++            for (int i = 0; i < segments.size(); i++) {
++                Segment segment = segments.get(i);
++                if (segment.call) {
++                    break;
++                }
++                if (candidate.length() > 0) {
++                    candidate.append('.');
++                }
++                candidate.append(segment.name);
++                String fqcn = resolveTypeCandidate(candidate.toString(), cu, classIndex, memberIndex);
++                if (fqcn != null) {
++                    prefixEnd = i;
++                    prefixFqcn = fqcn;
++                }
++            }
++            if (prefixEnd < 0) {
++                return; // a local variable or qualified name we cannot type
++            }
++            currentType = prefixFqcn;
++            staticContext = true;
++            index = prefixEnd + 1;
++        }
++        if (index >= segments.size()) {
++            return;
++        }
++
++        for (int i = index; i < segments.size() && out.size() < MAX_UNKNOWN_TYPE_DIAGNOSTICS; i++) {
++            Segment segment = segments.get(i);
++            Set<String> memberNames = memberIndex.memberNames(currentType);
++            if (memberNames == null) {
++                return; // classpath/source gap: cannot verify safely
++            }
++            if (segment.call) {
++                Set<String> methods = methodNames(staticContext
++                        ? memberIndex.staticMethodsOf(currentType)
++                        : memberIndex.instanceMethodsOf(currentType));
++                if (!staticContext) {
++                    methods.addAll(OBJECT_METHODS);
++                }
++                if (!methods.contains(segment.name)) {
++                    out.add(methodWarning(segment.name, simpleName(currentType),
++                            rangeOf(text, base + segment.token.getStartIndex(),
++                                    base + segment.token.getStopIndex() + 1),
++                            bestTypoSuggestion(segment.name, methods), severity));
++                }
++                return; // return type is unknown; do not chase past a call
++            }
++
++            String fieldType = staticContext
++                    ? memberIndex.staticFieldTypeOf(currentType, segment.name)
++                    : memberIndex.memberTypeOf(currentType, segment.name);
++            if (fieldType == null) {
++                if (!memberNames.contains(segment.name)) {
++                    out.add(memberWarning(segment.name, simpleName(currentType),
++                            rangeOf(text, base + segment.token.getStartIndex(),
++                                    base + segment.token.getStopIndex() + 1),
++                            bestTypoSuggestion(segment.name, memberNames), severity));
++                }
++                return;
++            }
++            String fieldFqcn = fieldType.indexOf('.') >= 0
++                    ? fieldType : resolveTypeName(fieldType, cu, classIndex);
++            if (fieldFqcn == null) {
++                return;
++            }
++            currentType = fieldFqcn;
++            staticContext = false;
++        }
++    }
++
++    private static void scanModifyBlocks(List<Token> tokens, String text, int base,
++                                         Map<String, String> bindings,
++                                         Map<String, DeclaredType> typeIndex,
++                                         DRL10Parser.CompilationUnitContext cu, ClassIndex classIndex,
++                                         ClassMemberIndex memberIndex, DiagnosticSeverity severity,
++                                         List<Diagnostic> out) {
++        for (int i = 0; i < tokens.size() && out.size() < MAX_UNKNOWN_TYPE_DIAGNOSTICS; i++) {
++            Token token = tokens.get(i);
++            if (token.getType() != JavaLexer.IDENTIFIER || !"modify".equals(token.getText())) {
++                continue;
++            }
++            if (i + 1 >= tokens.size() || tokens.get(i + 1).getType() != JavaLexer.LPAREN) {
++                continue;
++            }
++            int closeParen = matchingToken(tokens, i + 1, JavaLexer.LPAREN, JavaLexer.RPAREN);
++            if (closeParen < 0 || i + 2 >= closeParen) {
++                continue;
++            }
++            Token argument = tokens.get(i + 2);
++            if (argument.getType() != JavaLexer.IDENTIFIER) {
++                continue;
++            }
++            String name = argument.getText();
++            String bound = bindings.get(name.startsWith("$") ? name.substring(1) : name);
++            if (bound == null) {
++                continue;
++            }
++            String simple = simpleName(bound);
++            if (typeIndex.containsKey(simple)) {
++                continue;
++            }
++            String fqcn = resolveTypeName(bound, cu, classIndex);
++            if (fqcn == null) {
++                continue;
++            }
++            Set<String> members = memberIndex.memberNames(fqcn);
++            if (members == null) {
++                continue;
++            }
++            int brace = closeParen + 1;
++            while (brace < tokens.size() && tokens.get(brace).getType() != JavaLexer.LBRACE) {
++                brace++;
++            }
++            if (brace >= tokens.size()) {
++                continue;
++            }
++            int closeBrace = matchingToken(tokens, brace, JavaLexer.LBRACE, JavaLexer.RBRACE);
++            if (closeBrace < 0) {
++                continue;
++            }
++            Set<String> methods = methodNames(memberIndex.instanceMethodsOf(fqcn));
++            methods.addAll(OBJECT_METHODS);
++            for (int j = brace + 1; j < closeBrace && out.size() < MAX_UNKNOWN_TYPE_DIAGNOSTICS; j++) {
++                Token method = tokens.get(j);
++                if (method.getType() != JavaLexer.IDENTIFIER) {
++                    continue;
++                }
++                if (j + 1 >= tokens.size() || tokens.get(j + 1).getType() != JavaLexer.LPAREN) {
++                    continue;
++                }
++                Token previous = j > 0 ? tokens.get(j - 1) : null;
++                if (previous != null && (previous.getType() == JavaLexer.DOT
++                        || previous.getType() == JavaLexer.NEW)) {
++                    continue;
++                }
++                if (RHS_DRL_FUNCTIONS.contains(method.getText())) {
++                    continue;
++                }
++                if (!methods.contains(method.getText())) {
++                    out.add(methodWarning(method.getText(), simpleName(fqcn),
++                            rangeOf(text, base + method.getStartIndex(),
++                                    base + method.getStopIndex() + 1),
++                            bestTypoSuggestion(method.getText(), methods), severity));
++                }
++            }
++            i = closeBrace;
++        }
++    }
++
++    private static int matchingToken(List<Token> tokens, int openIndex,
++                                     int openType, int closeType) {
++        int depth = 0;
++        for (int i = openIndex; i < tokens.size(); i++) {
++            int type = tokens.get(i).getType();
++            if (type == openType) {
++                depth++;
++            } else if (type == closeType) {
++                depth--;
++                if (depth == 0) {
++                    return i;
++                }
++            }
++        }
++        return -1;
++    }
++
++    private static String resolveTypeCandidate(String candidate,
++                                               DRL10Parser.CompilationUnitContext cu,
++                                               ClassIndex classIndex, ClassMemberIndex memberIndex) {
++        if (candidate.indexOf('.') < 0) {
++            return DRLCompletionHelper.resolveFqcn(candidate, candidate, cu, classIndex);
++        }
++        if (classIndex.contains(candidate) || platformTypeExists(candidate)
++                || memberIndex.memberNames(candidate) != null) {
++            return candidate;
++        }
++        return null;
++    }
++
++    private static String resolveTypeName(String typeName,
++                                          DRL10Parser.CompilationUnitContext cu,
++                                          ClassIndex classIndex) {
++        if (typeName == null || typeName.isEmpty()) {
++            return null;
++        }
++        return DRLCompletionHelper.resolveFqcn(typeName, simpleName(typeName), cu, classIndex);
++    }
++
++    private static Set<String> methodNames(List<String> signatures) {
++        Set<String> names = new LinkedHashSet<>();
++        if (signatures != null) {
++            for (String signature : signatures) {
++                int paren = signature.indexOf('(');
++                if (paren > 0) {
++                    names.add(signature.substring(0, paren));
++                }
++            }
++        }
++        return names;
++    }
++
++    private static Diagnostic methodWarning(String method, String container, Range range,
++                                            String suggestion, DiagnosticSeverity severity) {
++        Diagnostic diagnostic = new Diagnostic();
++        diagnostic.setSeverity(severity);
++        diagnostic.setSource("drools-type");
++        diagnostic.setCode("unknown-method");
++        diagnostic.setRange(range);
++        String message = "Unknown method '" + method + "' on type '" + container + "'";
++        if (suggestion != null && !suggestion.isBlank() && !suggestion.equals(method)) {
++            message += ". Did you mean '" + suggestion + "'?";
++            diagnostic.setData(suggestion);
++        } else {
++            message += ".";
++        }
++        diagnostic.setMessage(message);
++        return diagnostic;
++    }
++
++    private static final class Segment {
++        final String name;
++        final boolean call;
++        final Token token;
++
++        Segment(String name, boolean call, Token token) {
++            this.name = name;
++            this.call = call;
++            this.token = token;
++        }
++    }
++
++    private static final class Chain {
++        final List<Segment> segments;
++
++        Chain(List<Segment> segments) {
++            this.segments = segments;
++        }
++    }
++
 +    /**
 +     * Whether {@code fqcn} names a JDK/platform type. Needed because the class
 +     * index is built from the Maven classpath, which does not include the JDK
@@ -328,10 +1150,10 @@ index 921820f..f9eb708 100644
      private static void collectPatternTypes(ParseTree node, DRL10Parser.CompilationUnitContext cu,
                                              Set<String> known, Set<String> suggestions,
 diff --git a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaMemberSource.java b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaMemberSource.java
-index 59508fc..9e5078f 100644
+index 59508fc..474cc97 100644
 --- a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaMemberSource.java
 +++ b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaMemberSource.java
-@@ -58,4 +58,15 @@ public interface JavaMemberSource {
+@@ -58,4 +58,35 @@ public interface JavaMemberSource {
      List<Field> staticFieldsOf(String fqcn);
  
      List<String> staticMethodsOf(String fqcn);
@@ -345,6 +1167,26 @@ index 59508fc..9e5078f 100644
 +     */
 +    default List<String> instanceMethodsOf(String fqcn) {
 +        return List.of();
++    }
++
++    /**
++     * The declared type of instance member {@code name} on {@code fqcn} — a
++     * public field, a record component, or a bean-property getter's return
++     * type — as a simple or fully-qualified name, or {@code null} when the
++     * member is unknown. Used by RHS chain resolution to continue past a
++     * field access.
++     */
++    default String memberTypeOf(String fqcn, String name) {
++        return null;
++    }
++
++    /**
++     * The declared type of public static field {@code name} on {@code fqcn},
++     * as a simple or fully-qualified name, or {@code null} when the member is
++     * unknown. Used by RHS chain resolution to continue past {@code Type.FIELD}.
++     */
++    default String staticFieldTypeOf(String fqcn, String name) {
++        return null;
 +    }
  }
 diff --git a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceType.java b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceType.java
@@ -384,10 +1226,10 @@ index cfa34bf..b4f0203 100644
          this.declColumn = declColumn;
      }
 diff --git a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceTypeIndex.java b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceTypeIndex.java
-index 1cb8ab7..5e142aa 100644
+index 1cb8ab7..5d0aff5 100644
 --- a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceTypeIndex.java
 +++ b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceTypeIndex.java
-@@ -295,6 +295,41 @@ public final class JavaSourceTypeIndex implements JavaMemberSource {
+@@ -295,6 +295,65 @@ public final class JavaSourceTypeIndex implements JavaMemberSource {
          return type == null ? List.of() : type.staticMethods;
      }
  
@@ -395,6 +1237,30 @@ index 1cb8ab7..5e142aa 100644
 +    public List<String> instanceMethodsOf(String fqcn) {
 +        JavaSourceType type = byFqcn(fqcn);
 +        return type == null ? List.of() : instanceMethodsIncludingInherited(fqcn, type);
++    }
++
++    @Override
++    public String memberTypeOf(String fqcn, String name) {
++        JavaSourceType type = byFqcn(fqcn);
++        if (type == null) {
++            return null;
++        }
++        Field field = membersIncludingInherited(fqcn, type).get(name);
++        return field == null ? null : field.type;
++    }
++
++    @Override
++    public String staticFieldTypeOf(String fqcn, String name) {
++        JavaSourceType type = byFqcn(fqcn);
++        if (type == null) {
++            return null;
++        }
++        for (Field field : type.staticFields) {
++            if (field.name.equals(name)) {
++                return field.type;
++            }
++        }
++        return null;
 +    }
 +
 +    /**
@@ -581,10 +1447,10 @@ index 9bc0ac5..1fd4962 100644
              if (property != null) {
                  gettersOut.add(new Field(property,
 diff --git a/packages/drools-lsp/drools-lsp-server/src/main/java/org/drools/lsp/server/DroolsLspDocumentService.java b/packages/drools-lsp/drools-lsp-server/src/main/java/org/drools/lsp/server/DroolsLspDocumentService.java
-index 20e0fa6..d46cc45 100644
+index 20e0fa6..b23fb73 100644
 --- a/packages/drools-lsp/drools-lsp-server/src/main/java/org/drools/lsp/server/DroolsLspDocumentService.java
 +++ b/packages/drools-lsp/drools-lsp-server/src/main/java/org/drools/lsp/server/DroolsLspDocumentService.java
-@@ -266,9 +266,16 @@ public class DroolsLspDocumentService implements TextDocumentService {
+@@ -266,9 +266,19 @@ public class DroolsLspDocumentService implements TextDocumentService {
          // non-empty: source-derived names land in that index before Maven has
          // resolved anything, and judging a dependency type unknown on that basis
          // reports every one of them as a typo until the build catches up.
@@ -600,6 +1466,9 @@ index 20e0fa6..d46cc45 100644
 +        // turning off unknown types does not hide import typos.
 +        diagnostics.addAll(DRLLintHelper.lintUnknownImports(
 +                text, parsed.compilationUnit, classIndex, classpathResolved));
++        diagnostics.addAll(DRLLintHelper.lintUnknownMembers(
++                text, parsed.compilationUnit, documentPath, openSiblings(documentPath),
++                classIndex, classMemberIndex, classpathResolved));
 +        return diagnostics;
      }
  
