@@ -166,7 +166,16 @@ return {
     ft = { "xml", "xsd", "xsl", "xslt", "svg" },
     cmd = "LemminxMavenInstall",
     build = ":LemminxMavenInstall",
-    opts = {},
+    opts = {
+      settings = {
+        fileAssociations = {
+          {
+            pattern = "**/kmodule.xml",
+            systemId = vim.uri_from_fname(vim.fn.stdpath('config') .. '/schemas/kmodule.xsd'),
+          },
+        },
+      },
+    },
   },
   {
     "kevinhwang91/nvim-bqf",

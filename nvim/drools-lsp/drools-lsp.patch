@@ -1,0 +1,629 @@
+diff --git a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/ClassIndex.java b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/ClassIndex.java
+index 97940a4..cc476ec 100644
+--- a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/ClassIndex.java
++++ b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/ClassIndex.java
+@@ -25,6 +25,7 @@ import java.nio.file.Path;
+ import java.util.ArrayList;
+ import java.util.Collections;
+ import java.util.HashMap;
++import java.util.LinkedHashSet;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.Set;
+@@ -39,6 +40,8 @@ public class ClassIndex {
+     private static final Logger logger = Logger.getLogger(ClassIndex.class.getName());
+ 
+     private final Map<String, List<String>> index;
++    /** Every indexed FQCN, built lazily; used for exact and case-insensitive import checks. */
++    private volatile Set<String> allFqcns;
+ 
+     private ClassIndex(Map<String, List<String>> index) {
+         this.index = index;
+@@ -107,6 +110,76 @@ public class ClassIndex {
+         return fqcns == null ? List.of() : Collections.unmodifiableList(fqcns);
+     }
+ 
++    /**
++     * Whether {@code fqcn} names a type in this index, case-sensitively.
++     * Nested classes are indexed under their binary name
++     * ({@code Outer$Inner}), so a source-style dotted name
++     * ({@code Outer.Inner}) is accepted too. See {@link #findIgnoreCase} for
++     * the case-insensitive suggestion lookup.
++     */
++    public boolean contains(String fqcn) {
++        if (fqcn == null || fqcn.isEmpty()) {
++            return false;
++        }
++        Set<String> names = allFqcns();
++        if (names.contains(fqcn)) {
++            return true;
++        }
++        String candidate = fqcn;
++        int dot = candidate.lastIndexOf('.');
++        while (dot > 0) {
++            candidate = candidate.substring(0, dot) + '$' + candidate.substring(dot + 1);
++            if (names.contains(candidate)) {
++                return true;
++            }
++            dot = candidate.lastIndexOf('.', dot - 1);
++        }
++        return false;
++    }
++
++    /**
++     * The indexed FQCN equal to {@code fqcn} ignoring case, or {@code null} when
++     * there is no such single candidate. Used by the unknown-import lint to
++     * suggest the correctly-cased name for a package/type typo.
++     */
++    public String findIgnoreCase(String fqcn) {
++        if (fqcn == null || fqcn.isEmpty()) {
++            return null;
++        }
++        String simple = fqcn.substring(fqcn.lastIndexOf('.') + 1);
++        for (String candidate : forSimpleName(simple)) {
++            if (candidate.equalsIgnoreCase(fqcn)) {
++                return candidate;
++            }
++        }
++        // Nested source-style names are not in forSimpleName; fall back to a
++        // scan, which imports make rare enough to be acceptable.
++        for (String candidate : allFqcns()) {
++            if (candidate.equalsIgnoreCase(fqcn)) {
++                return candidate;
++            }
++            String dotted = candidate.replace('$', '.');
++            if (dotted.equalsIgnoreCase(fqcn)) {
++                return dotted;
++            }
++        }
++        return null;
++    }
++
++    private Set<String> allFqcns() {
++        Set<String> names = allFqcns;
++        if (names == null) {
++            synchronized (this) {
++                names = allFqcns;
++                if (names == null) {
++                    names = Collections.unmodifiableSet(new LinkedHashSet<>(getAll()));
++                    allFqcns = names;
++                }
++            }
++        }
++        return names;
++    }
++
+     public List<String> getMatching(String prefix) {
+         List<String> result = new ArrayList<>();
+         for (Map.Entry<String, List<String>> entry : index.entrySet()) {
+diff --git a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/ClassMemberIndex.java b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/ClassMemberIndex.java
+index 8dc6e68..3775923 100644
+--- a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/ClassMemberIndex.java
++++ b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/ClassMemberIndex.java
+@@ -348,6 +348,42 @@ public final class ClassMemberIndex implements AutoCloseable {
+         }
+     }
+ 
++    /**
++     * Public instance method signatures of {@code fqcn} —
++     * {@code name(ParamSimple, ParamSimple) : Return}, the same shape
++     * {@link #staticMethodsOf} uses — or the {@link #fallback} source's when
++     * the class can't load, or empty when neither knows the type. Methods
++     * declared by {@code java.lang.Object} are omitted, as are compiler
++     * bridges and synthetics: they are callable but add noise to completion.
++     * Inherited methods are included, matching {@code getMethods()}. Not
++     * cached, like the static view.
++     */
++    public List<String> instanceMethodsOf(String fqcn) {
++        if (fqcn == null || fqcn.isEmpty()) {
++            return Collections.emptyList();
++        }
++        Class<?> clazz = tryLoad(fqcn);
++        if (clazz == null) {
++            JavaMemberSource f = fallback;
++            return f != null ? f.instanceMethodsOf(fqcn) : Collections.emptyList();
++        }
++        try {
++            Set<String> out = new LinkedHashSet<>();
++            for (Method m : clazz.getMethods()) {
++                if (Modifier.isStatic(m.getModifiers()) || !Modifier.isPublic(m.getModifiers())
++                        || m.isBridge() || m.isSynthetic() || m.getDeclaringClass() == Object.class) {
++                    continue;
++                }
++                out.add(m.getName() + "(" + parameterList(m.getParameterTypes(), m.isVarArgs())
++                        + ") : " + m.getReturnType().getSimpleName());
++            }
++            return Collections.unmodifiableList(new ArrayList<>(out));
++        } catch (Throwable t) {
++            logger.log(Level.FINE, "Failed to reflect instance methods of " + fqcn, t);
++            return Collections.emptyList();
++        }
++    }
++
+     /**
+      * Attempts to load {@code fqcn} without running static initializers.
+      * Returns {@code null} (rather than throwing) when the loader is absent
+@@ -390,6 +426,15 @@ public final class ClassMemberIndex implements AutoCloseable {
+                     }
+                 }
+             }
++            if (clazz.isRecord()) {
++                // A record component has no bean-style getter and its backing
++                // field is private, so neither loop below finds it. Its
++                // accessor is the property DRL constraints name.
++                for (java.lang.reflect.RecordComponent rc : clazz.getRecordComponents()) {
++                    members.putIfAbsent(rc.getName(),
++                            new Field(rc.getName(), rc.getType().getSimpleName(), null, Field.Origin.GETTER));
++                }
++            }
+             for (Method m : clazz.getMethods()) {
+                 String property = propertyNameOf(m);
+                 if (property != null) {
+diff --git a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/DRLCompletionHelper.java b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/DRLCompletionHelper.java
+index 21eeb3c..78197fe 100644
+--- a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/DRLCompletionHelper.java
++++ b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/DRLCompletionHelper.java
+@@ -454,7 +454,14 @@ public class DRLCompletionHelper {
+      */
+     private static List<CompletionItem> staticItems(List<Field> staticFields, List<String> staticMethods) {
+         List<CompletionItem> items = new ArrayList<>(fieldItems(staticFields));
+-        for (String signature : staticMethods) {
++        items.addAll(methodItems(staticMethods));
++        return items;
++    }
++
++    /** Method items whose label is the bare name and whose detail is the full signature. */
++    private static List<CompletionItem> methodItems(List<String> methods) {
++        List<CompletionItem> items = new ArrayList<>(methods.size());
++        for (String signature : methods) {
+             int paren = signature.indexOf('(');
+             CompletionItem item = new CompletionItem();
+             item.setLabel(paren < 0 ? signature : signature.substring(0, paren));
+@@ -479,7 +486,9 @@ public class DRLCompletionHelper {
+         if (fqcn == null) {
+             return List.of();
+         }
+-        return fieldItems(memberIndex.membersOf(fqcn));
++        List<CompletionItem> items = new ArrayList<>(fieldItems(memberIndex.membersOf(fqcn)));
++        items.addAll(methodItems(memberIndex.instanceMethodsOf(fqcn)));
++        return items;
+     }
+ 
+     private static List<CompletionItem> fieldItems(List<Field> fields) {
+diff --git a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/DRLLintHelper.java b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/DRLLintHelper.java
+index 921820f..f9eb708 100644
+--- a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/DRLLintHelper.java
++++ b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/DRLLintHelper.java
+@@ -57,6 +57,7 @@ import org.eclipse.lsp4j.TextEdit;
+  *   drools.lsp.lint.missingSemicolon   = off | hint | info | warning | error
+  *   drools.lsp.lint.unbalancedParens   = off | hint | info | warning | error
+  *   drools.lsp.lint.unknownTypes       = off | hint | info | warning | error
++ *   drools.lsp.lint.unknownImports     = off | hint | info | warning | error
+  *   drools.lsp.lint.mvelPropertyAccess = off | hint | info | warning | error
+  * </pre>
+  *
+@@ -80,6 +81,7 @@ public final class DRLLintHelper {
+     private static final String PROP_MISSING_SEMICOLON    = "drools.lsp.lint.missingSemicolon";
+     private static final String PROP_UNBALANCED_PARENS    = "drools.lsp.lint.unbalancedParens";
+     private static final String PROP_UNKNOWN_TYPES        = "drools.lsp.lint.unknownTypes";
++    private static final String PROP_UNKNOWN_IMPORTS      = "drools.lsp.lint.unknownImports";
+     private static final String PROP_MVEL_PROPERTY_ACCESS = "drools.lsp.lint.mvelPropertyAccess";
+ 
+     private static final int MAX_DIAGNOSTICS_PER_PASS = 20;
+@@ -848,6 +850,116 @@ public final class DRLLintHelper {
+         return out;
+     }
+ 
++    /**
++     * Flags normal (non-static, non-function) imports whose fully-qualified name
++     * does not resolve to a known type. Like the unknown-type lint, this only
++     * runs once the dependency classpath has resolved, so a workspace that is
++     * still building does not report every dependency import. JDK types are
++     * checked against the platform class loader; project types are checked
++     * against the merged class/source index.
++     *
++     * <p>When the name differs from an indexed type only by case (the common
++     * package typo), or matches a near-miss simple name, the suggestion rides
++     * in the diagnostic's {@code data} so the existing quick-fix can replace
++     * the import. Self-gated by {@code drools.lsp.lint.unknownImports}
++     * (default {@code warning}; {@code off} disables).
++     */
++    public static List<Diagnostic> lintUnknownImports(String text, DRL10Parser.CompilationUnitContext cu,
++                                                      ClassIndex classIndex,
++                                                      boolean classpathResolved) {
++        if (text == null || text.isEmpty() || cu == null || !classpathResolved) {
++            return Collections.emptyList();
++        }
++        DiagnosticSeverity severity = severityFor(PROP_UNKNOWN_IMPORTS, "warning");
++        if (severity == null) {
++            return Collections.emptyList();
++        }
++        List<Diagnostic> out = new ArrayList<>();
++        for (DRL10Parser.DrlStatementdefContext stmt : cu.drlStatementdef()) {
++            if (!(stmt.importdef() instanceof DRL10Parser.ImportStandardDefContext importDef)) {
++                continue;
++            }
++            if (importDef.DRL_FUNCTION() != null || importDef.STATIC() != null
++                    || importDef.MUL() != null || importDef.drlQualifiedName() == null) {
++                continue;
++            }
++            DRL10Parser.DrlQualifiedNameContext name = importDef.drlQualifiedName();
++            String fqcn = name.getText();
++            if (fqcn == null || fqcn.isEmpty()
++                    || classIndex.contains(fqcn) || platformTypeExists(fqcn)) {
++                continue;
++            }
++            Token start = name.getStart();
++            Token stop = name.getStop();
++            if (start == null || stop == null) {
++                continue;
++            }
++            Range range = new Range(
++                    new Position(start.getLine() - 1, start.getCharPositionInLine()),
++                    new Position(stop.getLine() - 1,
++                                 stop.getCharPositionInLine() + stop.getText().length()));
++            String suggestion = classIndex.findIgnoreCase(fqcn);
++            if (suggestion == null) {
++                String simple = simpleName(fqcn);
++                String near = bestTypoSuggestion(simple, classIndex.simpleNames());
++                List<String> candidates = near == null ? List.of() : classIndex.forSimpleName(near);
++                if (candidates.size() == 1) {
++                    suggestion = candidates.get(0);
++                }
++            }
++            Diagnostic d = new Diagnostic();
++            d.setSeverity(severity);
++            d.setSource("drools-type");
++            d.setCode("unknown-import");
++            d.setRange(range);
++            String message = "Unknown import '" + fqcn + "'";
++            if (suggestion != null && !suggestion.isBlank() && !suggestion.equals(fqcn)) {
++                message += ". Did you mean '" + suggestion + "'?";
++                d.setData(suggestion); // drives the "Replace with '<suggestion>'" quick-fix
++            } else {
++                message += ".";
++            }
++            message += " Ensure the type is on the resolved classpath.";
++            d.setMessage(message);
++            out.add(d);
++            if (out.size() >= MAX_DIAGNOSTICS_PER_PASS) {
++                break;
++            }
++        }
++        return out;
++    }
++
++    /**
++     * Whether {@code fqcn} names a JDK/platform type. Needed because the class
++     * index is built from the Maven classpath, which does not include the JDK
++     * modules. Nested source-style names are retried with {@code $}.
++     */
++    private static boolean platformTypeExists(String fqcn) {
++        String candidate = fqcn;
++        try {
++            while (true) {
++                try {
++                    Class.forName(candidate, false, ClassLoader.getPlatformClassLoader());
++                    return true;
++                } catch (ClassNotFoundException e) {
++                    int dot = candidate.lastIndexOf('.');
++                    if (dot <= 0) {
++                        return false;
++                    }
++                    candidate = candidate.substring(0, dot) + '$' + candidate.substring(dot + 1);
++                }
++            }
++        } catch (LinkageError | SecurityException e) {
++            return false;
++        }
++    }
++
++    /** The simple name of a possibly-qualified type name. */
++    private static String simpleName(String typeName) {
++        int dot = typeName.lastIndexOf('.');
++        return dot < 0 ? typeName : typeName.substring(dot + 1);
++    }
++
+     /** Walks {@code node}, checking each pattern's object type against {@code cu}'s resolution. */
+     private static void collectPatternTypes(ParseTree node, DRL10Parser.CompilationUnitContext cu,
+                                             Set<String> known, Set<String> suggestions,
+diff --git a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaMemberSource.java b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaMemberSource.java
+index 59508fc..9e5078f 100644
+--- a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaMemberSource.java
++++ b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaMemberSource.java
+@@ -58,4 +58,15 @@ public interface JavaMemberSource {
+     List<Field> staticFieldsOf(String fqcn);
+ 
+     List<String> staticMethodsOf(String fqcn);
++
++    /**
++     * Public instance method signatures of {@code fqcn} —
++     * {@code name(ParamSimple, ParamSimple) : Return}, matching
++     * {@link #staticMethodsOf}'s shape — for completion after a fact binding
++     * or property. Empty when the type is unknown, or by default when a
++     * source does not model methods.
++     */
++    default List<String> instanceMethodsOf(String fqcn) {
++        return List.of();
++    }
+ }
+diff --git a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceType.java b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceType.java
+index cfa34bf..b4f0203 100644
+--- a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceType.java
++++ b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceType.java
+@@ -49,6 +49,13 @@ public final class JavaSourceType {
+      */
+     public final List<Field> staticFields;
+     public final List<String> staticMethods;
++    /**
++     * Public instance method signatures, e.g. {@code "greet(String) : String"}.
++     * These are not fact properties (those are in {@link #members}), but they
++     * are callable from a DRL consequence after a binding, so completion
++     * offers them after a dot.
++     */
++    public final List<String> instanceMethods;
+     /** 0-based line/column of the type's name token. */
+     public final int declLine;
+     public final int declColumn;
+@@ -56,7 +63,8 @@ public final class JavaSourceType {
+     JavaSourceType(String fqcn, String simpleName, boolean isEnum, String extendsSimpleName,
+                    List<String> interfaceSimpleNames, List<Field> members,
+                    List<String> constructors, List<Field> staticFields,
+-                   List<String> staticMethods, int declLine, int declColumn) {
++                   List<String> staticMethods, List<String> instanceMethods,
++                   int declLine, int declColumn) {
+         this.fqcn = fqcn;
+         this.simpleName = simpleName;
+         this.isEnum = isEnum;
+@@ -66,6 +74,7 @@ public final class JavaSourceType {
+         this.constructors = List.copyOf(constructors);
+         this.staticFields = List.copyOf(staticFields);
+         this.staticMethods = List.copyOf(staticMethods);
++        this.instanceMethods = List.copyOf(instanceMethods);
+         this.declLine = declLine;
+         this.declColumn = declColumn;
+     }
+diff --git a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceTypeIndex.java b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceTypeIndex.java
+index 1cb8ab7..5e142aa 100644
+--- a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceTypeIndex.java
++++ b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceTypeIndex.java
+@@ -295,6 +295,41 @@ public final class JavaSourceTypeIndex implements JavaMemberSource {
+         return type == null ? List.of() : type.staticMethods;
+     }
+ 
++    @Override
++    public List<String> instanceMethodsOf(String fqcn) {
++        JavaSourceType type = byFqcn(fqcn);
++        return type == null ? List.of() : instanceMethodsIncludingInherited(fqcn, type);
++    }
++
++    /**
++     * Own public instance methods followed by ancestors' — the source-side
++     * equivalent of reflection's {@code getMethods()}. Walks the same
++     * {@code extends} chain as {@link #membersIncludingInherited}, stopping on
++     * an unresolvable parent rather than guessing.
++     */
++    private List<String> instanceMethodsIncludingInherited(String fqcn, JavaSourceType type) {
++        java.util.LinkedHashSet<String> methods = new java.util.LinkedHashSet<>(type.instanceMethods);
++        Set<String> seen = new HashSet<>();
++        seen.add(fqcn);
++        String currentFqcn = fqcn;
++        String parentSimpleName = type.extendsSimpleName;
++        int depth = 0;
++        while (parentSimpleName != null && depth++ < 10) {
++            String parentFqcn = resolveParentFqcn(currentFqcn, parentSimpleName);
++            if (parentFqcn == null || !seen.add(parentFqcn)) {
++                break;
++            }
++            JavaSourceType parent = typesByFqcn.get(parentFqcn);
++            if (parent == null) {
++                break;
++            }
++            methods.addAll(parent.instanceMethods);
++            currentFqcn = parentFqcn;
++            parentSimpleName = parent.extendsSimpleName;
++        }
++        return List.copyOf(methods);
++    }
++
+     /**
+      * Returns {@code type}'s own members followed by those of its ancestors,
+      * walked through {@code extendsSimpleName} within this index only, so a
+diff --git a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceTypeParser.java b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceTypeParser.java
+index 9bc0ac5..1fd4962 100644
+--- a/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceTypeParser.java
++++ b/packages/drools-lsp/drools-completion/src/main/java/org/drools/completion/JavaSourceTypeParser.java
+@@ -128,16 +128,17 @@ public final class JavaSourceTypeParser {
+         List<String> ctors = new ArrayList<>();
+         List<Field> staticFields = new ArrayList<>();
+         List<String> staticMethods = new ArrayList<>();
++        List<String> instanceMethods = new ArrayList<>();
+         if (cd.classBody() != null) {
+             collectBodyMembers(cd.classBody().classBodyDeclaration(), fields, getters, ctors,
+-                    staticFields, staticMethods, simpleName);
++                    staticFields, staticMethods, instanceMethods, simpleName);
+         }
+ 
+         Map<String, Field> members = new LinkedHashMap<>();
+         mergeGettersThenFields(members, getters, fields);
+ 
+         return new JavaSourceType(fqcn(pkg, simpleName), simpleName, false, extendsName, interfaces,
+-                new ArrayList<>(members.values()), ctors, staticFields, staticMethods,
++                new ArrayList<>(members.values()), ctors, staticFields, staticMethods, instanceMethods,
+                 declLine(cd.identifier()), declColumn(cd.identifier()));
+     }
+ 
+@@ -164,14 +165,15 @@ public final class JavaSourceTypeParser {
+         List<Field> getters = new ArrayList<>();
+         List<String> ctors = new ArrayList<>();
+         List<String> staticMethods = new ArrayList<>();
++        List<String> instanceMethods = new ArrayList<>();
+         if (ed.enumBodyDeclarations() != null) {
+             collectBodyMembers(ed.enumBodyDeclarations().classBodyDeclaration(), fields, getters, ctors,
+-                    staticFields, staticMethods, simpleName);
++                    staticFields, staticMethods, instanceMethods, simpleName);
+         }
+         mergeGettersThenFields(members, getters, fields);
+ 
+         return new JavaSourceType(fqcn(pkg, simpleName), simpleName, true, null, interfaces,
+-                new ArrayList<>(members.values()), ctors, staticFields, staticMethods,
++                new ArrayList<>(members.values()), ctors, staticFields, staticMethods, instanceMethods,
+                 declLine(ed.identifier()), declColumn(ed.identifier()));
+     }
+ 
+@@ -187,10 +189,11 @@ public final class JavaSourceTypeParser {
+         List<Field> constants = new ArrayList<>();
+         List<Field> getters = new ArrayList<>();
+         List<String> staticMethods = new ArrayList<>();
++        List<String> instanceMethods = new ArrayList<>();
+         if (id.interfaceBody() != null) {
+             for (JavaParser.InterfaceBodyDeclarationContext ibd : id.interfaceBody().interfaceBodyDeclaration()) {
+                 try {
+-                    collectInterfaceMember(ibd, constants, getters, staticMethods);
++                    collectInterfaceMember(ibd, constants, getters, staticMethods, instanceMethods);
+                 } catch (Exception e) {
+                     logger.fine(() -> "Skipping interface member in " + simpleName + ": " + e.getMessage());
+                 }
+@@ -200,7 +203,7 @@ public final class JavaSourceTypeParser {
+         mergeGettersThenFields(members, getters, List.of());
+ 
+         return new JavaSourceType(fqcn(pkg, simpleName), simpleName, false, null, interfaces,
+-                new ArrayList<>(members.values()), List.of(), constants, staticMethods,
++                new ArrayList<>(members.values()), List.of(), constants, staticMethods, instanceMethods,
+                 declLine(id.identifier()), declColumn(id.identifier()));
+     }
+ 
+@@ -218,10 +221,13 @@ public final class JavaSourceTypeParser {
+         // single GETTER, consistent with getters beating fields elsewhere.
+         Map<String, Field> members = new LinkedHashMap<>();
+         List<String> ctorTypes = new ArrayList<>();
++        List<String> instanceMethods = new ArrayList<>();
+         for (JavaParser.RecordComponentContext rc : components) {
+             String name = rc.identifier().getText();
+             String type = simplify(rc.typeType());
+             members.putIfAbsent(name, new Field(name, type, null, Field.Origin.GETTER));
++            // A record component's accessor is an ordinary public instance method.
++            instanceMethods.add(name + "() : " + type);
+             ctorTypes.add(type);
+         }
+         List<String> ctors = new ArrayList<>();
+@@ -234,7 +240,7 @@ public final class JavaSourceTypeParser {
+         List<String> staticMethods = new ArrayList<>();
+         if (rd.recordBody() != null) {
+             collectBodyMembers(rd.recordBody().classBodyDeclaration(), fields, getters, bodyCtors,
+-                    staticFields, staticMethods, simpleName);
++                    staticFields, staticMethods, instanceMethods, simpleName);
+         }
+         mergeGettersThenFields(members, getters, fields);
+         // An explicitly written canonical constructor repeats the one derived above.
+@@ -245,7 +251,7 @@ public final class JavaSourceTypeParser {
+         }
+ 
+         return new JavaSourceType(fqcn(pkg, simpleName), simpleName, false, null, interfaces,
+-                new ArrayList<>(members.values()), ctors, staticFields, staticMethods,
++                new ArrayList<>(members.values()), ctors, staticFields, staticMethods, instanceMethods,
+                 declLine(rd.identifier()), declColumn(rd.identifier()));
+     }
+ 
+@@ -273,7 +279,8 @@ public final class JavaSourceTypeParser {
+     private static void collectBodyMembers(List<JavaParser.ClassBodyDeclarationContext> decls,
+                                             List<Field> fieldsOut, List<Field> gettersOut,
+                                             List<String> ctorsOut, List<Field> staticFieldsOut,
+-                                            List<String> staticMethodsOut, String simpleName) {
++                                            List<String> staticMethodsOut, List<String> instanceMethodsOut,
++                                            String simpleName) {
+         for (JavaParser.ClassBodyDeclarationContext cbd : decls) {
+             try {
+                 JavaParser.MemberDeclarationContext md = cbd.memberDeclaration();
+@@ -293,10 +300,12 @@ public final class JavaSourceTypeParser {
+                     }
+                 } else if (md.methodDeclaration() != null && hasPublicModifier(cbd.modifier())) {
+                     JavaParser.MethodDeclarationContext mt = md.methodDeclaration();
++                    String signature = signatureOf(mt.identifier().getText(), mt.formalParameters())
++                            + " : " + returnTypeOf(mt.typeTypeOrVoid()) + dimensions(mt.LBRACK());
+                     if (hasStaticModifier(cbd.modifier())) {
+-                        staticMethodsOut.add(signatureOf(mt.identifier().getText(), mt.formalParameters())
+-                                + " : " + returnTypeOf(mt.typeTypeOrVoid()) + dimensions(mt.LBRACK()));
++                        staticMethodsOut.add(signature);
+                     } else {
++                        instanceMethodsOut.add(signature);
+                         String property =
+                                 getterPropertyOf(mt.typeTypeOrVoid(), mt.identifier(), mt.formalParameters());
+                         if (property != null) {
+@@ -340,7 +349,8 @@ public final class JavaSourceTypeParser {
+      */
+     private static void collectInterfaceMember(JavaParser.InterfaceBodyDeclarationContext ibd,
+                                                 List<Field> fieldsOut, List<Field> gettersOut,
+-                                                List<String> staticMethodsOut) {
++                                                List<String> staticMethodsOut,
++                                                List<String> instanceMethodsOut) {
+         JavaParser.InterfaceMemberDeclarationContext imd = ibd.interfaceMemberDeclaration();
+         if (imd == null) {
+             return; // bare ';'
+@@ -355,13 +365,17 @@ public final class JavaSourceTypeParser {
+         } else if (imd.interfaceMethodDeclaration() != null) {
+             JavaParser.InterfaceMethodDeclarationContext method = imd.interfaceMethodDeclaration();
+             JavaParser.InterfaceCommonBodyDeclarationContext body = method.interfaceCommonBodyDeclaration();
++            String signature = signatureOf(body.identifier().getText(), body.formalParameters())
++                    + " : " + returnTypeOf(body.typeTypeOrVoid()) + dimensions(body.LBRACK());
+             if (isStaticInterfaceMethod(ibd, method)) {
+                 if (!hasModifier(ibd.modifier(), JavaParser.ClassOrInterfaceModifierContext::PRIVATE)) {
+-                    staticMethodsOut.add(signatureOf(body.identifier().getText(), body.formalParameters())
+-                            + " : " + returnTypeOf(body.typeTypeOrVoid()) + dimensions(body.LBRACK()));
++                    staticMethodsOut.add(signature);
+                 }
+                 return;
+             }
++            if (!hasModifier(ibd.modifier(), JavaParser.ClassOrInterfaceModifierContext::PRIVATE)) {
++                instanceMethodsOut.add(signature);
++            }
+             String property = getterPropertyOf(body.typeTypeOrVoid(), body.identifier(), body.formalParameters());
+             if (property != null) {
+                 gettersOut.add(new Field(property,
+diff --git a/packages/drools-lsp/drools-lsp-server/src/main/java/org/drools/lsp/server/DroolsLspDocumentService.java b/packages/drools-lsp/drools-lsp-server/src/main/java/org/drools/lsp/server/DroolsLspDocumentService.java
+index 20e0fa6..d46cc45 100644
+--- a/packages/drools-lsp/drools-lsp-server/src/main/java/org/drools/lsp/server/DroolsLspDocumentService.java
++++ b/packages/drools-lsp/drools-lsp-server/src/main/java/org/drools/lsp/server/DroolsLspDocumentService.java
+@@ -266,9 +266,16 @@ public class DroolsLspDocumentService implements TextDocumentService {
+         // non-empty: source-derived names land in that index before Maven has
+         // resolved anything, and judging a dependency type unknown on that basis
+         // reports every one of them as a typo until the build catches up.
+-        return DRLLintHelper.lintUnknownTypes(text, parsed.compilationUnit, documentPath,
+-                openSiblings(documentPath), classIndex, classMemberIndex,
+-                server.isDependencyClasspathResolved());
++        boolean classpathResolved = server.isDependencyClasspathResolved();
++        List<Diagnostic> diagnostics = new ArrayList<>(DRLLintHelper.lintUnknownTypes(
++                text, parsed.compilationUnit, documentPath, openSiblings(documentPath),
++                classIndex, classMemberIndex, classpathResolved));
++        // Independent of the unknown-type pass (its own property), so an
++        // unresolved classpath still leaves the import check dormant while
++        // turning off unknown types does not hide import typos.
++        diagnostics.addAll(DRLLintHelper.lintUnknownImports(
++                text, parsed.compilationUnit, classIndex, classpathResolved));
++        return diagnostics;
+     }
+ 
+     @Override
+diff --git a/packages/drools-lsp/pom.xml b/packages/drools-lsp/pom.xml
+index c19249d..ca350f1 100644
+--- a/packages/drools-lsp/pom.xml
++++ b/packages/drools-lsp/pom.xml
+@@ -35,6 +35,18 @@
+   <artifactId>drools-lsp</artifactId>
+   <packaging>pom</packaging>
+ 
++  <dependencyManagement>
++    <dependencies>
++      <dependency>
++        <groupId>org.drools</groupId>
++        <artifactId>drools-bom</artifactId>
++        <version>10.2.0</version>
++        <type>pom</type>
++        <scope>import</scope>
++      </dependency>
++    </dependencies>
++  </dependencyManagement>
++
+   <modules>
+     <module>drools-lsp-engine-bridge</module>
+     <module>drools-lsp-server</module>

@@ -33,53 +33,29 @@ vim.lsp.config('lua_ls', {
   },
 })
 
+local drools_lsp_jar = vim.fn.stdpath('data') .. '/drools-lsp/drools-lsp-server-jar-with-dependencies.jar'
+if vim.fn.filereadable(drools_lsp_jar) == 0 then
+  drools_lsp_jar = vim.fn.stdpath('data') .. '/mason/packages/drools-lsp/drools-lsp-server-jar-with-dependencies.jar'
+end
+
 vim.lsp.config('drools_lsp', {
   cmd = {
-    'java', '-jar',
-    vim.fn.stdpath('data') .. '/mason/packages/drools-lsp/drools-lsp-server-jar-with-dependencies.jar',
+    'java',
+    '-Ddrools.lsp.logLevel=INFO',
+    '-Ddrools.lsp.lint.missingEnd=warning',
+    '-Ddrools.lsp.lint.missingSeparator=warning',
+    '-Ddrools.lsp.lint.missingSemicolon=warning',
+    '-Ddrools.lsp.lint.unbalancedParens=warning',
+    '-Ddrools.lsp.lint.unknownTypes=warning',
+    '-Ddrools.lsp.lint.unknownImports=warning',
+    '-Ddrools.lsp.lint.mvelPropertyAccess=off',
+    '-jar',
+    drools_lsp_jar,
   },
   filetypes = { 'drools' },
   root_markers = { 'pom.xml', 'kmodule.xml', '.git' },
-  settings = {
-    drools = {
-      lsp = {
-        logLevel = 'INFO',
-        lint = {
-          missingEnd = 'warning',
-          missingSeparator = 'warning',
-          missingSemicolon = 'warning',
-          unbalancedParens = 'warning',
-          mvelPropertyAccess = 'off',
-        },
-        inlayHints = { enabled = true },
-        maven = { pomPath = '' },
-      },
-    },
-  },
 })
-local drools_fmt = vim.fn.stdpath('config') .. '/drools_fmt.py'
 
-vim.api.nvim_create_autocmd('BufWritePre', {
-  pattern = '*.drl',
-  callback = function(args)
-    if vim.fn.executable('python3') == 0 or vim.fn.filereadable(drools_fmt) == 0 then
-      return
-    end
-    local lines = vim.api.nvim_buf_get_lines(args.buf, 0, -1, false)
-    local res = vim.system(
-      { 'python3', drools_fmt },
-      { stdin = table.concat(lines, '\n') .. '\n' }
-    ):wait()
-    if res.code ~= 0 or res.stdout == '' then return end
-    local new = vim.split(res.stdout, '\n', { plain = true })
-    if new[#new] == '' then table.remove(new) end
-    if not vim.deep_equal(new, lines) then
-      local view = vim.fn.winsaveview()
-      vim.api.nvim_buf_set_lines(args.buf, 0, -1, false, new)
-      vim.fn.winrestview(view)
-    end
-  end,
-})
 --json_lsp
 vim.lsp.config('jsonls', {
   cmd = { vim.fn.stdpath("data") .. "/mason/bin/vscode-json-language-server", '--stdio' },
