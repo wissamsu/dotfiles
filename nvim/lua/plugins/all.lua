@@ -344,65 +344,26 @@ return {
     },
   },
   {
-    "emrearmagan/dockyard.nvim",
-    cmd = { "Dockyard", "DockyardFloat", "DockyardRun" },
-    keys = {
-      {
-        "<leader>dy",
-        "<cmd>DockyardFloat<cr>",
-        desc = "Docker Yard Float",
-      },
-      {
-        "<leader>dr",
-        function()
-          local names = { "docker-compose.yaml", "docker-compose.yml", "compose.yaml", "compose.yml" }
-
-          -- start from the current file, or the cwd if the buffer isn't a real file (e.g. fyler)
-          local start = vim.api.nvim_buf_get_name(0)
-          if start == "" or start:match("^%a+://") then
-            start = vim.fn.getcwd()
-          end
-
-          local root = vim.fs.root(start, names)
-          if not root then
-            vim.notify("No compose file found above " .. start, vim.log.levels.WARN)
-            return
-          end
-
-          local compose
-          for _, name in ipairs(names) do
-            local path = root .. "/" .. name
-            if vim.uv.fs_stat(path) then
-              compose = path
-              break
-            end
-          end
-
-          local origin = vim.api.nvim_get_current_buf()
-          vim.cmd("edit " .. vim.fn.fnameescape(compose))
-          vim.cmd("DockyardRun")
-          vim.cmd("buffer " .. origin)
-        end,
-        desc = "Docker Run (compose)",
-      },
-    },
+    "mgierada/lazydocker.nvim",
+    dependencies = { "akinsho/toggleterm.nvim" },
     config = function()
-      require("dockyard").setup({
-        keymaps = {
-          ui = {
-            open_panel = { "p", "l" }, -- keep p, add l
-          },
-        },
+      require("lazydocker").setup({
+        border = "curved", -- valid options are "single" | "double" | "shadow" | "curved"
+        width = 0.9,       -- width of the floating window (0-1 for percentage, >1 for absolute columns)
+        height = 0.9,      -- height of the floating window (0-1 for percentage, >1 for absolute rows)
       })
     end,
+    event = "BufRead",
+    keys = {
+      {
+        "<leader>ld",
+        function()
+          require("lazydocker").open()
+        end,
+        desc = "Open Lazydocker floating window",
+      },
+    },
   },
-
-  -- {
-  --   "tris203/precognition.nvim",
-  --   opts = {
-  --     targetedMotionHints = { enabled = false },
-  --   },
-  -- },
   {
     "NickvanDyke/opencode.nvim",
     keys = {
