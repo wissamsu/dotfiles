@@ -72,7 +72,6 @@ local function resolve_main_class(root)
   if #candidates == 0 then
     return nil, "no Kotlin main function found"
   end
-  -- Prefer Spring Boot application files when present.
   for _, c in ipairs(candidates) do
     if c.file:match("Application%.kt$") or c.file:match("Main%.kt$") then
       return c.mainClass
