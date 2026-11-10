@@ -5,7 +5,6 @@ M.name = "neotest-kotlin"
 local uv = vim.uv or vim.loop
 local is_win = package.config:sub(1, 1) == "\\"
 
--- Matches @Test but not @TestFactory / @TestTemplate / etc.
 local query = [[
   (class_declaration
     (type_identifier) @namespace.name) @namespace.definition
@@ -25,10 +24,6 @@ local IGNORED_DIRS = {
   [".gradle"] = true,
   [".idea"] = true,
 }
-
-----------------------------------------------------------------------
--- Small helpers (all safe to call from neotest's async context)
-----------------------------------------------------------------------
 
 local function exists(path)
   return uv.fs_stat(path) ~= nil
@@ -78,8 +73,6 @@ local function xml_unescape(s)
   )
 end
 
---- Walk up from `path` to the nearest directory containing a build file.
---- Returns the directory and the build tool ("maven" | "gradle").
 local function locate(path)
   local stat = uv.fs_stat(path)
   local dir = (stat and stat.type == "directory") and path or vim.fs.dirname(path)
@@ -99,7 +92,6 @@ local function locate(path)
   return nil, nil
 end
 
---- Look for mvnw / gradlew between `dir` and `stop` (inclusive); fall back to global binary.
 local function find_wrapper(dir, stop, tool)
   local wrapper, fallback
   if tool == "maven" then
@@ -134,7 +126,6 @@ local function report_dir(module_dir, tool)
   return module_dir .. "/build/test-results/test"
 end
 
---- "Outer$Inner" style chain of enclosing classes for a tree node.
 local function class_chain(node)
   local names = {}
   local n = node
@@ -152,10 +143,6 @@ local function class_name(node, pkg)
   local chain = class_chain(node)
   return (pkg ~= "" and (pkg .. ".") or "") .. chain
 end
-
-----------------------------------------------------------------------
--- Adapter interface
-----------------------------------------------------------------------
 
 function M.root(dir)
   return vim.fs.root(dir, {
@@ -178,7 +165,6 @@ function M.is_test_file(file_path)
 end
 
 function M.discover_positions(file_path)
-  -- Default position ids (path::Outer::Inner::test) already include every parent.
   return require("neotest.lib.treesitter").parse_positions(file_path, query, {
     require_namespaces = true,
   })
@@ -195,7 +181,6 @@ function M.build_spec(args)
   local root = M.root(module_dir) or module_dir
   local runner = find_wrapper(module_dir, root, tool)
 
-  -- Work out which classes / methods to run.
   local targets = {}
   if position.type == "test" or position.type == "namespace" then
     local pkg = package_name(position.path)
@@ -215,7 +200,6 @@ function M.build_spec(args)
       return nil
     end
   end
-  -- position.type == "dir": no filter, run every test in the module.
 
   local command
   if tool == "maven" then
@@ -229,7 +213,6 @@ function M.build_spec(args)
   else
     command = { runner, "--console=plain", "cleanTest", "test" }
     for _, target in ipairs(targets) do
-      -- Gradle wants Class.method rather than Class#method
       table.insert(command, "--tests")
       table.insert(command, (target:gsub("#", ".")))
     end
@@ -246,11 +229,6 @@ function M.build_spec(args)
   }
 end
 
-----------------------------------------------------------------------
--- Results
-----------------------------------------------------------------------
-
---- Parse a JUnit-style XML report into a list of testcases.
 local function parse_report(xml)
   local cases = {}
   local pos = 1
@@ -285,7 +263,6 @@ local function parse_report(xml)
 
     table.insert(cases, {
       classname = xml_unescape(attrs:match('classname="([^"]*)"')),
-      -- leading %s avoids matching the "name" inside "classname"
       name = xml_unescape(attrs:match('%sname="([^"]*)"')),
       status = status,
       message = xml_unescape(message),
@@ -308,7 +285,6 @@ local function collect_cases(dirs, started)
         if name:match("^TEST%-.*%.xml$") then
           local path = dir .. "/" .. name
           local stat = uv.fs_stat(path)
-          -- ignore stale reports from earlier runs
           if stat and stat.mtime.sec >= (started or 0) - 1 then
             local xml = read_file(path)
             if xml then
@@ -326,7 +302,6 @@ function M.results(spec, result, tree)
   local ctx = spec.context or {}
   local results = {}
 
-  -- Index every test in the run by "binary.class.Name#method".
   local tests, report_dirs, pkgs = {}, {}, {}
   for _, node in tree:iter_nodes() do
     local pos = node:data()
@@ -342,7 +317,6 @@ function M.results(spec, result, tree)
 
   local found_any = false
   for _, case in ipairs(collect_cases(report_dirs, ctx.started)) do
-    -- JUnit 5 reports "method()"; JUnit 4 reports "method"
     local method = (case.name:gsub("%(%)$", ""))
     local pos = tests[case.classname .. "#" .. method]
     if pos then
@@ -364,8 +338,6 @@ function M.results(spec, result, tree)
     end
   end
 
-  -- Nothing was reported (compile error, bad filter, ...) and the build failed:
-  -- mark everything that was supposed to run as failed.
   if not found_any and result.code ~= 0 then
     for _, pos in pairs(tests) do
       results[pos.id] = {
@@ -377,7 +349,6 @@ function M.results(spec, result, tree)
     end
   end
 
-  -- Fallback for the position that was actually run.
   if ctx.position_id and not results[ctx.position_id] and (ctx.position_type == "test" or not found_any) then
     results[ctx.position_id] = {
       status = result.code == 0 and "passed" or "failed",

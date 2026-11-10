@@ -1,8 +1,7 @@
 local function map(mode, lhs, rhs, opts)
   opts = opts or {}
-  opts.silent = false -- default to true unless specified
+  opts.silent = false
 
-  -- Only convert regular ex commands, leave interactive prompts like ":" alone
   if type(rhs) == "string" and rhs:match("^:") and rhs ~= ":" then
     rhs = rhs:gsub("^:", "<cmd>"):gsub("<CR>$", "") .. "<CR>"
   end
@@ -27,12 +26,10 @@ map("n", "<C-n>", function()
     local name = vim.api.nvim_buf_get_name(buf):lower()
 
     if ft:find("fyler") or name:find("fyler") then
-      -- prefer a built-in close if this version has one
       if type(fyler.close) == "function" then
         fyler.close()
         return
       end
-      -- otherwise fire the buffer-local "q" mapping directly
       vim.api.nvim_win_call(win, function()
         local m = vim.fn.maparg("q", "n", false, true)
         if m.callback then
@@ -93,12 +90,6 @@ map("n", "<leader>gi", ":GradleInit<CR>", { noremap = true, silent = true })
 
 map("n", "<leader>co", ":CodexToggle<CR>", { noremap = true, silent = true })
 vim.keymap.set('n', 'gd', function() vim.lsp.buf.definition() end, { desc = 'Go to definition' })
--- -- 1. Map <leader>ds to open all workspace diagnostics in quickfix
--- vim.keymap.set('n', '<leader>ds', function()
---   vim.diagnostic.setqflist()
--- end, { desc = 'Show workspace diagnostics' })
-
--- 2. Automatically close the quickfix list when pressing <CR> on an entry
 vim.api.nvim_create_autocmd('FileType', {
   pattern = 'qf',
   callback = function(event)
@@ -114,14 +105,12 @@ vim.keymap.set('i', '<CR>', function()
 end, { expr = true, desc = 'Accept completion with Enter' })
 vim.keymap.set('n', '<leader>cl', vim.lsp.codelens.run, { desc = 'Run code lens' })
 
--- JNI navigation: gn jumps between a Java native method and its C/C++ implementation
 
 local function mangle(s)
   s = s:gsub("_", "_1"):gsub("%.", "_"):gsub("%$", "_00024")
   return s
 end
 
--- Split a mangled JNI name into its parts, decoding escapes
 local function unmangle(s)
   local parts, cur, i = {}, {}, 1
   while i <= #s do
@@ -152,10 +141,8 @@ local function project_root()
   return (vim.fs.root and vim.fs.root(0, ".git")) or vim.fn.getcwd()
 end
 
--- Search C/C++ files for the mangled symbol and jump straight to it
 local function find_native_impl(symbol)
   local root = project_root()
-  -- symbol, optionally followed by an overload suffix (__sig), but not a longer name
   local pattern = symbol .. "(__|[^A-Za-z0-9_]|$)"
 
   local cmd
@@ -172,7 +159,6 @@ local function find_native_impl(symbol)
   local lines = vim.fn.systemlist(cmd)
   local impls, headers = {}, {}
   for _, l in ipairs(lines) do
-    -- rg --vimgrep: file:line:col:text, grep -n: file:line:text
     local file, lnum, rest = l:match("^(.-):(%d+):(.*)$")
     if file then
       local col = rest:match("^(%d+):")
@@ -185,7 +171,6 @@ local function find_native_impl(symbol)
     end
   end
 
-  -- prefer a source file over a header
   local hit = impls[1] or headers[1]
   if not hit then
     vim.notify("No native implementation found for " .. symbol, vim.log.levels.WARN)
@@ -225,7 +210,6 @@ local function native_to_java()
   end
 
   local parts = unmangle(name:sub(#"Java_" + 1))
-  -- drop overload signature suffix (foo__I -> parts: foo, "", I)
   for i = 2, #parts do
     if parts[i] == "" then
       for j = #parts, i, -1 do parts[j] = nil end
@@ -238,7 +222,7 @@ local function native_to_java()
   end
 
   local method = table.remove(parts)
-  local class = table.remove(parts):match("^[^$]+") -- Outer$Inner -> Outer
+  local class = table.remove(parts):match("^[^$]+")
   local pkg_path = table.concat(parts, "/")
 
   local matches = vim.fs.find(function(fname)
@@ -313,7 +297,6 @@ vim.api.nvim_create_user_command("DockerSearch", function(opts)
   vim.bo[buf].modifiable = false
   vim.bo[buf].bufhidden = "wipe"
 
-  -- highlight the header row
   vim.api.nvim_buf_set_extmark(buf, vim.api.nvim_create_namespace("DockerSearch"), 0, 0, {
     line_hl_group = "Title",
   })
@@ -336,7 +319,7 @@ vim.api.nvim_create_user_command("DockerSearch", function(opts)
   vim.wo[win].cursorline = true
   vim.wo[win].wrap = false
   if #out > 1 then
-    vim.api.nvim_win_set_cursor(win, { 2, 0 }) -- skip the header
+    vim.api.nvim_win_set_cursor(win, { 2, 0 })
   end
 
   local close = function()
@@ -345,7 +328,6 @@ vim.api.nvim_create_user_command("DockerSearch", function(opts)
     end
   end
 
-  -- name of the image on the current line (nil on the header row)
   local function current_name()
     local row = vim.api.nvim_win_get_cursor(win)[1]
     if row == 1 then
@@ -376,6 +358,6 @@ end, { nargs = 1 })
 vim.keymap.set('n', 'n', function()
   local ok = pcall(vim.cmd, 'normal! ' .. vim.v.count1 .. 'n')
   if not ok then
-    vim.cmd('normal %') -- no `!` so matchit's % (tags, if/end) works too
+    vim.cmd('normal %')
   end
 end, { desc = 'Next search match, or matching pair if none' })

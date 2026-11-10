@@ -1,5 +1,3 @@
--- shada handling lives in init.lua so that it stays on the startup path
--- (UIEnter can fire before this deferred module is loaded).
 vim.cmd("colorscheme ex-modus")
 vim.o.title = true
 vim.o.titlestring = "%F"
@@ -29,7 +27,7 @@ vim.o.autoindent = true
 vim.o.shada = "!,'100,<50,s10,h"
 vim.cmd("set whichwrap+=<,>,[,]")
 
-vim.api.nvim_set_hl(0, "Whitespace", { fg = "#45475a" }) -- dim guide color
+vim.api.nvim_set_hl(0, "Whitespace", { fg = "#45475a" })
 vim.api.nvim_create_autocmd("FileType", {
   pattern = { "qf" },
   callback = function()
@@ -39,7 +37,6 @@ vim.api.nvim_create_autocmd("FileType", {
 
 vim.o.laststatus = 3
 
--- Define mode names and custom highlight group mappings
 local mode_map = {
   ['n']   = { 'NORMAL', 'StatusLineModeNormal' },
   ['i']   = { 'INSERT', 'StatusLineModeInsert' },
@@ -51,7 +48,6 @@ local mode_map = {
   ['t']   = { 'TERMINAL', 'StatusLineModeInsert' },
 }
 
--- Setup mode-specific highlight colors dynamically matching your colorscheme
 local function setup_hl()
   local set_hl = vim.api.nvim_set_hl
   set_hl(0, 'StatusLineModeNormal', { fg = '#1e1e2e', bg = '#89b4fa', bold = true })
@@ -90,10 +86,10 @@ vim.diagnostic.config({
 
 local function set_diag_hl()
   local set = vim.api.nvim_set_hl
-  set(0, "DiagnosticSignError", { fg = "#ff6188", bold = true }) -- red
-  set(0, "DiagnosticSignWarn", { fg = "#e6b673", bold = true })  -- yellow
-  set(0, "DiagnosticSignInfo", { fg = "#7aa2f7", bold = true })  -- blue
-  set(0, "DiagnosticSignHint", { fg = "#7aa2f7", bold = true })  -- blue
+  set(0, "DiagnosticSignError", { fg = "#ff6188", bold = true })
+  set(0, "DiagnosticSignWarn", { fg = "#e6b673", bold = true })
+  set(0, "DiagnosticSignInfo", { fg = "#7aa2f7", bold = true })
+  set(0, "DiagnosticSignHint", { fg = "#7aa2f7", bold = true })
 end
 
 set_diag_hl()
@@ -126,7 +122,6 @@ local function refresh_diagnostic_cache(buf)
 end
 
 local function refresh_lsp_cache(buf)
-  -- don't force-load vim.lsp just to draw the statusline
   if not package.loaded["vim.lsp"] then
     lsp_cache[buf] = "%#StatusLineMuted#󰅛 No LSP%*"
     return
@@ -150,14 +145,12 @@ _G.statusline_diagnostics = function()
   if diagnostic_cache[buf] == nil then refresh_diagnostic_cache(buf) end
   return diagnostic_cache[buf]
 end
--- Helper functions
 _G.statusline_mode = function()
   local m = vim.api.nvim_get_mode().mode
   local mode_info = mode_map[m] or { m:upper(), 'StatusLineModeNormal' }
   return string.format("%%#%s# %s %%*", mode_info[2], mode_info[1])
 end
 
--- Get attached native LSP client names for active buffer
 _G.statusline_lsp = function()
   local buf = vim.api.nvim_get_current_buf()
   if lsp_cache[buf] == nil then refresh_lsp_cache(buf) end
@@ -197,13 +190,12 @@ vim.api.nvim_create_autocmd("BufWipeout", {
   end,
 })
 
--- Assemble the styled statusline
 vim.o.statusline =
     "%{%v:lua.statusline_mode()%}" ..
     " %#StatusLineMuted#%F%* %m%r" ..
     "%=" ..
     "%{%v:lua.statusline_diagnostics()%}" ..
-    "   " .. -- extra spacing here
+    "   " ..
     "%{%v:lua.statusline_lsp()%}" ..
     " %#StatusLineMuted#│ %y │ %l:%c [%p%%]%*"
 
@@ -245,68 +237,13 @@ vim.o.smarttab = true
 vim.o.incsearch = true
 
 
--- Configure diagnostics to display virtual text inline next to errors
--- vim.api.nvim_create_autocmd("LspAttach", {
---   callback = function(args)
---     local bufnr = args.buf
---     vim.diagnostic.config({
---       virtual_text = true,  -- Enables inline virtual text
---       signs = true,         -- Shows icons in the sign column (gutter)
---       underline = true,     -- Underlines the text containing the error
---       update_in_insert = false, -- Don't update diagnostics while typing (reduces noise)
---     })
---     -- Trigger native LSP omnifunc completion with Ctrl+h
---     vim.keymap.set('i', '<C-h>', '<C-x><C-o>', { desc = "Trigger LSP autocomplete" })
---     vim.o.updatetime = 200
---     -- 2. Set up native autocomplete options
---     vim.keymap.set('n', '<leader>ds', vim.diagnostic.setqflist, { desc = "List workspace diagnostics" })
---     vim.opt.completeopt = { "menu", "menuone", "noinsert" }
---     vim.opt.pumheight = 20 -- Limits the suggestion popup to 20 items
---     vim.o.complete = "o"  -- Use the LSP/omnifunc source
---     vim.o.autocomplete = true -- Enable native auto-popup while typing
---
---     local function clean_insert_key(key)
---       return function()
---         -- temporarily turn off native auto-popup
---         vim.o.autocomplete = false
---
---         -- schedule autocomplete to turn back on right after entering insert mode / keypress
---         vim.schedule(function()
---           vim.o.autocomplete = true
---         end)
---
---         -- return the literal keypress so neovim executes it normally
---         return key
---       end
---     end
---     -- intercept space, backspace, and the normal mode 'o' / 'o' line openers
---     vim.keymap.set('i', '<space>', clean_insert_key('<space>'), { expr = true, replace_keycodes = true })
---     vim.keymap.set('i', '<bs>', clean_insert_key('<bs>'), { expr = true, replace_keycodes = true })
---     vim.keymap.set('i', '"', clean_insert_key('"'), { expr = true, replace_keycodes = true })
---     vim.keymap.set('i', '\'', clean_insert_key('\''), { expr = true, replace_keycodes = true })
---     vim.keymap.set('n', 'o', clean_insert_key('o'), { expr = true, replace_keycodes = true })
---     vim.keymap.set('n', 'o', clean_insert_key('o'), { expr = true, replace_keycodes = true })
---     vim.keymap.set('n', 'i', clean_insert_key('i'), { expr = true, replace_keycodes = true })
---     vim.keymap.set('n', 'a', clean_insert_key('a'), { expr = true, replace_keycodes = true })
---     vim.keymap.set('n', 'A', clean_insert_key('A'), { expr = true, replace_keycodes = true })
---     local insert_chars = { "~", ";", ":", ",", "&", "|", "{", "}", "(", ")" }
---     for _, char in ipairs(insert_chars) do
---       vim.keymap.set('i', char, clean_insert_key(char), { expr = true, replace_keycodes = true })
---     end
---   end,
--- })
 vim.schedule(function()
   vim.diagnostic.config({
     virtual_text = true,
-    -- Show diagnostics while still typing. With the default (false) Neovim
-    -- holds pushed diagnostics back until InsertLeave, which reads as "the
-    -- error shows up late" on slow Java builds.
     update_in_insert = true,
   })
 end)
 
--- Faster CursorHold: default is 4000ms, which delays hover/diagnostic
--- actions that key off CursorHold.
 vim.o.updatetime = 300
 --gitsigns
 local ns, base = vim.api.nvim_create_namespace("gitdiff"), {}
@@ -418,7 +355,7 @@ end)
 --indentblankline
 vim.o.list = true
 vim.opt.listchars = {
-  leadmultispace = "│ ", -- "│" + 1 space = 2-wide indent
+  leadmultispace = "│ ",
   tab = "│ ",
 }
 
@@ -452,9 +389,6 @@ local function opens(s) return s:match("[%[%({]%s*$") ~= nil end
 local st = { first = nil, last = nil, col = 0, blank = {} }
 local drawn = {}
 
--- Compute the indent scope block around the cursor for the visible range.
--- Returns nil when there is nothing to draw, otherwise the first/last buffer
--- rows, the screen column, and a row -> is_blank lookup for on_line.
 local function scope_block(win, buf, top, bot)
   if win ~= vim.api.nvim_get_current_win() or vim.bo[buf].buftype ~= "" then
     return nil
@@ -466,7 +400,7 @@ local function scope_block(win, buf, top, bot)
   local n = #lines
   if n == 0 then return nil end
 
-  local cur = vim.api.nvim_win_get_cursor(win)[1] - top -- 1-based index into lines
+  local cur = vim.api.nvim_win_get_cursor(win)[1] - top
   if cur < 1 or cur > n then return nil end
 
   local ind, blank = {}, {}
@@ -478,12 +412,10 @@ local function scope_block(win, buf, top, bot)
   while base > 1 and blank[base] do base = base - 1 end
 
   if is_closer(lines[base]) then
-    -- on a closing bracket: use the block it closes
     local p = base - 1
     while p >= 1 and blank[p] do p = p - 1 end
     if p >= 1 and ind[p] > ind[base] then base = p end
   elseif opens(lines[base]) then
-    -- on an opening line (for ... {): use the block it opens
     local nx = base + 1
     while nx <= n and blank[nx] do nx = nx + 1 end
     if nx <= n and ind[nx] > ind[base] then base = nx end
@@ -496,7 +428,7 @@ local function scope_block(win, buf, top, bot)
   while first > 1 and (blank[first - 1] or ind[first - 1] >= indent) do first = first - 1 end
   while last < n and (blank[last + 1] or ind[last + 1] >= indent) do last = last + 1 end
 
-  local first_row, last_row = first + top - 1, last + top - 1 -- 0-based buffer rows
+  local first_row, last_row = first + top - 1, last + top - 1
   local row_blank = {}
   for i = first, last do
     row_blank[i + top - 1] = blank[i]
@@ -532,8 +464,6 @@ vim.api.nvim_set_decoration_provider(ns, {
   end,
 })
 
--- Neovim only repaints the cursor line on a plain move, so ask for a full
--- window repaint only when the visible scope block actually changes.
 vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
   callback = function()
     local win = vim.api.nvim_get_current_win()
@@ -561,19 +491,14 @@ vim.api.nvim_create_autocmd("WinClosed", {
 -- treesitter
 local max_treesitter_lines = 10000
 
--- Filetypes that never have a parser, skipped so nvim-treesitter doesn't load just to check.
--- Add more here if you notice the plugin loading needlessly.
 local skip_filetypes = { [""] = true, text = true, conf = true, log = true }
 
--- Filetypes we already tried to resolve/install this session (avoids retry loops)
 local attempted = {}
 
 local function parser_installed(lang)
   return #vim.api.nvim_get_runtime_file("parser/" .. lang .. ".*", false) > 0
 end
 
--- Calls cb(true) if a parser is available for the buffer, cb(false) otherwise.
--- Installs the parser first if it's missing.
 local function ensure_parser(buf, cb)
   local ft = vim.bo[buf].filetype
   local lang = vim.treesitter.language.get_lang(ft)
@@ -587,7 +512,6 @@ local function ensure_parser(buf, cb)
   end)
   if not loaded then return cb(false) end
 
-  -- the plugin registers filetype aliases (e.g. javascriptreact -> javascript), so resolve again
   lang = vim.treesitter.language.get_lang(ft)
   if not lang then return cb(false) end
   if parser_installed(lang) then return cb(true) end
@@ -601,7 +525,6 @@ local function ensure_parser(buf, cb)
   end)
 end
 
--- BLOCK 1: fold the import block
 local function fold_imports(buf)
   if not vim.api.nvim_buf_is_valid(buf) then return end
   local lines = vim.api.nvim_buf_get_lines(buf, 0, 200, false)
@@ -637,7 +560,6 @@ vim.api.nvim_create_autocmd("FileType", {
     local is_diffview_buf = vim.api.nvim_buf_get_name(buf):match('^diffview://') ~= nil
 
     if vim.bo[buf].buftype ~= "" or vim.api.nvim_buf_line_count(buf) > max_treesitter_lines then
-      -- only touch folds for filetypes that treesitter would otherwise handle
       local lang = vim.treesitter.language.get_lang(ft)
       if not is_diffview_buf and lang and parser_installed(lang) then
         vim.opt_local.foldmethod = "manual"
@@ -651,7 +573,7 @@ vim.api.nvim_create_autocmd("FileType", {
       end
 
       ensure_parser(buf, function(available)
-        if not available then return end -- no parser: leave folds and options untouched
+        if not available then return end
         if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
           return
         end
@@ -671,7 +593,6 @@ vim.api.nvim_create_autocmd("FileType", {
           end
         end
 
-        -- BLOCK 2: fold imports for Java right after the fold setup
         if ft == 'java' and not is_diffview_buf then
           fold_imports(buf)
         end
@@ -680,7 +601,6 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
--- BLOCK 3: Kotlin import fold, recomputed on every change
 function _G.kotlin_import_fold(lnum)
   return vim.fn.getline(lnum):match('^import%s') and 1 or 0
 end
@@ -696,7 +616,6 @@ vim.api.nvim_create_autocmd('FileType', {
   end,
 })
 
--- re-close import folds whenever the number of import lines changes
 local import_filetypes = { kotlin = true, java = true }
 
 local function close_imports(buf)
@@ -711,7 +630,6 @@ local function close_imports(buf)
   end
   if not first or first == last then return end
 
-  -- don't close it while the cursor is inside the imports (typing one by hand)
   local row = vim.api.nvim_win_get_cursor(0)[1]
   if row >= first and row <= last then return end
 
@@ -737,7 +655,6 @@ vim.api.nvim_create_autocmd({ 'TextChanged', 'TextChangedI', 'InsertLeave' }, {
       vim.schedule(function() close_imports(buf) end)
     end
 
-    -- second pass on leaving insert, in case the fold reopened after the edit
     if a.event == 'InsertLeave' and import_pending[buf] then
       import_pending[buf] = nil
       vim.schedule(function() close_imports(buf) end)
@@ -751,8 +668,6 @@ vim.api.nvim_create_autocmd('BufWipeout', {
   end,
 })
 --tabline
--- Static icons are quicker than resolving icons through a plugin every redraw.
--- These glyphs require a Nerd Font in your terminal.
 local file_icons = {
   lua = { icon = "", color = "#51A0CF" },
   vim = { icon = "", color = "#019833" },
@@ -850,7 +765,6 @@ function _G.buftabline()
       name = name:gsub("%%", "%%%%")
       if vim.bo[buf].modified then name = name .. " ●" end
 
-      -- %<buf>@v:lua.fn@ makes the label clickable
       s[#s + 1] = string.format("%s%%%d@v:lua.buftab_click@ %s%s %%X", hl, buf, icon_part, name)
     end
   end
@@ -862,7 +776,7 @@ function _G.buftab_click(buf)
   vim.api.nvim_set_current_buf(buf)
 end
 
-vim.o.showtabline = 2 -- always show; use 1 to show only with 2+ buffers
+vim.o.showtabline = 2
 vim.o.tabline = "%!v:lua.buftabline()"
 
 vim.api.nvim_create_autocmd("BufEnter", {
@@ -884,7 +798,6 @@ vim.keymap.set("n", "<S-Tab>", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
 local function close_buffer()
   local cur = vim.api.nvim_get_current_buf()
 
-  -- collect listed buffers in tabline order
   local bufs = vim.tbl_filter(function(b)
     return vim.bo[b].buflisted
   end, vim.api.nvim_list_bufs())
@@ -897,10 +810,8 @@ local function close_buffer()
         break
       end
     end
-    -- previous buffer in the tabline, or the next one if closing the first
     local target = bufs[idx - 1] or bufs[idx + 1]
 
-    -- switch every window showing this buffer, so no window closes
     for _, win in ipairs(vim.fn.win_findbuf(cur)) do
       vim.api.nvim_win_set_buf(win, target)
     end
@@ -916,20 +827,17 @@ end
 
 vim.keymap.set("n", "<leader>x", close_buffer, { desc = "Close buffer" })
 --codeaction
--- Custom native floating window handler for vim.ui.select
 vim.schedule(function()
   vim.ui.select = function(items, opts, on_choice)
     opts = opts or {}
     if #items == 0 then return end
 
-    -- Format items (e.g. converting LSP action objects into display strings)
     local format_item = opts.format_item or tostring
     local lines = {}
     for i, item in ipairs(items) do
       table.insert(lines, string.format(" %d. %s ", i, format_item(item)))
     end
 
-    -- Calculate window dimensions
     local max_width = 0
     for _, line in ipairs(lines) do
       if #line > max_width then max_width = #line end
@@ -937,11 +845,9 @@ vim.schedule(function()
     local width = math.max(max_width + 2, 30)
     local height = #lines
 
-    -- Create scratch buffer
     local buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 
-    -- Open floating window in the center
     local win = vim.api.nvim_open_win(buf, true, {
       relative = 'editor',
       row = math.floor((vim.o.lines - height) / 2),
@@ -954,7 +860,6 @@ vim.schedule(function()
       title_pos = 'center',
     })
 
-    -- Keybindings for selection inside the float
     local close = function(choice_index)
       if vim.api.nvim_win_is_valid(win) then
         vim.api.nvim_win_close(win, true)
@@ -966,16 +871,13 @@ vim.schedule(function()
       end
     end
 
-    -- Press <CR> to select line under cursor
     vim.keymap.set('n', '<CR>', function()
       close(vim.api.nvim_win_get_cursor(win)[1])
     end, { buffer = buf, silent = true })
 
-    -- Press <Esc> or 'q' to cancel
     vim.keymap.set('n', 'q', function() close(nil) end, { buffer = buf, silent = true })
     vim.keymap.set('n', '<Esc>', function() close(nil) end, { buffer = buf, silent = true })
 
-    -- Press number key (1-9) to execute action immediately
     for i = 1, math.min(#items, 9) do
       vim.keymap.set('n', tostring(i), function() close(i) end, { buffer = buf, silent = true })
     end
@@ -997,13 +899,11 @@ local function show_count()
   local ok, sc = pcall(vim.fn.searchcount, { maxcount = 0, timeout = 100, recompute = 1 })
   if not ok or not sc.total or sc.total == 0 then return end
 
-  -- end of the match under the cursor (does not move the cursor)
   local pos = vim.fn.searchpos(vim.fn.getreg("/"), "cenW")
   local lnum, endcol = pos[1], pos[2]
   if lnum == 0 then return end
 
   local line = vim.api.nvim_buf_get_lines(0, lnum - 1, lnum, false)[1] or ""
-  -- step past the full (possibly multibyte) last character
   local col = endcol + vim.str_utf_end(line, endcol)
 
   vim.api.nvim_buf_set_extmark(0, count_ns, lnum - 1, math.min(col, #line), {
@@ -1039,7 +939,6 @@ for _, key in ipairs({ "n", "N", "*", "#" }) do
   end, { expr = true })
 end
 
--- remove the label as soon as you move away from the match
 vim.api.nvim_create_autocmd({ "CursorMoved", "InsertEnter" }, {
   callback = clear_count,
 })

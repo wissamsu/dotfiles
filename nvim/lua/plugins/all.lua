@@ -1,7 +1,7 @@
 --just
 local rocks = vim.uv.os_homedir() .. "/.luarocks/share/lua/5.1/"
 package.path = package.path .. ";" .. rocks .. "?.lua;" .. rocks .. "?/init.lua"
-local type_kind_cache = {} -- name -> 'C' | 'I' | 'E' | 'λ' | false (unknown)
+local type_kind_cache = {}
 local type_kind_pending = {}
 
 local functional_ifaces = {}
@@ -14,7 +14,6 @@ for _, n in ipairs({
 
 local sym_kind = { [5] = 'C', [10] = 'E', [11] = 'I' }
 
--- counts abstract methods declared in an interface's source
 local function count_abstract(src)
   src = src:gsub('/%*.-%*/', ''):gsub('//[^\n]*', ''):gsub('"[^"\n]*"', '""')
   src = src:gsub('@[%w_.]+%b()', ''):gsub('@[%w_.]+', '')
@@ -22,12 +21,11 @@ local function count_abstract(src)
   local _, brace = src:find('interface%s+[%w_]+[^{]*{')
   if not brace then return nil end
 
-  -- keep only the top level of the interface body
   local flat, depth = {}, 1
   for i = brace + 1, #src do
     local c = src:sub(i, i)
     if c == '{' then
-      if depth == 1 then flat[#flat + 1] = '{;' end -- marks "has a body"
+      if depth == 1 then flat[#flat + 1] = '{;' end
       depth = depth + 1
     elseif c == '}' then
       depth = depth - 1
@@ -54,7 +52,6 @@ local function count_abstract(src)
   return n
 end
 
--- upgrades 'I' to 'ƒ' if the interface has exactly one abstract method
 local refresh_timer
 local function refresh_menu()
   if refresh_timer then refresh_timer:stop() end
@@ -101,14 +98,13 @@ local function lookup_type_kind(name)
     end
     type_kind_cache[name] = found
     if found == 'I' and uri then
-      check_functional(client, name, uri) -- refreshes when done
+      check_functional(client, name, uri)
     else
       refresh_menu()
     end
   end)
 end
 
--- "tasklet(Tasklet t, Map<String, Foo> m)" -> { 'Tasklet', 'Map' }
 local function param_types(label)
   local inner = label:match('%((.*)%)')
   if not inner or inner == '' then return {} end
@@ -160,7 +156,6 @@ local function param_kind_hint(label)
   return #parts > 0 and ('(' .. table.concat(parts, ' ') .. ')') or ''
 end
 return {
-  -- lazy.nvim
   {
     "JavaHello/lemminx-maven.nvim",
     ft = { "xml", "xsd", "xsl", "xslt", "svg" },
@@ -187,7 +182,6 @@ return {
           should_preview_cb = function(pbufnr, _)
             local fname = vim.fn.bufname(pbufnr)
             if vim.startswith(fname, "jdt://") then
-              -- 未加载时不预览
               return vim.fn.bufloaded(pbufnr) == 1
             end
             return true
@@ -244,7 +238,6 @@ return {
       },
     },
     config = function()
-      -- new vertical splits open on the right
       vim.o.splitright = true
       vim.api.nvim_create_autocmd("FileType", {
         pattern = "rest_nvim_result",
@@ -256,17 +249,16 @@ return {
           })
         end,
       })
-      -- rest.nvim v3 is configured through this global, not a setup() call
       vim.g.rest_nvim = {
         env = {
           enable = true,
-          pattern = ".*%.env.*", -- matches .env, .env.dev, local.env, etc.
+          pattern = ".*%.env.*",
         },
         result = {
           split = {
-            horizontal = false,                         -- false = vertical split (right side)
+            horizontal = false,
             in_place = false,
-            stay_in_current_window_after_split = false, -- jump into the result pane so Tab works right away
+            stay_in_current_window_after_split = false,
           },
         },
         ui = {
@@ -298,7 +290,7 @@ return {
       modes = {
         diagnostics = {
           win = {
-            size = { height = 0.4 }, -- 40% of the editor height
+            size = { height = 0.4 },
           },
         },
       },
@@ -310,7 +302,7 @@ return {
     keys = {
       {
         "<leader>ds",
-        "<cmd>Trouble diagnostics toggle focus=true<cr>",
+        "<cmd>Trouble diagnostics toggle filter.buf=0 focus=true<cr>",
         desc = "Diagnostics (Trouble)",
       },
       {
@@ -348,9 +340,9 @@ return {
     dependencies = { "akinsho/toggleterm.nvim" },
     config = function()
       require("lazydocker").setup({
-        border = "curved", -- valid options are "single" | "double" | "shadow" | "curved"
-        width = 0.9,       -- width of the floating window (0-1 for percentage, >1 for absolute columns)
-        height = 0.9,      -- height of the floating window (0-1 for percentage, >1 for absolute rows)
+        border = "curved",
+        width = 0.9,
+        height = 0.9,
       })
     end,
     keys = {
@@ -378,7 +370,6 @@ return {
 
       vim.o.autoread = true
 
-      -- Recommended/example keymaps.
       vim.keymap.set({ "n", "x" }, "<C-o>", function() require("opencode").ask("@this: ", { submit = true }) end,
         { desc = "Ask opencode…" })
       vim.keymap.set({ "n", "x" }, "<C-x>", function() require("opencode").select() end,
@@ -430,7 +421,6 @@ return {
     'Exafunction/codeium.vim',
     event = 'InsertEnter',
     config = function()
-      -- Change '<C-g>' to any keycode you like.
       vim.keymap.set('i', '<C-g>', function() return vim.fn['codeium#Accept']() end, { expr = true, silent = true })
       vim.keymap.set('i', '<c-;>', function() return vim.fn['codeium#CycleCompletions'](1) end,
         { expr = true, silent = true })
@@ -443,26 +433,24 @@ return {
     'windwp/nvim-autopairs',
     event = "InsertEnter",
     config = true
-    -- use opts = {} for passing setup options
-    -- this is equivalent to setup({}) function
   },
   {
     "nvim-treesitter/nvim-treesitter-context",
     event = { "BufReadPost", "BufNewFile" },
     opts = {
-      enable = true,            -- Enable this plugin (Can be enabled/disabled later via commands)
-      multiwindow = false,      -- Enable multiwindow support.
-      max_lines = 1,            -- How many lines the window should span. Values <= 0 mean no limit.
-      min_window_height = 0,    -- Minimum editor window height to enable context. Values <= 0 mean no limit.
+      enable = true,
+      multiwindow = false,
+      max_lines = 1,
+      min_window_height = 0,
       line_numbers = true,
-      multiline_threshold = 20, -- Maximum number of lines to show for a single context
-      trim_scope = 'outer',     -- Which context lines to discard if `max_lines` is exceeded. Choices: 'inner', 'outer'
-      mode = 'cursor',          -- Line used to calculate context. Choices: 'cursor', 'topline'
-      -- Separator between context and content. Should be a single character string, like '-'.
-      -- When separator is set, the context will only show up when there are at least 2 lines above cursorline.
+      multiline_threshold = 20,
+      trim_scope = 'outer',
+      mode = 'cursor',
+
+
       separator = nil,
-      zindex = 20,     -- The Z-index of the context window
-      on_attach = nil, -- (fun(buf: integer): boolean) return false to disable attaching
+      zindex = 20,
+      on_attach = nil,
     },
     keys = {
       {
@@ -487,7 +475,7 @@ return {
           local ft = vim.bo[a.buf].filetype
           if vim.bo[a.buf].buftype == '' and not ft:match('^fff') then
             vim.api.nvim_exec_autocmds('User', { pattern = 'BlinkLoad' })
-            return true -- delete this autocmd, it only needs to fire once
+            return true
           end
         end,
       })
@@ -505,7 +493,6 @@ return {
         ['<CR>']    = { 'select_and_accept', 'fallback' },
         ['<C-s>']   = { 'show_signature', 'hide_signature', 'fallback' },
 
-        -- hide the menu, then let the arrow key do its normal thing
         ['<Left>']  = { function(cmp) cmp.hide() end, 'fallback' },
         ['<Right>'] = { function(cmp) cmp.hide() end, 'fallback' },
       },
@@ -515,7 +502,6 @@ return {
         keyword = { range = 'full' },
         accept = { auto_brackets = { blocked_filetypes = { 'kotlin' } } },
 
-        -- coc-style menu: no border, "label   k [SRC]" layout
         menu = {
           border = 'none',
           scrollbar = false,
@@ -526,7 +512,6 @@ return {
               { 'kind',  'source_name',       gap = 1 },
             },
             components = {
-              -- single-letter kind like coc (m, f, v, ...)
               label_description = {
                 width = { max = 40 },
                 text = function(ctx)
@@ -536,7 +521,6 @@ return {
                   if vim.bo.filetype == 'kotlin' then
                     local item = ctx.item
 
-                    -- 1) package from the auto-import edit: "import com.foo.Bar\n" -> "com.foo"
                     for _, edit in ipairs(item.additionalTextEdits or {}) do
                       local full = (edit.newText or ''):match('import%s+([%w_%.]+)')
                       if full then
@@ -545,8 +529,6 @@ return {
                       end
                     end
 
-                    -- 2) your get_completions override strips "import from ", so a detail
-                    --    that is just a dotted name is the package
                     if desc == '' and type(item.detail) == 'string' and item.detail:match('^[%w_]+[%w_%.]*$') then
                       desc = item.detail
                     end
@@ -607,7 +589,6 @@ return {
                   return 'BlinkCmpKindOther'
                 end,
               },
-              -- [LS] / [A] / [S] / [F] instead of the full provider name
               source_name = {
                 text = function(ctx)
                   local names = { lsp = 'LS', buffer = 'A', snippets = 'S', path = 'F' }
@@ -635,7 +616,7 @@ return {
           direction_priority = { 'n', 's' },
           show_documentation = true,
           max_width = 100,
-          max_height = 20, -- leave room for the description
+          max_height = 20,
         },
       },
 
@@ -645,7 +626,6 @@ return {
           buffer = {
             min_keyword_length = 1,
           },
-          --here
           lsp = {
             async = true,
             transform_items = function(_, items)
@@ -659,8 +639,6 @@ return {
                   it.textEdit.newText = it.textEdit.newText:gsub('%s+$', '')
                 end
 
-                -- lemminx-maven sends Maven properties like ${drools.version} flagged as
-                -- snippets; the dot makes them invalid snippet syntax, so insert as plain text
                 local text = (type(it.textEdit) == 'table' and it.textEdit.newText) or it.insertText or ''
                 if it.insertTextFormat == Snippet and text:find('%${[%w_%-]*%.[^}]*}') then
                   it.insertTextFormat = PlainText
@@ -715,12 +693,12 @@ return {
                   local after_at = line:sub(1, col):match('@[%w_]*$') ~= nil
                   for _, it in ipairs(items) do
                     local label = it.label or ''
-                    local keep = not label:find('$', 1, true) -- nested/anonymous classes
+                    local keep = not label:find('$', 1, true)
                     if keep then
                       if after_at then
                         keep = true
                       else
-                        keep = not pkg_of(it):match('%.annotation$') -- hide annotation-package classes outside @
+                        keep = not pkg_of(it):match('%.annotation$')
                       end
                     end
                     if keep then
@@ -773,7 +751,6 @@ return {
               end,
             },
           },
-          --here
         },
       },
       fuzzy = {
@@ -799,9 +776,9 @@ return {
         set(0, 'BlinkCmpMenuBorder', { bg = '#303030', fg = '#303030' })
         set(0, 'BlinkCmpMenuSelection', { bg = '#4a4a4a' })
         set(0, 'BlinkCmpLabel', { fg = '#d4d4d4' })
-        set(0, 'BlinkCmpLabelMatch', { fg = '#00bfbf' }) -- matched chars (cyan)
-        set(0, 'BlinkCmpKindFn', { fg = '#f38ba8' })     -- f (pink)
-        set(0, 'BlinkCmpKindOther', { fg = '#00bfbf' })  -- m, v, ... (cyan)
+        set(0, 'BlinkCmpLabelMatch', { fg = '#00bfbf' })
+        set(0, 'BlinkCmpKindFn', { fg = '#f38ba8' })
+        set(0, 'BlinkCmpKindOther', { fg = '#00bfbf' })
         set(0, 'BlinkCmpSource', { fg = '#808080', italic = true, bold = true })
         set(0, 'BlinkCmpLabelDescription', { fg = '#808080', italic = true })
       end
@@ -818,13 +795,8 @@ return {
     opts = {
       parser = { comments = { "#", "//" } },
       keymaps = {
-        -- Text objects for selecting fields
         textobject_field_inner = { "if", mode = { "o", "x" } },
         textobject_field_outer = { "af", mode = { "o", "x" } },
-        -- Excel-like navigation:
-        -- Use <Tab> and <S-Tab> to move horizontally between fields.
-        -- Use <Enter> and <S-Enter> to move vertically between rows and place the cursor at the end of the field.
-        -- Note: In terminals, you may need to enable CSI-u mode to use <S-Tab> and <S-Enter>.
         jump_next_field_end = { "<Tab>", mode = { "n", "v" } },
         jump_prev_field_end = { "<S-Tab>", mode = { "n", "v" } },
         jump_next_row = { "<Enter>", mode = { "n", "v" } },
@@ -836,33 +808,31 @@ return {
   {
     "dmtrKovalenko/fff.nvim",
     build = function()
-      -- this will download prebuild binary or try to use existing rustup toolchain to build from source
-      -- (if you are using lazy you can use gb for rebuilding a plugin if needed)
       require("fff.download").download_or_build_binary()
     end,
     config = function()
       require("fff").setup({
         install = {
-          timeout = 1200,     -- 20 minutes - should be plenty
+          timeout = 1200,
         },
-        title = 'Find Files', -- Window title
-        max_results = 100,    -- Maximum search results to display
-        max_threads = 4,      -- Maximum threads for fuzzy search
+        title = 'Find Files',
+        max_results = 100,
+        max_threads = 4,
         lazy_sync = true,
 
-        prompt = '🛸 ', -- Input prompt symbol
+        prompt = '🛸 ',
         layout = {
-          width = 0.75, -- Window width as fraction of screen
-          height = 0.85, -- Window height as fraction of screen
-          prompt_position = 'bottom', -- or 'top'
-          preview_position = 'right', -- or 'left', 'right', 'top', 'bottom'
+          width = 0.75,
+          height = 0.85,
+          prompt_position = 'bottom',
+          preview_position = 'right',
           preview_size = 0.5,
           flex = false,
         },
         preview = {
           enabled = true,
           max_lines = 100,
-          max_size = 10 * 1024 * 1024, -- 1MB
+          max_size = 10 * 1024 * 1024,
           chunk_size = 8192,
           binary_file_threshold = 1024,
           line_numbers = false,
@@ -871,8 +841,8 @@ return {
           history = {
             enabled = true,
             db_path = vim.fn.stdpath('data') .. '/fff_queries',
-            min_combo_count = 3,                -- file will get a boost if it was selected 3 in a row times per specific query
-            combo_boost_score_multiplier = 100, -- Score multiplier for combo matches
+            min_combo_count = 3,
+            combo_boost_score_multiplier = 100,
           },
         },
         keymaps = {
@@ -881,16 +851,16 @@ return {
           select_split = '<C-s>',
           select_vsplit = '<C-v>',
           select_tab = '<C-t>',
-          -- Multiple bindings supported
+
           move_up = { '<Up>', '<C-p>', '<C-k>' },
           move_down = { '<Down>', '<C-n>', '<C-j>' },
           preview_scroll_up = '<C-u>',
           preview_scroll_down = '<C-d>',
         },
         git = {
-          status_text_color = true, -- Enable git status colors on filename text
+          status_text_color = true,
         },
-        -- Highlight groups
+
         hl = {
           border = 'FloatBorder',
           normal = 'Normal',
@@ -901,12 +871,12 @@ return {
           active_file = 'Visual',
           frecency = 'Number',
           debug = 'Comment',
-          git_staged = 'FFFGitStaged',       -- Files staged for commit
-          git_modified = 'FFFGitModified',   -- Modified unstaged files
-          git_deleted = 'FFFGitDeleted',     -- Deleted files
-          git_renamed = 'FFFGitRenamed',     -- Renamed files
-          git_untracked = 'FFFGitUntracked', -- New untracked files
-          git_ignored = 'FFFGitIgnored',     -- Git-ignored files
+          git_staged = 'FFFGitStaged',
+          git_modified = 'FFFGitModified',
+          git_deleted = 'FFFGitDeleted',
+          git_renamed = 'FFFGitRenamed',
+          git_untracked = 'FFFGitUntracked',
+          git_ignored = 'FFFGitIgnored',
         },
         frecency = {
           enabled = true,
@@ -915,12 +885,12 @@ return {
         history = {
           enabled = true,
           db_path = vim.fn.stdpath('data') .. '/fff_queries',
-          min_combo_count = 3,                -- file will get a boost if it was selected 3 in a row times per specific query
-          combo_boost_score_multiplier = 100, -- Score multiplier for combo matches
+          min_combo_count = 3,
+          combo_boost_score_multiplier = 100,
         },
-        -- Debug options
+
         debug = {
-          show_scores = false, -- Toggle with F2 or :FFFDebug
+          show_scores = false,
         },
       })
     end,
@@ -982,20 +952,20 @@ return {
 
       iron.setup {
         config = {
-          scratch_repl = true, -- don't keep REPL buffer after closing
+          scratch_repl = true,
           repl_definition = {
             sh = { command = { "zsh" } },
             python = {
-              command = { "python3" }, -- or { "ipython", "--no-autoindent" }
+              command = { "python3" },
               format = common.bracketed_paste_python,
               block_dividers = { "# %%", "#%%" },
-              env = { PYTHON_BASIC_REPL = "1" }, -- needed for Python >=3.13
+              env = { PYTHON_BASIC_REPL = "1" },
             },
           },
           repl_filetype = function(_, ft)
             return ft
           end,
-          repl_open_cmd = view.bottom(20), -- open REPL in bottom 40 rows
+          repl_open_cmd = view.bottom(20),
         },
         keymaps = {
           toggle_repl = "<space>rr",
@@ -1021,7 +991,7 @@ return {
         ignore_blank_lines = true,
       }
 
-      -- extra convenience keymaps
+
       vim.keymap.set("n", "<space>rf", "<cmd>IronFocus<cr>")
       vim.keymap.set("n", "<space>rh", "<cmd>IronHide<cr>")
     end,
@@ -1107,7 +1077,7 @@ return {
           elseif vim.bo.filetype == "kotlin" then
             require("config.dap.kotlin-dap").launch()
           else
-            dap.continue() -- shows the config picker (lldb launch, etc.)
+            dap.continue()
           end
         end,
         desc = "Debug: launch / continue",
@@ -1129,7 +1099,7 @@ return {
       local dap = require("dap")
       local dapui = require("dapui")
 
-      -- unchanged for Java: set it up first, as before
+
       local ok, jd = pcall(require, "config.dap.java-dap")
       if ok then jd.setup() end
       local okk, kd = pcall(require, "config.dap.kotlin-dap")
@@ -1143,7 +1113,7 @@ return {
         end
       end
 
-      -- no-op listeners for Java adapter metadata events (unchanged)
+
       dap.listeners.after.event_processid = dap.listeners.after.event_processid or {}
       dap.listeners.after.event_telemetry = dap.listeners.after.event_telemetry or {}
       dap.listeners.after.event_processid["java-dap-metadata"] = function() end
@@ -1171,7 +1141,7 @@ return {
         },
         controls = {
           enabled = true,
-          element = "console", -- put the pause/step/stop winbar on the console
+          element = "console",
         },
       })
 
@@ -1179,7 +1149,7 @@ return {
         return session and session.config and session.config.type == "java"
       end
 
-      -- non-Java sessions (lldb etc.): open the UI ourselves
+
       dap.listeners.after.event_initialized["dapui_config"] = function(session)
         if not is_java(session) then
           dapui.open()
@@ -1188,7 +1158,7 @@ return {
 
       local close_dap_ui = function(session)
         pcall(dapui.close)
-        -- Java-only cleanup, same call as before
+
         if ok and is_java(session) then
           jd.cleanup_terminal(session)
         end
@@ -1269,8 +1239,8 @@ return {
     },
     config = function()
       local java_adapter = require("neotest-java")({
-        -- see the neotest-java README for the current option names
-        -- incremental_build = true,
+
+
       })
       local original_is_test_file = java_adapter.is_test_file
       java_adapter.is_test_file = function(file_path)
@@ -1364,7 +1334,7 @@ return {
     dependencies = {
       "nvim-lua/plenary.nvim",
     },
-    opts = {}, -- options, see default configuration
+    opts = {},
     keys = {
       { "<leader>M",  desc = "+Maven",           mode = { "n", "v" } },
       { "<leader>Mm", "<cmd>Maven<cr>",          desc = "Maven Projects" },
@@ -1378,7 +1348,7 @@ return {
       "nvim-lua/plenary.nvim",
       "MunifTanjim/nui.nvim"
     },
-    opts = {}, -- options, see default configuration
+    opts = {},
     keys = {
       { '<leader>Gg', '<cmd>Gradle<cr>',          desc = 'Gradle Projects' },
       { '<leader>Gf', '<cmd>GradleFavorites<cr>', desc = 'Gradle Favorite Commands' }
@@ -1390,7 +1360,7 @@ return {
     config = function()
       require("tiny-cmdline").setup({
         width = { value = "28%" },
-        -- Render `/` and `?` searches in the tiny floating cmdline too.
+
         native_types = {},
         on_reposition = require("tiny-cmdline").adapters.blink,
       })
@@ -1404,7 +1374,7 @@ return {
   },
   {
     "MunifTanjim/nui.nvim",
-    lazy = true, -- lazy.nvim will load it automatically whenever another plugin requires it
+    lazy = true,
   },
   {
     "FylerOrg/fyler.nvim",
@@ -1426,30 +1396,25 @@ return {
       },
     },
     config = function(_, opts)
-      ---------------------------------------------------------------------
-      -- Java kind icons (class/interface/record/enum/annotation/exception)
-      -- + diagnostics at end of line
-      ---------------------------------------------------------------------
       local devicons = require("nvim-web-devicons")
       local orig_get_icon = devicons.get_icon
 
-      -- Kind icons (Font Awesome glyphs, available in every Nerd Font version)
       local kind_icons = {
-        class      = { glyph = "\u{f1b2}", hl = "JavaKindClass" },      -- cube
-        interface  = { glyph = "\u{f12e}", hl = "JavaKindInterface" },  -- puzzle piece
-        record     = { glyph = "\u{f192}", hl = "JavaKindRecord" },     -- dot in circle
-        enum       = { glyph = "\u{f009}", hl = "JavaKindEnum" },       -- 2x2 grid
-        annotation = { glyph = "\u{f1fa}", hl = "JavaKindAnnotation" }, -- @
-        exception  = { glyph = "\u{f0e7}", hl = "JavaKindException" },  -- bolt
+        class      = { glyph = "\u{f1b2}", hl = "JavaKindClass" },
+        interface  = { glyph = "\u{f12e}", hl = "JavaKindInterface" },
+        record     = { glyph = "\u{f192}", hl = "JavaKindRecord" },
+        enum       = { glyph = "\u{f009}", hl = "JavaKindEnum" },
+        annotation = { glyph = "\u{f1fa}", hl = "JavaKindAnnotation" },
+        exception  = { glyph = "\u{f0e7}", hl = "JavaKindException" },
       }
 
       local function define_hl()
-        vim.api.nvim_set_hl(0, "JavaKindClass", { fg = "#4fc1e9" })      -- blue
-        vim.api.nvim_set_hl(0, "JavaKindInterface", { fg = "#62b543" })  -- green
-        vim.api.nvim_set_hl(0, "JavaKindRecord", { fg = "#f0d63c" })     -- yellow
-        vim.api.nvim_set_hl(0, "JavaKindEnum", { fg = "#ef6f5a" })       -- salmon
-        vim.api.nvim_set_hl(0, "JavaKindAnnotation", { fg = "#b07ad9" }) -- purple
-        vim.api.nvim_set_hl(0, "JavaKindException", { fg = "#f0b429" })  -- amber
+        vim.api.nvim_set_hl(0, "JavaKindClass", { fg = "#4fc1e9" })
+        vim.api.nvim_set_hl(0, "JavaKindInterface", { fg = "#62b543" })
+        vim.api.nvim_set_hl(0, "JavaKindRecord", { fg = "#f0d63c" })
+        vim.api.nvim_set_hl(0, "JavaKindEnum", { fg = "#ef6f5a" })
+        vim.api.nvim_set_hl(0, "JavaKindAnnotation", { fg = "#b07ad9" })
+        vim.api.nvim_set_hl(0, "JavaKindException", { fg = "#f0b429" })
       end
       define_hl()
       vim.api.nvim_create_autocmd("ColorScheme", { callback = define_hl })
@@ -1463,8 +1428,8 @@ return {
         node_modules = true,
       }
 
-      local kind_cache = {} -- full path -> kind
-      local index = {}      -- basename -> full path
+      local kind_cache = {}
+      local index = {}
       local index_time = 0
 
       local function now_ms() return vim.uv.hrtime() / 1e6 end
@@ -1486,21 +1451,19 @@ return {
 
       local function resolve(name)
         if index[name] then return index[name] end
-        -- not found: rebuild at most once every 3s (picks up new files)
         if now_ms() - index_time > 3000 then rebuild_index() end
         return index[name]
       end
 
       local kws = { "class", "interface", "enum", "record" }
 
-      -- Kotlin: order matters (specific before generic)
       local kt_rules = {
         { "annotation", "annotation%s+class" },
         { "enum",       "enum%s+class" },
         { "record",     "data%s+class" },
         { "record",     "value%s+class" },
-        { "interface",  "interface" }, -- also matches `fun interface` / `sealed interface`
-        { "class",      "class" },     -- also matches `sealed`/`abstract`/`open class`
+        { "interface",  "interface" },
+        { "class",      "class" },
         { "class",      "object" },
       }
 
@@ -1541,7 +1504,6 @@ return {
                     or line:find("extends%s+[%w_%.]*Exception")
                     or line:find("extends%s+[%w_%.]*Error")
                     or line:find("extends%s+[%w_%.]*Throwable")
-                    -- Kotlin uses `: Exception()` instead of `extends`
                     or (is_kt and (
                       line:find("%)%s*:%s*[%w_%.]*Exception")
                       or line:find("%)%s*:%s*[%w_%.]*Error")
@@ -1563,7 +1525,6 @@ return {
         return result or nil
       end
 
-      -- Replace the Java icon with the kind icon
       devicons.get_icon = function(name, ext, o)
         local icon, hl = orig_get_icon(name, ext, o)
         if type(name) == "string" and (name:match("%.java$") or name:match("%.kt$")) then
@@ -1574,7 +1535,6 @@ return {
         return icon, hl
       end
 
-      -- refresh after saving a Java file
       vim.api.nvim_create_autocmd("BufWritePost", {
         pattern = { "*.java", "*.kt" },
         callback = function(a) kind_cache[vim.fn.fnamemodify(a.file, ":p")] = nil end,
@@ -1586,11 +1546,7 @@ return {
         return ft:find("fyler", 1, true) ~= nil or name:find("fyler", 1, true) ~= nil
       end
 
-      ---------------------------------------------------------------------
-      -- `o` on a folder opens the new line already indented inside it
-      ---------------------------------------------------------------------
       local function on_folder_line(buf, row)
-        -- detect folders by the highlight group on the row (no text parsing needed)
         local extmarks = vim.api.nvim_buf_get_extmarks(
           buf, -1, { row, 0 }, { row, -1 }, { details = true }
         )
@@ -1611,9 +1567,9 @@ return {
         vim.b[buf].fyler_o_mapped = true
         vim.keymap.set("n", "o", function()
           local row = vim.api.nvim_win_get_cursor(0)[1] - 1
-          vim.api.nvim_feedkeys(vim.keycode("o"), "n", false)       -- plain `o` (no recursion)
+          vim.api.nvim_feedkeys(vim.keycode("o"), "n", false)
           if on_folder_line(buf, row) then
-            vim.api.nvim_feedkeys(vim.keycode("<Tab>"), "m", false) -- same Tab you press by hand
+            vim.api.nvim_feedkeys(vim.keycode("<Tab>"), "m", false)
           end
         end, { buffer = buf, desc = "Fyler: new line (indented inside folders)" })
       end
@@ -1623,11 +1579,6 @@ return {
           if is_fyler_buf(a.buf) then map_o(a.buf) end
         end,
       })
-      ---------------------------------------------------------------------
-
-      ---------------------------------------------------------------------
-      -- Diagnostics per file
-      ---------------------------------------------------------------------
       local sev = vim.diagnostic.severity
       local diag_icons = {
         [sev.ERROR] = { "\u{f057}", "DiagnosticError" },
@@ -1697,11 +1648,9 @@ return {
           end
         end,
       })
-      ---------------------------------------------------------------------
 
       require("fyler").setup(opts)
 
-      -- Skip the "Want to continue?" popup: auto-confirm every mutation.
       require("fyler.input").get_confirmation = function(_, _, callback)
         vim.schedule(function() callback(true) end)
       end
@@ -1710,7 +1659,6 @@ return {
   {
     "DevDad-Main/spring-tools.nvim",
     opts = {
-      -- Add any custom configuration options here
     },
     config = function(_, opts)
       require("spring-tools").setup(opts)
@@ -1718,7 +1666,7 @@ return {
     keys = {
       { "<leader>st", "<cmd>SpringTools<CR>",     desc = "Spring Tools" },
       { "<leader>sc", "<cmd>SpringConfig<CR>",    desc = "Spring Configs" },
-      { "<leader>sT", "<cmd>SpringTest<CR>",      desc = "Spring Tests" }, -- Changed to avoid duplicate <leader>st
+      { "<leader>sT", "<cmd>SpringTest<CR>",      desc = "Spring Tests" },
       { "<leader>sb", "<cmd>SpringBeans<CR>",     desc = "Spring Beans" },
       { "<leader>se", "<cmd>SpringEndpoints<CR>", desc = "Spring Endpoints" },
     },
@@ -1745,7 +1693,6 @@ return {
       "DBUIFindBuffer",
     },
     init = function()
-      -- Your DBUI configuration
       vim.g.db_ui_use_nerd_fonts = 1
     end,
   },
@@ -1771,9 +1718,6 @@ return {
     "folke/which-key.nvim",
     event = "VeryLazy",
     opts = {
-      -- your configuration comes here
-      -- or leave it empty to use the default settings
-      -- refer to the configuration section below
     },
     keys = {
       {
@@ -1799,7 +1743,6 @@ return {
       },
     },
   },
-  -- lua/plugins/diffview.lua
   {
     "sindrets/diffview.nvim",
     cmd = {
@@ -1865,7 +1808,6 @@ return {
   {
     "HakonHarnes/img-clip.nvim",
     keys = {
-      -- The plugin lazy-loads automatically when this keybinding is pressed
       { "<leader>p", "<cmd>PasteImage<cr>", desc = "Paste image from clipboard" },
     },
     opts = {

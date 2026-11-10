@@ -8,8 +8,6 @@ vim.g.loaded_node_provider = 0
 vim.g.loaded_shada_plugin = 1
 vim.o.shadafile = "NONE"
 
--- Keep filetype detection (ftplugins, treesitter, syntax) off the startup
--- path. It is re-enabled right after the first paint.
 vim.g.did_load_filetypes = 1
 vim.api.nvim_create_autocmd("UIEnter", {
   once = true,

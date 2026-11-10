@@ -10,12 +10,11 @@ local curl = require("plenary.curl")
 local M = {}
 
 local URL = "https://search.maven.org/solrsearch/select"
-local DEPS_URL = "https://api.deps.dev" -- stars / dependents / license / advisories
+local DEPS_URL = "https://api.deps.dev"
 local SCOPES = { "compile", "test", "provided", "runtime", "import" }
 local ATTEMPTS = 10
-local cache = {} -- query -> docs, lasts until Neovim restarts
+local cache = {}
 
--- Sections whose <dependencies> blocks should NOT be touched
 local SKIP_TAGS = { "dependencyManagement", "pluginManagement", "build", "profiles", "reporting" }
 
 local function err(msg)
@@ -31,7 +30,6 @@ local function coords(d)
   return ("%s:%s:%s"):format(d.g, d.a, d.latestVersion or "?")
 end
 
--- Build the dependency as a list of lines, indented with `indent`/`unit`
 local function dep_lines(d, scope, indent, unit)
   local lines = {
     indent .. "<dependency>",
@@ -39,7 +37,6 @@ local function dep_lines(d, scope, indent, unit)
     indent .. unit .. "<artifactId>" .. d.a .. "</artifactId>",
     indent .. unit .. "<version>" .. (d.latestVersion or "") .. "</version>",
   }
-  -- compile is Maven's default, so omit it
   if scope ~= "compile" then
     table.insert(lines, indent .. unit .. "<scope>" .. scope .. "</scope>")
   end
@@ -47,11 +44,6 @@ local function dep_lines(d, scope, indent, unit)
   return lines
 end
 
----------------------------------------------------------------------------
--- Formatting helpers
----------------------------------------------------------------------------
-
--- "today", "5d ago", "3mo ago", "2.4y ago" from a Unix time in milliseconds
 local function ago(ms)
   if type(ms) ~= "number" then return "?" end
   local days = math.floor((os.time() - ms / 1000) / 86400)
@@ -61,7 +53,6 @@ local function ago(ms)
   return ("%.1fy ago"):format(days / 365)
 end
 
--- 1234 -> "1.2k", 2500000 -> "2.5M"
 local function human(n)
   if type(n) ~= "number" then return "?" end
   if n >= 1e6 then return ("%.1fM"):format(n / 1e6) end
@@ -75,9 +66,6 @@ local function urlenc(s)
   end))
 end
 
----------------------------------------------------------------------------
--- pom.xml handling
----------------------------------------------------------------------------
 
 local function find_pom()
   local name = vim.api.nvim_buf_get_name(0)
@@ -88,7 +76,6 @@ local function find_pom()
   return vim.fs.find("pom.xml", { upward = true, path = start })[1]
 end
 
--- Guess the indentation unit used by the file (defaults to 4 spaces)
 local function detect_unit(lines)
   for _, l in ipairs(lines) do
     local ws = l:match("^(%s+)<")
@@ -97,8 +84,6 @@ local function detect_unit(lines)
   return "    "
 end
 
--- Locate the project-level <dependencies> block.
--- Returns open_line, close_line (1-based). If self-closing, both are equal.
 local function find_dependencies(lines)
   local depth, open_i = 0, nil
   for i, line in ipairs(lines) do
@@ -147,14 +132,12 @@ local function add_to_pom(d, scope)
   local open_i, close_i = find_dependencies(lines)
 
   if open_i and open_i ~= close_i then
-    -- Normal case: existing <dependencies> ... </dependencies>
     if already_declared(lines, open_i, close_i, d) then
       return vim.notify(("MvnSearch: %s:%s is already in %s"):format(d.g, d.a, vim.fn.fnamemodify(path, ":.")),
         vim.log.levels.WARN)
     end
     local base = lines[close_i]:match("^(%s*)") or ""
     local child = base .. unit
-    -- Prefer the indentation of an existing <dependency> if there is one
     for i = open_i + 1, close_i - 1 do
       local ws = lines[i]:match("^(%s*)<dependency>")
       if ws then
@@ -166,14 +149,12 @@ local function add_to_pom(d, scope)
     if child_unit == "" then child_unit = unit end
     vim.api.nvim_buf_set_lines(bufnr, close_i - 1, close_i - 1, false, dep_lines(d, scope, child, child_unit))
   elseif open_i then
-    -- Self-closing <dependencies/>: expand it
     local base = lines[open_i]:match("^(%s*)") or ""
     local new = { base .. "<dependencies>" }
     vim.list_extend(new, dep_lines(d, scope, base .. unit, unit))
     table.insert(new, base .. "</dependencies>")
     vim.api.nvim_buf_set_lines(bufnr, open_i - 1, open_i, false, new)
   else
-    -- No <dependencies> block: create one before </project>
     local proj_close
     for i = #lines, 1, -1 do
       if lines[i]:match("</project>") then
@@ -190,18 +171,12 @@ local function add_to_pom(d, scope)
     vim.api.nvim_buf_set_lines(bufnr, proj_close - 1, proj_close - 1, false, new)
   end
 
-  -- Save the pom (works whether or not the buffer is currently visible)
   vim.api.nvim_buf_call(bufnr, function()
     vim.cmd("silent write")
   end)
   vim.notify(("Added %s (%s) to %s"):format(label, scope, vim.fn.fnamemodify(path, ":.")))
 end
 
----------------------------------------------------------------------------
--- Maven Central search
----------------------------------------------------------------------------
-
--- Fast-fail fetch: abort slow requests at curl level and retry
 local function fetch(query, attempt, on_done)
   local function retry_or_fail(msg)
     if attempt < ATTEMPTS then
@@ -233,20 +208,9 @@ local function fetch(query, attempt, on_done)
   })
 end
 
----------------------------------------------------------------------------
--- Popularity / health stats (deps.dev)
---
--- Maven Central itself only tells us when the latest version was released
--- and how many versions exist (both already in the search response). Stars,
--- usage and the rest come from deps.dev, fetched lazily for whichever entry
--- is highlighted and cached for the rest of the session.
----------------------------------------------------------------------------
+local stats_cache = {}
+local stats_waiting = {}
 
-local stats_cache = {}   -- "g:a:version" -> stats table
-local stats_waiting = {} -- same key -> callbacks waiting on an in-flight lookup
-
--- GET a JSON document. cb(data) on success, cb(nil, status) otherwise.
--- status is the HTTP code, or nil for transport/parse errors.
 local function get_json(url, cb)
   curl.get(url, {
     headers = { accept = "application/json" },
@@ -267,7 +231,6 @@ local function get_json(url, cb)
   })
 end
 
--- Prefer the SOURCE_REPO project, fall back to whatever project is listed
 local function pick_repo(projects)
   local fallback
   for _, p in ipairs(projects or {}) do
@@ -297,7 +260,6 @@ local function load_stats(d, cb)
   local function done()
     pending = pending - 1
     if pending > 0 then return end
-    -- don't cache lookups that hit network trouble, so the next view retries
     if not st.network_error then stats_cache[key] = st end
     local waiting = stats_waiting[key]
     stats_waiting[key] = nil
@@ -307,7 +269,6 @@ local function load_stats(d, cb)
   local pkg = urlenc(d.g .. ":" .. d.a)
   local version_url = ("%s/v3/systems/maven/packages/%s/versions/%s"):format(DEPS_URL, pkg, urlenc(ver))
 
-  -- 1) version details -> source repo -> project stats (stars, forks, ...)
   get_json(version_url, function(v, status)
     if not v then
       if status == 404 then st.not_found = true else st.network_error = true end
@@ -330,9 +291,6 @@ local function load_stats(d, cb)
     end)
   end)
 
-  -- 2) dependents: how many other packages depend on this one.
-  -- This lives in deps.dev's v3alpha API (not in the stable v3 docs), so treat
-  -- it as best-effort: if it's missing or fails, the row is simply left out.
   local dependents_url = ("%s/v3alpha/systems/maven/packages/%s/versions/%s:dependents")
       :format(DEPS_URL, pkg, urlenc(ver))
   get_json(dependents_url, function(x)
@@ -350,7 +308,6 @@ local function add_row(lines, label, value)
   end
 end
 
--- st == nil means "still loading"
 local function preview_lines(d, st)
   local lines = { ("%s:%s"):format(d.g, d.a), "" }
 
@@ -407,7 +364,7 @@ local function stats_previewer()
   return previewers.new_buffer_previewer({
     title = "Details",
     define_preview = function(self, entry)
-      local bufnr = self.state.bufnr -- a fresh buffer per entry, wiped when you move on
+      local bufnr = self.state.bufnr
       local d = entry.value
       local function render(st)
         if vim.api.nvim_buf_is_valid(bufnr) then
@@ -420,9 +377,6 @@ local function stats_previewer()
   })
 end
 
----------------------------------------------------------------------------
--- Picker
----------------------------------------------------------------------------
 
 local function make_entry_maker(docs)
   local width = 20

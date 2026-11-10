@@ -111,7 +111,6 @@ vim.lsp.config('graphql', {
     local root = config.root_dir
     local cmd = { resolve_command('graphql-lsp'), 'server', '-m', 'stream' }
 
-    -- only generate a config if the project doesn't already have one
     local has_config = vim.fn.glob(root .. '/.graphqlrc*') ~= ''
         or vim.fn.glob(root .. '/graphql.config.*') ~= ''
     if not has_config then
@@ -1453,11 +1452,9 @@ local function jdt_aware_definition()
         local buf = find_buf_by_name(uri)
 
         if buf and vim.api.nvim_buf_is_loaded(buf) then
-          -- already open: just switch to it
           vim.api.nvim_set_current_buf(buf)
         else
           if buf then
-            -- stale, unloaded buffer with the same name: remove it first
             pcall(vim.api.nvim_buf_delete, buf, { force = true })
           end
 

@@ -1,19 +1,5 @@
--- Java debugging for nvim-dap.
---
--- The Java debug adapter is an Eclipse/OSGi bundle (`com.microsoft.java.debug
--- .plugin`) that cannot be started with `java -jar`. In VSCode it is loaded
--- *into jdtls* and exposes a DAP server on a TCP port; the VSCode extension
--- asks for that port with `vscode.java.startDebugSession` and then connects.
---
--- The DAP server does no classpath resolution of its own -- in VSCode the
--- extension client resolves the classpath through `vscode.java.resolveClasspath`
--- and passes `classPaths` / `modulePaths` in the launch request. Without them
--- it answers "Missing mainClass or modulePaths/classPaths options" (error 1004).
--- So we do the same resolution here, via jdtls.
-
 local M = {}
 
----Run a jdtls command synchronously.
 ---@param c vim.lsp.Client
 ---@param command string
 ---@param arguments any[]|nil
@@ -33,7 +19,6 @@ local function execute(c, command, arguments)
   return response.result
 end
 
----Find the project root for a buffer using the usual Java build files.
 ---@param bufnr integer
 ---@return string?
 local function project_root(bufnr)
@@ -56,9 +41,6 @@ local function project_root(bufnr)
   })
 end
 
---- Start or reuse JDTLS for a project even when the current buffer is not
---- Java. This is what allows <leader>dc to work from application.properties
---- and YAML without a user-authored debug configuration.
 ---@param bufnr integer
 ---@param root string
 ---@return vim.lsp.Client?, string?
@@ -78,9 +60,6 @@ local function ensure_jdtls(bufnr, root)
   config.name = 'jdtls'
   config.root_dir = root
 
-  -- Explicitly start without attaching JDTLS to the properties/YAML buffer.
-  -- Spring LS still uses this project client for main-class and classpath
-  -- queries, and the bridge is installed because no LspAttach fires here.
   local id = vim.lsp.start(config, {
     bufnr = bufnr,
     attach = false,
@@ -110,8 +89,6 @@ local function wait_for_jdtls(c)
   return c.initialized and not c:is_stopped()
 end
 
----Ask jdtls for the main class of the project. jdtls returns every candidate
----ordered, so prefer one that is not in a test source folder.
 ---@param c vim.lsp.Client
 ---@return { mainClass: string, projectName: string, filePath: string }?
 local function resolve_main_class(c)
@@ -134,8 +111,6 @@ function M.setup()
   local dap = require('dap')
   dap.configurations.java = {}
 
-  -- Lazily ask jdtls for a debug server port whenever any session starts
-  -- (neotest, <leader>dc, attach configs, ...).
   dap.adapters.java = function(callback)
     local c = vim.lsp.get_clients({ name = 'jdtls' })[1]
     if not c then
@@ -156,9 +131,6 @@ function M.setup()
   end
 end
 
----Stop and discard the integrated-terminal buffer used by a DAP session.
----nvim-dap-ui keeps its Console buffer around, but a terminal buffer cannot
----be connected to a second job until the first terminal channel is closed.
 ---@param session vim.DAP.Session?
 function M.cleanup_terminal(session)
   session = session or require('dap').session()
@@ -183,13 +155,9 @@ function M.cleanup_terminal(session)
   end
 end
 
----Launch the current project's application under the debugger.
 function M.launch()
   local dap = require('dap')
 
-  -- <leader>dc doubles as Continue once a debug session is active. Keep the
-  -- guard here too so callers cannot accidentally launch a second debuggee
-  -- while stopped at a breakpoint and reuse the active terminal buffer.
   if dap.session() then
     dap.continue()
     return
@@ -254,9 +222,6 @@ function M.launch()
     classPaths = class_paths,
     cwd = root,
     args = '',
-    -- Ask the Java debug adapter to run the application through DAP's
-    -- integrated terminal. nvim-dap-ui owns that terminal buffer, so Spring
-    -- Boot stdout/stderr is visible in the Console element.
     console = 'integratedTerminal',
     encoding = 'UTF-8',
     stopOnEntry = false,
