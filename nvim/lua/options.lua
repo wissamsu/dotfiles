@@ -953,3 +953,18 @@ vim.schedule(function()
     vim.cmd('silent! filetype detect')
   end
 end)
+vim.filetype.add({
+  pattern = {
+    ['.*/%.github/workflows/.*%.ya?ml'] = 'yaml.github',
+    ['.*/%.github/actions/.*%.ya?ml'] = 'yaml.github',
+  },
+})
+vim.filetype.add({
+  filename = {
+    ['Jenkinsfile'] = 'groovy',
+  },
+  pattern = {
+    ['Jenkinsfile.*'] = 'groovy',
+    ['.*%.jenkinsfile'] = 'groovy',
+  },
+})

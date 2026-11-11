@@ -361,3 +361,4 @@ vim.keymap.set('n', 'n', function()
     vim.cmd('normal %')
   end
 end, { desc = 'Next search match, or matching pair if none' })
+vim.keymap.set('n', '<leader>gi', '<cmd>GHWorkflow<cr>', { desc = 'GitHub Actions: new workflow from template' })

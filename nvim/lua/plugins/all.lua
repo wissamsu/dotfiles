@@ -403,6 +403,226 @@ return {
     end,
   },
   {
+    'skanehira/github-actions.nvim',
+    init = function()
+      -- syntax highlighting for the logs buffer
+      local function color_logs(buf)
+        if not vim.api.nvim_buf_is_valid(buf) then return end
+
+        local links = {
+          GhaLogTime    = 'Comment',
+          GhaLogInfo    = 'DiagnosticOk',
+          GhaLogWarn    = 'DiagnosticWarn',
+          GhaLogError   = 'DiagnosticError',
+          GhaLogUrl     = 'Underlined',
+          GhaLogCommand = 'Special',
+          GhaLogGroup   = 'Title',
+          GhaLogDown    = 'Function',
+          GhaLogOk      = 'DiagnosticOk',
+          GhaLogFail    = 'DiagnosticError',
+        }
+        for group, target in pairs(links) do
+          vim.api.nvim_set_hl(0, group, { link = target, default = true })
+        end
+
+        vim.api.nvim_buf_call(buf, function()
+          vim.cmd([[
+      syntax clear
+      syntax match GhaLogTime    /^\[\d\d:\d\d:\d\d\]/
+      syntax match GhaLogUrl     /https\?:\/\/\S\+/
+      syntax match GhaLogDown    /\<Download\(ing\|ed\)\>/
+      syntax match GhaLogCommand /\[command\]\S\+/
+      syntax match GhaLogGroup   /##\[\(group\|endgroup\)\]/
+      syntax match GhaLogInfo    /\[INFO\]/
+      syntax match GhaLogWarn    /\[WARNING\]/
+      syntax match GhaLogWarn    /##\[warning\].*/
+      syntax match GhaLogError   /\[ERROR\]/
+      syntax match GhaLogError   /##\[error\].*/
+      syntax match GhaLogOk      /BUILD SUCCESS/
+      syntax match GhaLogFail    /BUILD FAILURE/
+      syntax match GhaLogFail    /Tests run:.*\(Failures: [1-9]\|Errors: [1-9]\).*/
+    ]])
+        end)
+      end
+
+      vim.api.nvim_create_autocmd('FileType', {
+        pattern = 'github-actions-logs',
+        callback = function(ev)
+          -- schedule so this runs after the plugin has finished setting up the buffer
+          vim.schedule(function() color_logs(ev.buf) end)
+        end,
+      })
+      -- <CR> toggles folds in the logs buffer
+      vim.api.nvim_create_autocmd('FileType', {
+        pattern = 'github-actions-logs',
+        callback = function(ev)
+          vim.keymap.set('n', '<CR>', function()
+            -- za errors on lines that aren't in a fold, so silence it
+            vim.cmd('silent! normal! za')
+          end, { buffer = ev.buf, desc = 'Toggle fold' })
+        end,
+      })
+      -- when logs open: close the history float and any leftover empty window
+      vim.api.nvim_create_autocmd('BufWinEnter', {
+        callback = function(ev)
+          -- slight delay so the plugin has finished creating its windows/buffers
+          vim.defer_fn(function()
+            if not vim.api.nvim_buf_is_valid(ev.buf) then return end
+
+            local name = vim.api.nvim_buf_get_name(ev.buf)
+            local first = vim.api.nvim_buf_get_lines(ev.buf, 0, 1, false)[1] or ''
+            local is_logs = first:find('^Press q to close, za') ~= nil
+                or (name:find('[GitHub Actions]', 1, true) ~= nil and not name:find('Run History', 1, true))
+            if not is_logs then return end
+
+            -- 1. close the floating history window
+            for _, win in ipairs(vim.api.nvim_list_wins()) do
+              local buf = vim.api.nvim_win_get_buf(win)
+              local is_float = vim.api.nvim_win_get_config(win).relative ~= ''
+              if is_float and buf ~= ev.buf
+                  and vim.api.nvim_buf_get_name(buf):find('Run History', 1, true) then
+                pcall(vim.api.nvim_win_close, win, true)
+              end
+            end
+
+            -- 2. close leftover empty, unnamed windows in this tab
+            local wins = {}
+            for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+              if vim.api.nvim_win_get_config(win).relative == '' then
+                table.insert(wins, win)
+              end
+            end
+            for _, win in ipairs(wins) do
+              if #wins > 1 then
+                local buf = vim.api.nvim_win_get_buf(win)
+                local empty = buf ~= ev.buf
+                    and vim.api.nvim_buf_get_name(buf) == ''
+                    and vim.bo[buf].buftype == ''
+                    and not vim.bo[buf].modified
+                    and vim.api.nvim_buf_line_count(buf) == 1
+                    and (vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] or '') == ''
+                if empty then
+                  pcall(vim.api.nvim_win_close, win, true)
+                  wins = vim.tbl_filter(function(w) return w ~= win end, wins)
+                end
+              end
+            end
+          end, 50)
+        end,
+      })
+      vim.api.nvim_create_autocmd({ 'BufEnter', 'BufWinEnter' }, {
+        callback = function(ev)
+          if not vim.api.nvim_buf_get_name(ev.buf):find('Run History', 1, true) then
+            return
+          end
+
+          -- schedule so this runs after the plugin sets up its own buffer keymaps
+          vim.schedule(function()
+            if not vim.api.nvim_buf_is_valid(ev.buf) then return end
+
+            vim.keymap.set('n', '<CR>', function()
+              local row = vim.api.nvim_win_get_cursor(0)[1]
+              local line = vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1] or ''
+              local nxt = vim.api.nvim_buf_get_lines(0, row, row + 1, false)[1] or ''
+
+              local key = 'l' -- default: expand / view logs
+              if line:find('#%d+') then
+                -- on a run line: collapse if its children are showing, else expand
+                local has_children = nxt ~= '' and not nxt:find('#%d+')
+                if has_children then key = 'h' end
+              end
+
+              vim.api.nvim_feedkeys(key, 'm', false) -- 'm' so the plugin's l/h mappings apply
+            end, { buffer = ev.buf, desc = 'Toggle run / view logs' })
+          end)
+        end,
+      })
+      local real = vim.fn.exepath('gh')
+      local dir = vim.fn.stdpath('data') .. '/gh-wrapper'
+      -- skip if gh is missing, or if we're already inheriting the wrapper (e.g. nested nvim)
+      if real == '' or real:find(dir, 1, true) then return end
+
+      local path = dir .. '/gh'
+      local log = vim.fn.stdpath('state') .. '/gh-wrapper.log'
+      local script = table.concat({
+        '#!/bin/sh',
+        'REAL="' .. real .. '"',
+        'LOG="' .. log .. '"',
+        'ERR=$(mktemp)',
+        '"$REAL" "$@" 2>"$ERR"',
+        'code=$?',
+        'if [ "$code" -ne 0 ] && grep -q "escape sequences" "$ERR"; then',
+        '  rm -f "$ERR"',
+        '  echo "retry: gh $*" >> "$LOG"',
+        '  exec "$REAL" "$@" --allow-escape-sequences',
+        'fi',
+        'cat "$ERR" >&2',
+        'rm -f "$ERR"',
+        'exit "$code"',
+        '',
+      }, '\n')
+
+      vim.fn.mkdir(dir, 'p')
+      vim.fn.mkdir(vim.fn.stdpath('state'), 'p')
+      local f = io.open(path, 'r')
+      local current = f and f:read('*a')
+      if f then f:close() end
+      if current ~= script then
+        local w = assert(io.open(path, 'w'))
+        w:write(script)
+        w:close()
+        vim.uv.fs_chmod(path, tonumber('755', 8))
+      end
+
+      vim.env.PATH = dir .. ':' .. vim.env.PATH
+
+      -- :GhWrapperLog shows which gh commands needed the retry
+      vim.api.nvim_create_user_command('GhWrapperLog', function()
+        vim.cmd('split ' .. vim.fn.fnameescape(log))
+      end, {})
+    end,
+    event = {
+      'BufReadPre */.github/workflows/*.yml',
+      'BufReadPre */.github/workflows/*.yaml',
+      'BufReadPre */.github/actions/*/action.yml',
+      'BufReadPre */.github/actions/*/action.yaml',
+      'BufNewFile */.github/workflows/*.yml',
+      'BufNewFile */.github/workflows/*.yaml',
+    },
+    cmd = {
+      'GithubActionsWatch',
+      'GithubActionsHistory',
+      'GithubActionsDispatch',
+      'GithubActionsHistoryByPR',
+    },
+    keys = {
+      { '<leader>gd', function() require('github-actions').dispatch_workflow() end, desc = 'Dispatch workflow' },
+      { '<leader>gh', function() require('github-actions').show_history() end,      desc = 'Workflow history' },
+      { '<leader>gw', function() require('github-actions').watch_workflow() end,    desc = 'Watch workflow' },
+    },
+    dependencies = {
+      'nvim-treesitter/nvim-treesitter',
+      'nvim-telescope/telescope.nvim', -- Optional: for enhanced workflow selection
+    },
+    opts = {
+      history = {
+        buffer = {
+          history = {
+            open_mode = 'float', -- run history in a floating window
+          },
+          watch = {
+            open_mode = 'float',         -- `gh run watch` terminal in a float
+            open_mode_history = 'float', -- same, when started from the history buffer
+            window_options = {},         -- float size/position, default is 80% centered
+          },
+          logs = {
+            open_mode = 'current', -- see note below
+          },
+        },
+      },
+    },
+  },
+  {
     'kkrampis/codex.nvim',
     lazy = true,
     cmd = { 'Codex', 'CodexToggle' },
@@ -1280,6 +1500,8 @@ return {
     build = ":MasonInstall "
         .. table.concat({
           "autotools-language-server",
+          'groovy-language-server',
+          "gh-actions-language-server",
           "graphql-language-service-cli",
           "angular-language-server",
           "html-lsp",

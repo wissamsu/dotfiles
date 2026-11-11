@@ -67,6 +67,7 @@ local function load()
 
   require("options")
   require("mappings")
+  require('gh_workflows')
 
   vim.go.loadplugins = true
 

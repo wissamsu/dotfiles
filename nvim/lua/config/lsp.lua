@@ -96,6 +96,24 @@ local function resolve_command(mason_name, system_names)
   return mason_path
 end
 
+vim.lsp.config('groovyls', {
+  cmd = { resolve_command('groovy-language-server') },
+  filetypes = { 'groovy' },
+  root_markers = { 'Jenkinsfile', '.git' },
+})
+
+vim.lsp.config('gh_actions_ls', {
+  cmd = { resolve_command('gh-actions-language-server'), '--stdio' },
+  filetypes = { 'yaml.github' },
+  root_markers = { '.github', '.git' },
+  init_options = {}, -- required, even when empty
+  capabilities = {
+    workspace = {
+      didChangeWorkspaceFolders = { dynamicRegistration = true },
+    },
+  },
+})
+
 --graphql_lsp
 vim.lsp.config('graphql', {
   filetypes = { 'graphql' },
@@ -1729,4 +1747,6 @@ vim.lsp.enable({
   'ts_ls',
   'angularls',
   'graphql',
+  'gh_actions_ls',
+  'groovyls',
 })
