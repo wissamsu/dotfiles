@@ -2,7 +2,9 @@
 local rocks = vim.uv.os_homedir() .. "/.luarocks/share/lua/5.1/"
 package.path = package.path .. ";" .. rocks .. "?.lua;" .. rocks .. "?/init.lua"
 local type_kind_cache = {}
+local type_kind_neg = {}
 local type_kind_pending = {}
+local kotlin_prefetch_cache = {}
 
 local functional_ifaces = {}
 for _, n in ipairs({
@@ -81,6 +83,8 @@ end
 
 local function lookup_type_kind(name)
   if type_kind_cache[name] ~= nil or type_kind_pending[name] then return end
+  local t = type_kind_neg[name]
+  if t and vim.uv.now() - t < 30000 then return end
   local client = vim.lsp.get_clients({ name = 'jdtls' })[1]
   if not client or not client.initialized then return end
   type_kind_pending[name] = true
@@ -96,7 +100,11 @@ local function lookup_type_kind(name)
         end
       end
     end
-    type_kind_cache[name] = found
+    if found then
+      type_kind_cache[name] = found
+    else
+      type_kind_neg[name] = vim.uv.now()
+    end
     if found == 'I' and uri then
       check_functional(client, name, uri)
     else
@@ -161,16 +169,18 @@ return {
     ft = { "xml", "xsd", "xsl", "xslt", "svg" },
     cmd = "LemminxMavenInstall",
     build = ":LemminxMavenInstall",
-    opts = {
-      settings = {
-        fileAssociations = {
-          {
-            pattern = "**/kmodule.xml",
-            systemId = vim.uri_from_fname(vim.fn.stdpath('config') .. '/schemas/kmodule.xsd'),
+    opts = function()
+      return {
+        settings = {
+          fileAssociations = {
+            {
+              pattern = "**/kmodule.xml",
+              systemId = vim.uri_from_fname(vim.fn.stdpath("config") .. "/schemas/kmodule.xsd"),
+            },
           },
         },
-      },
-    },
+      }
+    end,
   },
   {
     "kevinhwang91/nvim-bqf",
@@ -197,6 +207,7 @@ return {
   },
   {
     "nvim-tree/nvim-web-devicons",
+    lazy = true,
     opts = {
       override_by_extension = {
         properties = { icon = "\u{f013}", color = "#6d8086", name = "Properties" },
@@ -711,8 +722,7 @@ return {
                   end
                   return out
                 end
-                _G._kotlin_prefetch_cache = _G._kotlin_prefetch_cache or {}
-                local cached = _G._kotlin_prefetch_cache[context.bufnr]
+                local cached = kotlin_prefetch_cache[context.bufnr]
                 if cached and type(cached.items) == 'table' then
                   local adapted = vim.deepcopy(refine(cached.items, context.line, context.cursor[2]))
                   for _, item in ipairs(adapted) do
@@ -743,7 +753,7 @@ return {
                     for _, it in ipairs(response.items) do
                       if type(it.detail) == 'string' then it.detail = it.detail:gsub('import from ', '') end
                     end
-                    _G._kotlin_prefetch_cache[context.bufnr] = { items = response.items }
+                    kotlin_prefetch_cache[context.bufnr] = { items = response.items }
                     response.items = refine(response.items, context.line, context.cursor[2])
                   end
                   return callback(response)
@@ -784,7 +794,10 @@ return {
       end
 
       hl()
-      vim.api.nvim_create_autocmd('ColorScheme', { callback = hl })
+      vim.api.nvim_create_autocmd('ColorScheme', {
+        group = vim.api.nvim_create_augroup('BlinkCustomHl', { clear = true }),
+        callback = hl,
+      })
     end,
   },
   {
@@ -1058,7 +1071,9 @@ return {
       "theHamsta/nvim-dap-virtual-text",
       {
         "julianolf/nvim-dap-lldb",
-        opts = { codelldb_path = vim.fn.stdpath("data") .. "/mason/bin/codelldb" },
+        opts = function()
+          return { codelldb_path = vim.fn.stdpath("data") .. "/mason/bin/codelldb" }
+        end,
       },
     },
     keys = {
@@ -1282,7 +1297,6 @@ return {
           "dockerfile-language-server",
           "drools-lsp",
           "java-debug-adapter",
-          "java-language-server",
           "java-test",
           "jdtls",
           "json-lsp",
@@ -1291,7 +1305,6 @@ return {
           "lemminx",
           "lua-language-server",
           "neocmakelsp",
-          "pyright",
           "shellcheck",
           "shfmt",
           "stylua",
@@ -1358,18 +1371,23 @@ return {
     "rachartier/tiny-cmdline.nvim",
     event = "VeryLazy",
     config = function()
-      require("tiny-cmdline").setup({
-        width = { value = "28%" },
+      local cmdline = require("tiny-cmdline")
 
+      cmdline.setup({
+        width = { value = "28%" },
         native_types = {},
-        on_reposition = require("tiny-cmdline").adapters.blink,
+        on_reposition = cmdline.adapters.blink,
       })
 
-      local function border_hl()
-        vim.api.nvim_set_hl(0, "TinyCmdlineBorder", { fg = "#89b4fa" })
+      local function set_border_hl()
+        vim.api.nvim_set_hl(0, "TinyCmdlineBorder", { link = "FloatBorder" })
       end
-      border_hl()
-      vim.api.nvim_create_autocmd("ColorScheme", { callback = border_hl })
+
+      set_border_hl()
+      vim.api.nvim_create_autocmd("ColorScheme", {
+        group = vim.api.nvim_create_augroup("TinyCmdlineBorder", { clear = true }),
+        callback = set_border_hl,
+      })
     end,
   },
   {
