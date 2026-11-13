@@ -45,7 +45,7 @@ map("n", "<C-n>", function()
   fyler.open()
 end, { desc = "Toggle Tree", silent = true })
 
-map("n", "<leader>tn", ":tabnew<CR>", { silent = true, desc = "New Tab" })
+map("n", "<leader>tn", ":tabnext<CR>", { silent = true, desc = "Next Tab" })
 map("n", "<leader>tc", ":tabclose<CR>", { silent = true, desc = "Close Tab" })
 
 function _G.add_notebook_cell()

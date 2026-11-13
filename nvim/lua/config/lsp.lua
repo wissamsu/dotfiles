@@ -106,7 +106,9 @@ vim.lsp.config('gh_actions_ls', {
   cmd = { resolve_command('gh-actions-language-server'), '--stdio' },
   filetypes = { 'yaml.github' },
   root_markers = { '.github', '.git' },
-  init_options = {}, -- required, even when empty
+  init_options = {
+    sessionToken = vim.fn.system('gh auth token'):gsub('%s+', ''),
+  }, -- required, even when empty
   capabilities = {
     workspace = {
       didChangeWorkspaceFolders = { dynamicRegistration = true },

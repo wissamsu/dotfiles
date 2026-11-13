@@ -403,6 +403,17 @@ return {
     end,
   },
   {
+    "ramilito/kubectl.nvim",
+    version = "2.*", -- downloads pre-built binaries, no Rust toolchain needed
+    dependencies = { "saghen/blink.lib" },
+    keys = {
+      { "<leader>lk", function() require("kubectl").toggle() end, desc = "Kubectl" },
+    },
+    config = function()
+      require("kubectl").setup()
+    end,
+  },
+  {
     'skanehira/github-actions.nvim',
     init = function()
       -- syntax highlighting for the logs buffer
