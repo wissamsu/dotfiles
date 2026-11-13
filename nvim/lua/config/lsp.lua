@@ -96,6 +96,24 @@ local function resolve_command(mason_name, system_names)
   return mason_path
 end
 
+vim.lsp.config('helm_ls', {
+  cmd = { resolve_command('helm_ls'), 'serve' },
+  filetypes = { 'helm' },
+  root_markers = { 'Chart.yaml', '.git' },
+  capabilities = {
+    workspace = {
+      didChangeWatchedFiles = { dynamicRegistration = true },
+    },
+  },
+  settings = {
+    ['helm-ls'] = {
+      yamlls = {
+        path = resolve_command('yaml-language-server'),
+      },
+    },
+  },
+})
+
 vim.lsp.config('groovyls', {
   cmd = { resolve_command('groovy-language-server') },
   filetypes = { 'groovy' },
@@ -1751,4 +1769,5 @@ vim.lsp.enable({
   'graphql',
   'gh_actions_ls',
   'groovyls',
+  'helm_ls',
 })

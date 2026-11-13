@@ -1511,6 +1511,7 @@ return {
     build = ":MasonInstall "
         .. table.concat({
           "autotools-language-server",
+          "helm-ls",
           'groovy-language-server',
           "gh-actions-language-server",
           "graphql-language-service-cli",
