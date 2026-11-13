@@ -1511,6 +1511,7 @@ return {
     build = ":MasonInstall "
         .. table.concat({
           "autotools-language-server",
+          "taplo",
           "helm-ls",
           'groovy-language-server',
           "gh-actions-language-server",

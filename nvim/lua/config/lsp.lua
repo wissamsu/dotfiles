@@ -96,6 +96,12 @@ local function resolve_command(mason_name, system_names)
   return mason_path
 end
 
+vim.lsp.config('taplo', {
+  cmd = { resolve_command('taplo'), 'lsp', 'stdio' },
+  filetypes = { 'toml' },
+  root_markers = { '.taplo.toml', 'taplo.toml', '.git' },
+})
+
 vim.lsp.config('helm_ls', {
   cmd = { resolve_command('helm_ls'), 'serve' },
   filetypes = { 'helm' },
@@ -616,10 +622,19 @@ local function is_spring_project(root)
 end
 
 --spring_lsp
+local function is_spring_config_file(name)
+  return name:match('^application[%w%-_]*%.ya?ml$') ~= nil
+      or name:match('^application[%w%-_]*%.properties$') ~= nil
+      or name:match('^bootstrap[%w%-_]*%.ya?ml$') ~= nil
+      or name:match('^bootstrap[%w%-_]*%.properties$') ~= nil
+end
 vim.lsp.config('springls', {
   root_dir = function(bufnr, on_dir)
     local name = vim.fs.basename(vim.api.nvim_buf_get_name(bufnr))
     if is_compose_file(name) then
+      return
+    end
+    if not is_spring_config_file(name) then
       return
     end
     local root = vim.fs.root(bufnr, spring_root_markers)
@@ -1549,6 +1564,9 @@ vim.filetype.add({
     ['docker-compose.yaml'] = 'yaml.docker-compose',
     ['docker-compose.yml'] = 'yaml.docker-compose',
   },
+  pattern = {
+    ['.*/nginx/.*%.conf'] = 'nginx',
+  },
 })
 
 local function render_codelens(bufnr)
@@ -1770,4 +1788,5 @@ vim.lsp.enable({
   'gh_actions_ls',
   'groovyls',
   'helm_ls',
+  'taplo',
 })
