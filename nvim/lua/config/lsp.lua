@@ -120,6 +120,32 @@ vim.lsp.config('helm_ls', {
   },
 })
 
+--yaml_lsp (kubernetes manifests, CRDs, schema store)
+local yaml_companion = require('yaml-companion')
+local yamlls_config = yaml_companion.setup({
+  formatting = false,
+  lspconfig = {
+    settings = {
+      redhat = { telemetry = { enabled = false } },
+      yaml = {
+        validate = true,
+        hover = true,
+        format = { enable = false },
+        schemaStore = { enable = true },
+        schemaDownload = { enable = true },
+        kubernetesCRDStore = { enable = true },
+        schemas = {},
+      },
+    },
+  },
+})
+
+vim.lsp.config('yamlls', vim.tbl_deep_extend('force', yamlls_config, {
+  cmd = { resolve_command('yaml-language-server'), '--stdio' },
+  filetypes = { 'yaml', 'yml', 'yaml.gitlab', 'yaml.helm-values' },
+  root_markers = { '.git' },
+}))
+
 vim.lsp.config('groovyls', {
   cmd = { resolve_command('groovy-language-server') },
   filetypes = { 'groovy' },
@@ -1789,4 +1815,5 @@ vim.lsp.enable({
   'groovyls',
   'helm_ls',
   'taplo',
+  'yamlls',
 })

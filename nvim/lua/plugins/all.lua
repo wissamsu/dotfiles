@@ -414,6 +414,10 @@ return {
     end,
   },
   {
+    "mosheavni/yaml-companion.nvim",
+    ft = { "yaml", "yml" },
+  },
+  {
     'skanehira/github-actions.nvim',
     init = function()
       -- syntax highlighting for the logs buffer
