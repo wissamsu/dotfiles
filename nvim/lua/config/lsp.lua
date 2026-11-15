@@ -121,30 +121,38 @@ vim.lsp.config('helm_ls', {
 })
 
 --yaml_lsp (kubernetes manifests, CRDs, schema store)
-local yaml_companion = require('yaml-companion')
-local yamlls_config = yaml_companion.setup({
-  formatting = false,
-  lspconfig = {
-    settings = {
-      redhat = { telemetry = { enabled = false } },
-      yaml = {
-        validate = true,
-        hover = true,
-        format = { enable = false },
-        schemaStore = { enable = true },
-        schemaDownload = { enable = true },
-        kubernetesCRDStore = { enable = true },
-        schemas = {},
+vim.api.nvim_create_autocmd('FileType', {
+  group = vim.api.nvim_create_augroup('YamlLspLazySetup', { clear = true }),
+  pattern = 'yaml',
+  once = true,
+  callback = function()
+    local yaml_companion = require('yaml-companion')
+    local yamlls_config = yaml_companion.setup({
+      formatting = false,
+      lspconfig = {
+        settings = {
+          redhat = { telemetry = { enabled = false } },
+          yaml = {
+            validate = true,
+            hover = true,
+            format = { enable = false },
+            schemaStore = { enable = true },
+            schemaDownload = { enable = true },
+            kubernetesCRDStore = { enable = true },
+            schemas = {},
+          },
+        },
       },
-    },
-  },
-})
+    })
 
-vim.lsp.config('yamlls', vim.tbl_deep_extend('force', yamlls_config, {
-  cmd = { resolve_command('yaml-language-server'), '--stdio' },
-  filetypes = { 'yaml', 'yml', 'yaml.gitlab', 'yaml.helm-values' },
-  root_markers = { '.git' },
-}))
+    vim.lsp.config('yamlls', vim.tbl_deep_extend('force', yamlls_config, {
+      cmd = { resolve_command('yaml-language-server'), '--stdio' },
+      filetypes = { 'yaml', 'yaml.gitlab', 'yaml.helm-values' },
+      root_markers = { '.git' },
+    }))
+    vim.lsp.enable('yamlls')
+  end,
+})
 
 vim.lsp.config('groovyls', {
   cmd = { resolve_command('groovy-language-server') },
@@ -156,9 +164,15 @@ vim.lsp.config('gh_actions_ls', {
   cmd = { resolve_command('gh-actions-language-server'), '--stdio' },
   filetypes = { 'yaml.github' },
   root_markers = { '.github', '.git' },
-  init_options = {
-    sessionToken = vim.fn.system('gh auth token'):gsub('%s+', ''),
-  }, -- required, even when empty
+  init_options = { sessionToken = '' },
+  before_init = function(params)
+    local ok, out = pcall(function()
+      return vim.system({ 'gh', 'auth', 'token' }, { text = true }):wait()
+    end)
+    if ok and out.code == 0 then
+      params.initializationOptions = { sessionToken = vim.trim(out.stdout) }
+    end
+  end,
   capabilities = {
     workspace = {
       didChangeWorkspaceFolders = { dynamicRegistration = true },
@@ -493,12 +507,7 @@ vim.api.nvim_create_autocmd('LspProgress', {
     end)
   end,
 })
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "drools",
-  callback = function()
-    vim.treesitter.start(0, "java")
-  end,
-})
+
 vim.api.nvim_create_autocmd('LspAttach', {
   group = vim.api.nvim_create_augroup('KotlinCompletionSeedOnAttach', { clear = true }),
   callback = function(args)
@@ -1168,7 +1177,7 @@ local root_markers = {
 }
 
 local function jdtls_workspace(root_dir)
-  local project_name = vim.fn.fnamemodify(root_dir, ':p:h:t')
+  local project_name = vim.fs.basename(root_dir) .. '_' .. vim.fn.sha256(root_dir):sub(1, 8)
   return vim.fn.stdpath('cache') .. '/jdtls/workspace/' .. project_name
 end
 
@@ -1551,12 +1560,15 @@ local function find_buf_by_name(name)
   end
 end
 local function jdt_aware_definition()
-  local params = vim.lsp.util.make_position_params(0, 'utf-8')
+  local clients = vim.lsp.get_clients({ bufnr = 0, method = 'textDocument/definition' })
+  local enc = clients[1] and clients[1].offset_encoding or 'utf-16'
+  local params = vim.lsp.util.make_position_params(0, enc)
   vim.lsp.buf_request_all(0, 'textDocument/definition', params, function(results)
     local result
-    for _, res in pairs(results) do
+    for client_id, res in pairs(results) do
       if res.result and not vim.tbl_isempty(res.result) then
         result = res.result
+        enc = vim.lsp.get_client_by_id(client_id).offset_encoding
         break
       end
     end
@@ -1625,7 +1637,7 @@ local function jdt_aware_definition()
       return
     end
 
-    local ok, err = pcall(vim.lsp.util.show_document, res, 'utf-8')
+    local ok, err = pcall(vim.lsp.util.show_document, res, enc)
     if not ok then
       vim.notify('Could not open definition: ' .. tostring(err), vim.log.levels.ERROR)
     end
@@ -1679,8 +1691,8 @@ local function render_codelens(bufnr)
       local resolved, pending = {}, #lenses
       local function draw()
         if
-          not vim.api.nvim_buf_is_valid(bufnr)
-          or vim.api.nvim_buf_get_changedtick(bufnr) ~= tick
+            not vim.api.nvim_buf_is_valid(bufnr)
+            or vim.api.nvim_buf_get_changedtick(bufnr) ~= tick
         then
           return
         end
@@ -1843,11 +1855,10 @@ vim.api.nvim_create_autocmd('LspProgress', {
     end, 500)
   end,
 })
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "drools",
-  callback = function()
-    vim.treesitter.start(0, "java")
-  end,
+vim.api.nvim_create_autocmd('FileType', {
+  group = vim.api.nvim_create_augroup('DroolsTS', { clear = true }),
+  pattern = 'drools',
+  callback = function() pcall(vim.treesitter.start, 0, 'java') end,
 })
 vim.lsp.enable({
   'lua_ls',
@@ -1875,5 +1886,4 @@ vim.lsp.enable({
   'groovyls',
   'helm_ls',
   'taplo',
-  'yamlls',
 })

@@ -28,6 +28,9 @@ return {
           signs = { add = "+", change = "~", delete = "-" },
         },
       })
+      vim.keymap.set("n", "<leader>dg", function()
+        require("mini.diff").goto_hunk("next")
+      end, { desc = "Next git hunk" })
       vim.api.nvim_create_autocmd("ColorScheme", { callback = set_hl })
       vim.api.nvim_create_autocmd("InsertEnter", {
         once = true,
