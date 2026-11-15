@@ -165,6 +165,28 @@ local function param_kind_hint(label)
 end
 return {
   {
+    "nvim-mini/mini.nvim",
+    config = function()
+      local set_hl = function()
+        vim.api.nvim_set_hl(0, "MiniIndentscopeSymbol", { fg = "#ffcc66" })
+        vim.api.nvim_set_hl(0, "MiniDiffSignAdd", { fg = "#a6e3a1" })
+        vim.api.nvim_set_hl(0, "MiniDiffSignChange", { fg = "#f9e2af" })
+        vim.api.nvim_set_hl(0, "MiniDiffSignDelete", { fg = "#f38ba8" })
+      end
+      set_hl()
+      require("mini.indentscope").setup({
+        symbol = "│",
+      })
+      require("mini.diff").setup({
+        view = {
+          style = "sign",
+          signs = { add = "+", change = "~", delete = "-" },
+        },
+      })
+      vim.api.nvim_create_autocmd("ColorScheme", { callback = set_hl })
+    end,
+  },
+  {
     "JavaHello/lemminx-maven.nvim",
     ft = { "xml", "xsd", "xsl", "xslt", "svg" },
     cmd = "LemminxMavenInstall",

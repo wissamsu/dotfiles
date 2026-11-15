@@ -245,99 +245,6 @@ vim.schedule(function()
 end)
 
 vim.o.updatetime = 300
---gitsigns
-local ns, base = vim.api.nvim_create_namespace("gitdiff"), {}
-local render_timers = {}
-local max_diff_lines = 5000
-local max_diff_bytes = 512 * 1024
-
-for g, c in pairs({ GitDiffAdd = "#a6e3a1", GitDiffChange = "#f9e2af", GitDiffDelete = "#f38ba8" }) do
-  vim.api.nvim_set_hl(0, g, { fg = c })
-end
-
-local function render(buf)
-  if not vim.api.nvim_buf_is_valid(buf) then return end
-  vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
-  if not base[buf] then return end
-
-  local line_count = vim.api.nvim_buf_line_count(buf)
-  if line_count > max_diff_lines then return end
-
-  local cur = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n") .. "\n"
-  if #cur > max_diff_bytes then return end
-
-  for _, h in ipairs(vim.diff(base[buf], cur, { result_type = "indices" })) do
-    local ca, sb, cb = h[2], h[3], h[4]
-    for l = sb, math.max(sb, sb + cb - 1) do
-      local s = cb == 0 and { "-", "GitDiffDelete" } or
-          (l - sb < ca and { "~", "GitDiffChange" } or { "+", "GitDiffAdd" })
-      vim.api.nvim_buf_set_extmark(buf, ns, math.max(l, 1) - 1, 0,
-        { sign_text = s[1], sign_hl_group = s[2], priority = 5 })
-    end
-  end
-end
-
-local function schedule_render(buf)
-  if render_timers[buf] or not base[buf] then return end
-  render_timers[buf] = vim.defer_fn(function()
-    render_timers[buf] = nil
-    render(buf)
-  end, 200)
-end
-
-local function update_git_base(buf)
-  if not vim.api.nvim_buf_is_valid(buf) or vim.bo[buf].buftype ~= "" then return end
-
-  local f = vim.api.nvim_buf_get_name(buf)
-  if f == "" then return end
-  if vim.api.nvim_buf_line_count(buf) > max_diff_lines then
-    base[buf] = nil
-    vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
-    return
-  end
-
-  local dir = vim.fs.dirname(f)
-  local basename = vim.fs.basename(f)
-  local git_file = ":./" .. basename
-
-  vim.system({ "git", "-C", dir, "show", git_file }, { text = true }, function(result)
-    vim.schedule(function()
-      if not vim.api.nvim_buf_is_valid(buf) or vim.api.nvim_buf_get_name(buf) ~= f then return end
-
-      if result.code == 0 and #(result.stdout or "") <= max_diff_bytes then
-        base[buf] = result.stdout or ""
-        render(buf)
-        return
-      end
-
-      vim.system({ "git", "-C", dir, "rev-parse", "--is-inside-work-tree" }, { text = true }, function(repo)
-        vim.schedule(function()
-          if not vim.api.nvim_buf_is_valid(buf) or vim.api.nvim_buf_get_name(buf) ~= f then return end
-          base[buf] = repo.code == 0 and "" or nil
-          render(buf)
-        end)
-      end)
-    end)
-  end)
-end
-
-vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "FocusGained" }, {
-  callback = function(a)
-    update_git_base(a.buf)
-  end,
-})
-vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
-  callback = function(a) schedule_render(a.buf) end,
-})
-vim.api.nvim_create_autocmd("BufWipeout", {
-  callback = function(a)
-    if render_timers[a.buf] then
-      render_timers[a.buf]:stop()
-      render_timers[a.buf] = nil
-    end
-    base[a.buf] = nil
-  end,
-})
 --notifications
 vim.schedule(function()
   local ok, ui = pcall(require, "vim._core.ui2")
@@ -358,135 +265,6 @@ vim.opt.listchars = {
   leadmultispace = "│ ",
   tab = "│ ",
 }
-
-local ns = vim.api.nvim_create_namespace("scope_guide")
-
-local function set_hl()
-  vim.api.nvim_set_hl(0, "ScopeGuide", { fg = "#ffcc66" })
-end
-set_hl()
-vim.api.nvim_create_autocmd("ColorScheme", { callback = set_hl })
-
--- returns indent width and whether the line is blank
-local function measure(line, ts)
-  local w = 0
-  for i = 1, #line do
-    local c = line:byte(i)
-    if c == 32 then
-      w = w + 1
-    elseif c == 9 then
-      w = w + ts - (w % ts)
-    else
-      return w, false
-    end
-  end
-  return w, true
-end
-
-local function is_closer(s) return s:match("^%s*[%]%)}]") ~= nil end
-local function opens(s) return s:match("[%[%({]%s*$") ~= nil end
-
-local st = { first = nil, last = nil, col = 0, blank = {} }
-local drawn = {}
-
-local function scope_block(win, buf, top, bot)
-  if win ~= vim.api.nvim_get_current_win() or vim.bo[buf].buftype ~= "" then
-    return nil
-  end
-
-  local ts = vim.bo[buf].tabstop
-  local sw = vim.fn.shiftwidth()
-  local lines = vim.api.nvim_buf_get_lines(buf, top, bot + 1, false)
-  local n = #lines
-  if n == 0 then return nil end
-
-  local cur = vim.api.nvim_win_get_cursor(win)[1] - top
-  if cur < 1 or cur > n then return nil end
-
-  local ind, blank = {}, {}
-  for i = 1, n do
-    ind[i], blank[i] = measure(lines[i], ts)
-  end
-
-  local base = cur
-  while base > 1 and blank[base] do base = base - 1 end
-
-  if is_closer(lines[base]) then
-    local p = base - 1
-    while p >= 1 and blank[p] do p = p - 1 end
-    if p >= 1 and ind[p] > ind[base] then base = p end
-  elseif opens(lines[base]) then
-    local nx = base + 1
-    while nx <= n and blank[nx] do nx = nx + 1 end
-    if nx <= n and ind[nx] > ind[base] then base = nx end
-  end
-
-  local indent = ind[base]
-  if indent < sw then return nil end
-
-  local first, last = base, base
-  while first > 1 and (blank[first - 1] or ind[first - 1] >= indent) do first = first - 1 end
-  while last < n and (blank[last + 1] or ind[last + 1] >= indent) do last = last + 1 end
-
-  local first_row, last_row = first + top - 1, last + top - 1
-  local row_blank = {}
-  for i = first, last do
-    row_blank[i + top - 1] = blank[i]
-  end
-
-  return first_row, last_row, indent - sw - vim.fn.winsaveview().leftcol, row_blank
-end
-
-vim.api.nvim_set_decoration_provider(ns, {
-  on_win = function(_, win, buf, top, bot)
-    local first, last, col, blank = scope_block(win, buf, top, bot)
-    if not first then
-      st.first, st.last = nil, nil
-      drawn[win] = nil
-      return false
-    end
-
-    st.first, st.last, st.col, st.blank = first, last, col, blank
-    drawn[win] = { first = first, last = last, col = col }
-    return col >= 0
-  end,
-
-  on_line = function(_, _, buf, row)
-    if st.first and row >= st.first and row <= st.last and not st.blank[row] then
-      vim.api.nvim_buf_set_extmark(buf, ns, row, 0, {
-        ephemeral = true,
-        virt_text = { { "│", "ScopeGuide" } },
-        virt_text_win_col = st.col,
-        virt_text_pos = "overlay",
-        hl_mode = "combine",
-      })
-    end
-  end,
-})
-
-vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
-  callback = function()
-    local win = vim.api.nvim_get_current_win()
-    local buf = vim.api.nvim_win_get_buf(win)
-    if vim.bo[buf].buftype ~= "" then return end
-
-    local first, last, col = scope_block(win, buf, vim.fn.line("w0"), vim.fn.line("w$"))
-    local prev = drawn[win]
-    if not first and not prev then return end
-
-    local changed = first
-        and (not prev or prev.first ~= first or prev.last ~= last or prev.col ~= col)
-    if changed or not first then
-      vim.api.nvim__redraw({ win = win, valid = false })
-    end
-  end,
-})
-
-vim.api.nvim_create_autocmd("WinClosed", {
-  callback = function(args)
-    drawn[tonumber(args.match)] = nil
-  end,
-})
 
 -- treesitter
 local max_treesitter_lines = 10000
@@ -579,22 +357,30 @@ vim.api.nvim_create_autocmd("FileType", {
         end
 
         local ok = pcall(vim.treesitter.start, buf)
-        for _, win in ipairs(vim.fn.win_findbuf(buf)) do
-          local tab = vim.api.nvim_win_get_tabpage(win)
-          if not is_diffview_buf and not vim.t[tab].diffview_view_initialized then
-            if ok then
-              vim.wo[win].foldmethod = "expr"
-              vim.wo[win].foldexpr = "v:lua.vim.treesitter.foldexpr()"
-              vim.wo[win].foldenable = true
-              vim.wo[win].foldlevel = 99
-            else
-              vim.wo[win].foldmethod = "manual"
-            end
-          end
-        end
 
         if ft == 'java' and not is_diffview_buf then
+          for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+            local tab = vim.api.nvim_win_get_tabpage(win)
+            if not vim.t[tab].diffview_view_initialized then
+              if ok then
+                vim.wo[win].foldmethod = "expr"
+                vim.wo[win].foldexpr = "v:lua.vim.treesitter.foldexpr()"
+                vim.wo[win].foldenable = true
+                vim.wo[win].foldlevel = 99
+              else
+                vim.wo[win].foldmethod = "manual"
+              end
+            end
+          end
           fold_imports(buf)
+        elseif ft ~= 'kotlin' then
+          for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+            if vim.wo[win].foldmethod == "expr"
+                and vim.wo[win].foldexpr == "v:lua.vim.treesitter.foldexpr()" then
+              vim.wo[win].foldmethod = "manual"
+              vim.wo[win].foldexpr = "0"
+            end
+          end
         end
       end)
     end, 30)
