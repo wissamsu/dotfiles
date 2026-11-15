@@ -654,6 +654,58 @@ local function is_spring_config_file(name)
       or name:match('^bootstrap[%w%-_]*%.ya?ml$') ~= nil
       or name:match('^bootstrap[%w%-_]*%.properties$') ~= nil
 end
+
+local function jdtls_for_root(root)
+  for _, c in ipairs(vim.lsp.get_clients({ name = 'jdtls', _uninitialized = true })) do
+    if c.config.root_dir == root then
+      return c
+    end
+  end
+end
+
+local function ensure_jdtls(root, bufnr)
+  local client = jdtls_for_root(root)
+  if client then
+    return client
+  end
+
+  local base = vim.lsp.config['jdtls']
+  if not base then
+    return
+  end
+
+  local cfg = vim.deepcopy(base) --[[@as vim.lsp.ClientConfig]]
+  cfg.name = 'jdtls'
+  cfg.root_dir = root
+  local ok, id = pcall(vim.lsp.start, cfg, { bufnr = bufnr, attach = false, silent = true })
+  if not ok or not id then
+    return
+  end
+
+  client = vim.lsp.get_client_by_id(id)
+  if client then
+    require('springls').setup(client)
+  end
+  return client
+end
+
+local function when_jdtls_ready(client, callback)
+  if client.initialized then
+    callback()
+    return
+  end
+
+  local deadline = vim.uv.now() + 30000
+  local timer = assert(vim.uv.new_timer())
+  timer:start(100, 100, vim.schedule_wrap(function()
+    if client.initialized or client:is_stopped() or vim.uv.now() >= deadline then
+      timer:stop()
+      timer:close()
+      callback()
+    end
+  end))
+end
+
 vim.lsp.config('springls', {
   root_dir = function(bufnr, on_dir)
     local name = vim.fs.basename(vim.api.nvim_buf_get_name(bufnr))
@@ -664,9 +716,21 @@ vim.lsp.config('springls', {
       return
     end
     local root = vim.fs.root(bufnr, spring_root_markers)
-    if root and is_spring_project(root) then
-      on_dir(root)
+    if not (root and is_spring_project(root)) then
+      return
     end
+
+    local jdtls = ensure_jdtls(root, bufnr)
+    if not jdtls then
+      on_dir(root)
+      return
+    end
+
+    when_jdtls_ready(jdtls, function()
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        on_dir(root)
+      end
+    end)
   end,
   cmd = function(dispatchers, _)
     local jar = spring_boot_ls_jar()
@@ -1702,61 +1766,6 @@ vim.lsp.config('kotlin_lsp', {
       },
     },
   },
-})
-
-local springls_restarted = {}
-
-vim.api.nvim_create_autocmd('LspAttach', {
-  group = vim.api.nvim_create_augroup('SpringLsEnsureJdtls', { clear = true }),
-  callback = function(args)
-    local client = vim.lsp.get_client_by_id(args.data.client_id)
-    if not client or client.name ~= 'springls' then return end
-
-    local root = client.config.root_dir
-    if springls_restarted[root] then return end
-
-    local jdtls
-    for _, c in ipairs(vim.lsp.get_clients({ name = 'jdtls' })) do
-      if c.config.root_dir == root then
-        jdtls = c
-        break
-      end
-    end
-
-    if jdtls and jdtls.initialized then return end
-
-    if not jdtls then
-      local base = vim.lsp.config['jdtls']
-      if not base then return end
-      local cfg = vim.deepcopy(base) --[[@as vim.lsp.ClientConfig]]
-      cfg.name = 'jdtls'
-      cfg.root_dir = root
-      local id = vim.lsp.start(cfg, { bufnr = args.buf, attach = false })
-      jdtls = id and vim.lsp.get_client_by_id(id)
-    end
-    if not jdtls then return end
-
-    springls_restarted[root] = true
-    local buf = args.buf
-    local timer = assert(vim.uv.new_timer())
-    timer:start(1000, 1000, vim.schedule_wrap(function()
-      if jdtls:is_stopped() then
-        timer:stop(); timer:close()
-        return
-      end
-      if not jdtls.initialized then return end
-      timer:stop(); timer:close()
-
-      vim.defer_fn(function()
-        client:stop()
-        vim.defer_fn(function()
-          if vim.api.nvim_buf_is_valid(buf) and not vim.bo[buf].modified then
-            vim.api.nvim_buf_call(buf, function() vim.cmd('edit') end)
-          end
-        end, 500)
-      end, 5000)
-    end))
-  end,
 })
 
 vim.api.nvim_create_user_command("JniHeader", function(opts)
