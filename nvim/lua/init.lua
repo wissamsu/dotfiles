@@ -111,14 +111,29 @@ local function load()
     vim.api.nvim_clear_autocmds({ group = lsp_group })
     require("config.lsp")
   end
-  vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile", "FileType" }, {
+  local function load_and_attach()
+  load_lsp()
+  -- re-fire FileType for buffers that were opened before LSP was set up
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(buf)
+        and vim.bo[buf].buftype == ""
+        and vim.bo[buf].filetype ~= "" then
+      vim.api.nvim_exec_autocmds("FileType", { buffer = buf, modeline = false })
+    end
+  end
+end
+
+if vim.v.vim_did_enter == 1 then
+  vim.schedule(load_and_attach)
+else
+  vim.api.nvim_create_autocmd("UIEnter", {
     group = lsp_group,
-    callback = function(args)
-      if vim.bo[args.buf].buftype == "" then
-        load_lsp()
-      end
+    once = true,
+    callback = function()
+      vim.schedule(load_and_attach)
     end,
   })
+end
 end
 
 
