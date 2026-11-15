@@ -1240,9 +1240,7 @@ vim.lsp.config('jdtls', {
       import = {
         generatesMetadataFilesAtProjectRoot = false,
       },
-      implementationsCodeLens = {
-        enabled = true,
-      },
+      implementationCodeLens = 'all',
       referencesCodeLens = {
         enabled = true,
       },
@@ -1659,38 +1657,48 @@ vim.filetype.add({
   },
 })
 
+local eol_codelens = {}
+
 local function render_codelens(bufnr)
-  if not vim.api.nvim_buf_is_valid(bufnr) then return end
+  if not vim.api.nvim_buf_is_valid(bufnr) then
+    return
+  end
   local tick = vim.api.nvim_buf_get_changedtick(bufnr)
 
-  local lens_clients = vim.tbl_filter(function(c)
-    return true
-  end, vim.lsp.get_clients({ bufnr = bufnr, method = 'textDocument/codeLens' }))
+  local lens_clients = vim.lsp.get_clients({ bufnr = bufnr, method = 'textDocument/codeLens' })
 
   for _, client in ipairs(lens_clients) do
     local ns = vim.api.nvim_create_namespace('eol_codelens_' .. client.id)
     local params = { textDocument = vim.lsp.util.make_text_document_params(bufnr) }
 
     client:request('textDocument/codeLens', params, function(err, lenses)
-      if err or not lenses then return end
+      if err or not lenses then
+        return
+      end
 
       local resolved, pending = {}, #lenses
       local function draw()
-        if not vim.api.nvim_buf_is_valid(bufnr)
-            or vim.api.nvim_buf_get_changedtick(bufnr) ~= tick then
+        if
+          not vim.api.nvim_buf_is_valid(bufnr)
+          or vim.api.nvim_buf_get_changedtick(bufnr) ~= tick
+        then
           return
         end
         vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
 
-        local by_line = {}
+        local by_line, items = {}, {}
         for _, lens in ipairs(resolved) do
           local title = lens.command and lens.command.title
           if title and title ~= '' then
-            local l = lens.range.start.line
-            by_line[l] = by_line[l] or {}
-            table.insert(by_line[l], title)
+            local line = lens.range.start.line
+            by_line[line] = by_line[line] or {}
+            table.insert(by_line[line], title)
+            items[#items + 1] = { client_id = client.id, lens = lens }
           end
         end
+        eol_codelens[bufnr] = eol_codelens[bufnr] or {}
+        eol_codelens[bufnr][client.id] = items
+
         for line, titles in pairs(by_line) do
           pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, line, 0, {
             virt_text = { { '  ' .. table.concat(titles, ' | '), 'LspCodeLens' } },
@@ -1700,13 +1708,17 @@ local function render_codelens(bufnr)
         end
       end
 
-      if pending == 0 then return draw() end
+      if pending == 0 then
+        return draw()
+      end
 
       for _, lens in ipairs(lenses) do
         local function done(l)
           table.insert(resolved, l or lens)
           pending = pending - 1
-          if pending == 0 then vim.schedule(draw) end
+          if pending == 0 then
+            vim.schedule(draw)
+          end
         end
         if lens.command or not client:supports_method('codeLens/resolve') then
           done(lens)
@@ -1732,12 +1744,24 @@ local function schedule_codelens(bufnr)
     if vim.api.nvim_buf_is_valid(bufnr) then
       render_codelens(bufnr)
     end
-  end, 1000)
+  end, 500)
 end
 
-vim.api.nvim_create_autocmd({ 'BufWritePost', 'InsertLeave' }, {
+vim.api.nvim_create_autocmd('LspAttach', {
   group = vim.api.nvim_create_augroup('EolCodeLens', { clear = true }),
-  callback = function(args) schedule_codelens(args.buf) end,
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if client and client:supports_method('textDocument/codeLens', args.buf) then
+      schedule_codelens(args.buf)
+    end
+  end,
+})
+
+vim.api.nvim_create_autocmd({ 'BufWritePost', 'InsertLeave' }, {
+  group = vim.api.nvim_create_augroup('EolCodeLensRefresh', { clear = true }),
+  callback = function(args)
+    schedule_codelens(args.buf)
+  end,
 })
 
 vim.api.nvim_create_autocmd('BufWipeout', {
@@ -1748,8 +1772,35 @@ vim.api.nvim_create_autocmd('BufWipeout', {
       timer:stop()
       codelens_timers[args.buf] = nil
     end
+    eol_codelens[args.buf] = nil
   end,
 })
+
+function _G.eol_codelens_run()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local row = vim.api.nvim_win_get_cursor(0)[1] - 1
+  local found
+
+  for _, items in pairs(eol_codelens[bufnr] or {}) do
+    for _, item in ipairs(items) do
+      if item.lens.range.start.line == row and item.lens.command then
+        found = item
+        break
+      end
+    end
+    if found then
+      break
+    end
+  end
+
+  if not found then
+    return
+  end
+  local client = vim.lsp.get_client_by_id(found.client_id)
+  if client then
+    client:exec_cmd(found.lens.command, { bufnr = bufnr })
+  end
+end
 
 --ktlsp (fwcd fork) kotlin language server
 vim.lsp.config('kotlin_lsp', {

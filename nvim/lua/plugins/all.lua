@@ -1,171 +1,12 @@
 --just
 local rocks = vim.uv.os_homedir() .. "/.luarocks/share/lua/5.1/"
 package.path = package.path .. ";" .. rocks .. "?.lua;" .. rocks .. "?/init.lua"
-local type_kind_cache = {}
-local type_kind_neg = {}
-local type_kind_pending = {}
 local kotlin_prefetch_cache = {}
 
-local functional_ifaces = {}
-for _, n in ipairs({
-  'Runnable', 'Callable', 'Comparator', 'Supplier', 'Consumer', 'BiConsumer',
-  'Function', 'BiFunction', 'UnaryOperator', 'BinaryOperator', 'Predicate',
-  'BiPredicate', 'IntFunction', 'IntPredicate', 'ToIntFunction',
-  'Tasklet', 'ItemReader', 'ItemProcessor', 'ItemWriter', 'JobParametersIncrementer',
-}) do functional_ifaces[n] = true end
-
-local sym_kind = { [5] = 'C', [10] = 'E', [11] = 'I' }
-
-local function count_abstract(src)
-  src = src:gsub('/%*.-%*/', ''):gsub('//[^\n]*', ''):gsub('"[^"\n]*"', '""')
-  src = src:gsub('@[%w_.]+%b()', ''):gsub('@[%w_.]+', '')
-
-  local _, brace = src:find('interface%s+[%w_]+[^{]*{')
-  if not brace then return nil end
-
-  local flat, depth = {}, 1
-  for i = brace + 1, #src do
-    local c = src:sub(i, i)
-    if c == '{' then
-      if depth == 1 then flat[#flat + 1] = '{;' end
-      depth = depth + 1
-    elseif c == '}' then
-      depth = depth - 1
-      if depth == 0 then break end
-    elseif depth == 1 then
-      flat[#flat + 1] = c
-    end
-  end
-
-  local skip = { equals = true, hashCode = true, toString = true }
-  local n = 0
-  for stmt in table.concat(flat):gmatch('[^;]+') do
-    local name = stmt:match('([%w_]+)%s*%(')
-    if name
-        and not stmt:find('{', 1, true)
-        and not stmt:find('=', 1, true)
-        and not stmt:find('%f[%w]default%f[%W]')
-        and not stmt:find('%f[%w]static%f[%W]')
-        and not stmt:find('%f[%w]private%f[%W]')
-        and not skip[name] then
-      n = n + 1
-    end
-  end
-  return n
-end
-
-local refresh_timer
-local function refresh_menu()
-  if refresh_timer then refresh_timer:stop() end
-  refresh_timer = vim.defer_fn(function()
-    local ok, cmp = pcall(require, 'blink.cmp')
-    if ok and cmp.is_menu_visible() then pcall(cmp.show) end
-  end, 50)
-end
-
-local function check_functional(client, name, uri)
-  local function done(src)
-    if type(src) == 'string' and count_abstract(src) == 1 then
-      type_kind_cache[name] = 'ƒ'
-    end
-    refresh_menu()
-  end
-
-  if uri:sub(1, 6) == 'jdt://' then
-    client:request('java/classFileContents', { uri = uri }, function(err, content)
-      done(not err and content or nil)
-    end)
-  else
-    local ok, lines = pcall(vim.fn.readfile, vim.uri_to_fname(uri))
-    done(ok and table.concat(lines, '\n') or nil)
-  end
-end
-
-local function lookup_type_kind(name)
-  if type_kind_cache[name] ~= nil or type_kind_pending[name] then return end
-  local t = type_kind_neg[name]
-  if t and vim.uv.now() - t < 30000 then return end
-  local client = vim.lsp.get_clients({ name = 'jdtls' })[1]
-  if not client or not client.initialized then return end
-  type_kind_pending[name] = true
-  client:request('workspace/symbol', { query = name }, function(err, res)
-    type_kind_pending[name] = nil
-    local found, uri = false, nil
-    if not err and res then
-      for _, s in ipairs(res) do
-        if s.name == name and sym_kind[s.kind] then
-          found = sym_kind[s.kind]
-          uri = s.location and s.location.uri
-          break
-        end
-      end
-    end
-    if found then
-      type_kind_cache[name] = found
-    else
-      type_kind_neg[name] = vim.uv.now()
-    end
-    if found == 'I' and uri then
-      check_functional(client, name, uri)
-    else
-      refresh_menu()
-    end
-  end)
-end
-
-local function param_types(label)
-  local inner = label:match('%((.*)%)')
-  if not inner or inner == '' then return {} end
-  local out, depth, cur = {}, 0, ''
-  for ch in inner:gmatch('.') do
-    if ch == '<' then
-      depth = depth + 1
-    elseif ch == '>' then
-      depth = depth - 1
-    end
-    if ch == ',' and depth == 0 then
-      out[#out + 1] = cur
-      cur = ''
-    else
-      cur = cur .. ch
-    end
-  end
-  out[#out + 1] = cur
-  local types = {}
-  for _, p in ipairs(out) do
-    p = vim.trim(p):gsub('<.*>', ''):gsub('%[%]', ''):gsub('%.%.%.', '')
-    local ty = p:match('^(.-)%s+[%w_]+$') or p
-    ty = ty:gsub('^final%s+', ''):match('([%w_$]+)$')
-    if ty then types[#types + 1] = ty end
-  end
-  return types
-end
-
-local primitives = {
-  int = true,
-  long = true,
-  short = true,
-  byte = true,
-  char = true,
-  boolean = true,
-  float = true,
-  double = true,
-}
-
-local function param_kind_hint(label)
-  local parts = {}
-  for _, ty in ipairs(param_types(label)) do
-    if not primitives[ty] then
-      local k = type_kind_cache[ty]
-      if k == nil then lookup_type_kind(ty) end
-      parts[#parts + 1] = k or '·'
-    end
-  end
-  return #parts > 0 and ('(' .. table.concat(parts, ' ') .. ')') or ''
-end
 return {
   {
     "nvim-mini/mini.nvim",
+    event = { "BufReadPost", "BufNewFile" },
     config = function()
       local set_hl = function()
         vim.api.nvim_set_hl(0, "MiniIndentscopeSymbol", { fg = "#ffcc66" })
@@ -176,6 +17,10 @@ return {
       set_hl()
       require("mini.indentscope").setup({
         symbol = "│",
+        draw = {
+          delay = 20,
+          animation = require("mini.indentscope").gen_animation.none(),
+        },
       })
       require("mini.diff").setup({
         view = {
@@ -184,6 +29,17 @@ return {
         },
       })
       vim.api.nvim_create_autocmd("ColorScheme", { callback = set_hl })
+      vim.api.nvim_create_autocmd("InsertEnter", {
+        once = true,
+        callback = function()
+          require("mini.pairs").setup()
+
+          -- Enter between a pair puts the cursor on its own indented line
+          vim.keymap.set("i", "<CR>", "v:lua.MiniPairs.cr()", { expr = true, replace_keycodes = false })
+          -- Backspace between a pair deletes both characters
+          vim.keymap.set("i", "<BS>", "v:lua.MiniPairs.bs()", { expr = true, replace_keycodes = false })
+        end,
+      })
     end,
   },
   {
@@ -441,8 +297,8 @@ return {
   },
   {
     'skanehira/github-actions.nvim',
-    init = function()
-      -- syntax highlighting for the logs buffer
+    config = function(_, opts)
+      require('github-actions').setup(opts)
       local function color_logs(buf)
         if not vim.api.nvim_buf_is_valid(buf) then return end
 
@@ -697,11 +553,11 @@ return {
       vim.keymap.set('i', '<c-x>', function() return vim.fn['codeium#Clear']() end, { expr = true, silent = true })
     end
   },
-  {
-    'windwp/nvim-autopairs',
-    event = "InsertEnter",
-    config = true
-  },
+  -- {
+  --   'windwp/nvim-autopairs',
+  --   event = "InsertEnter",
+  --   config = true
+  -- },
   {
     "nvim-treesitter/nvim-treesitter-context",
     event = { "BufReadPost", "BufNewFile" },
@@ -803,13 +659,6 @@ return {
                   else
                     desc = ctx.label_description or ''
                     if desc == '' then desc = ctx.item.detail or '' end
-
-                    if vim.bo.filetype == 'java' then
-                      local item = ctx.item
-                      local sig = (item.label or '') .. ((item.labelDetails and item.labelDetails.detail) or '')
-                      local hint = param_kind_hint(sig)
-                      if hint ~= '' then desc = hint .. ' ' .. desc end
-                    end
                   end
 
                   if vim.fn.strdisplaywidth(desc) > max then

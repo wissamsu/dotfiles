@@ -103,7 +103,11 @@ vim.api.nvim_create_autocmd('FileType', {
 vim.keymap.set('i', '<CR>', function()
   return vim.fn.pumvisible() == 1 and '<C-y>' or '<CR>'
 end, { expr = true, desc = 'Accept completion with Enter' })
-vim.keymap.set('n', '<leader>cl', vim.lsp.codelens.run, { desc = 'Run code lens' })
+vim.keymap.set('n', '<leader>cl', function()
+  if _G.eol_codelens_run then
+    _G.eol_codelens_run()
+  end
+end, { desc = 'Run code lens' })
 
 
 local function mangle(s)

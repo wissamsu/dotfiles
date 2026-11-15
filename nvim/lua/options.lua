@@ -34,6 +34,27 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.keymap.set("n", "<CR>", "<CR>", { buffer = true, noremap = true })
   end,
 })
+vim.keymap.set("n", "<CR>", function()
+  local function plain_enter()
+    vim.api.nvim_feedkeys(vim.keycode("<CR>"), "n", false)
+  end
+
+  if vim.bo.buftype ~= "" then return plain_enter() end
+
+  -- lazily enable treesitter folding on first use
+  if vim.wo.foldmethod == "manual"
+      and vim.treesitter.highlighter.active[vim.api.nvim_get_current_buf()] then
+    vim.wo.foldmethod = "expr"
+    vim.wo.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+    vim.wo.foldlevel = 99
+  end
+
+  if vim.fn.foldlevel(".") > 0 then
+    vim.cmd("normal! za")
+  else
+    plain_enter()
+  end
+end, { desc = "Toggle fold" })
 
 vim.o.laststatus = 3
 
