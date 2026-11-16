@@ -2,9 +2,9 @@ name: nvim-config
 
 on:
   push:
-    paths: ['.config/nvim/**', '.github/workflows/nvim.yml']
+    paths: ['nvim/**', '.github/workflows/neovim.yml']
   pull_request:
-    paths: ['.config/nvim/**', '.github/workflows/nvim.yml']
+    paths: ['nvim/**', '.github/workflows/neovim.yml']
 
 jobs:
   test:
@@ -23,7 +23,7 @@ jobs:
       - name: Link config
         run: |
           mkdir -p ~/.config
-          ln -s "$GITHUB_WORKSPACE/.config/nvim" ~/.config/nvim
+          ln -s "$GITHUB_WORKSPACE/nvim" ~/.config/nvim
 
       - name: Install plugins
         run: nvim --headless "+Lazy! sync" +qa
