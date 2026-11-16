@@ -260,7 +260,20 @@ vim.o.incsearch = true
 
 vim.schedule(function()
   vim.diagnostic.config({
-    virtual_text = true,
+    virtual_text = {
+      spacing = 2,
+      format = function(d)
+        local ns = vim.diagnostic.get_namespaces()[d.namespace]
+        local ns_name = (ns and ns.name or ''):lower()
+        local src = (d.source or ''):lower()
+        if src:find('sonar', 1, true) or ns_name:find('sonar', 1, true) then
+          local rule = d.code and (' ' .. tostring(d.code)) or ''
+          return '[Sonar' .. rule .. '] ' .. d.message
+        end
+        return d.message
+      end,
+    },
+    float = { source = true, header = '' },
     update_in_insert = true,
   })
 end)

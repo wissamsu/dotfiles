@@ -1,0 +1,32 @@
+name: nvim-config
+
+on:
+  push:
+    paths: ['.config/nvim/**', '.github/workflows/nvim.yml']
+  pull_request:
+    paths: ['.config/nvim/**', '.github/workflows/nvim.yml']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        nvim: [stable, nightly]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.nvim }}
+
+      - name: Link config
+        run: |
+          mkdir -p ~/.config
+          ln -s "$GITHUB_WORKSPACE/.config/nvim" ~/.config/nvim
+
+      - name: Install plugins
+        run: nvim --headless "+Lazy! sync" +qa
+
+      - name: Check startup
+        run: nvim --headless "+checkhealth" +qa

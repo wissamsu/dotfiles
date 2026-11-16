@@ -1865,6 +1865,84 @@ vim.api.nvim_create_autocmd('FileType', {
   pattern = 'drools',
   callback = function() pcall(vim.treesitter.start, 0, 'java') end,
 })
+
+-- On any line where jdtls has a diagnostic, hide Sonar's; otherwise show Sonar's.
+if not vim.g._diag_dedupe_installed then
+  vim.g._diag_dedupe_installed = true
+
+  local function ns_name(id)
+    local ns = vim.diagnostic.get_namespaces()[id]
+    return ns and ns.name and ns.name:lower() or ''
+  end
+
+  local function is_sonar(d)
+    return ns_name(d.namespace):find('sonar', 1, true) ~= nil
+        or (d.source or ''):lower():find('sonar', 1, true) ~= nil
+  end
+
+  local function is_jdtls(d)
+    return ns_name(d.namespace):find('jdtls', 1, true) ~= nil
+  end
+
+  local function filter(bufnr, diagnostics)
+    -- Only Sonar diagnostics ever get dropped, so skip all work otherwise.
+    local has_sonar = false
+    for _, d in ipairs(diagnostics) do
+      if is_sonar(d) then
+        has_sonar = true; break
+      end
+    end
+    if not has_sonar then return diagnostics end
+
+    local covered, any = {}, false
+    for _, d in ipairs(vim.diagnostic.get(bufnr)) do
+      if is_jdtls(d) then
+        covered[d.lnum] = true
+        any = true
+      end
+    end
+    if not any then return diagnostics end
+
+    local out = {}
+    for _, d in ipairs(diagnostics) do
+      if not (is_sonar(d) and covered[d.lnum]) then
+        out[#out + 1] = d
+      end
+    end
+    return out
+  end
+
+  for _, name in ipairs({ 'virtual_text', 'virtual_lines', 'underline', 'signs' }) do
+    local handler = vim.diagnostic.handlers[name]
+    if handler then
+      local orig_show = handler.show
+      vim.diagnostic.handlers[name] = {
+        show = function(ns, bufnr, diagnostics, opts)
+          return orig_show(ns, bufnr, filter(bufnr, diagnostics), opts)
+        end,
+        hide = handler.hide,
+      }
+    end
+  end
+
+  -- jdtls and Sonar publish at different times, so re-run Sonar's namespaces
+  -- through the filter whenever diagnostics change.
+  vim.api.nvim_create_autocmd('DiagnosticChanged', {
+    group = vim.api.nvim_create_augroup('DiagDedupeRefresh', { clear = true }),
+    callback = function(args)
+      local bufnr = args.buf
+      vim.schedule(function()
+        if not vim.api.nvim_buf_is_valid(bufnr) then return end
+        for id, ns in pairs(vim.diagnostic.get_namespaces()) do
+          if (ns.name or ''):lower():find('sonar', 1, true) then
+            vim.diagnostic.show(id, bufnr)
+          end
+        end
+      end)
+    end,
+  })
+end
+
 vim.lsp.enable({
   'lua_ls',
   'dockerls',

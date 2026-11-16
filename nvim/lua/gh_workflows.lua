@@ -81,6 +81,16 @@ end
 local function project_root()
   return vim.fs.root(0, '.git') or vim.uv.cwd()
 end
+local function filter(items, query)
+  local words = vim.split(query:lower(), '%s+', { trimempty = true })
+  return vim.tbl_filter(function(i)
+    local text = i.text:lower()
+    for _, w in ipairs(words) do
+      if not text:find(w, 1, true) then return false end
+    end
+    return true
+  end, items)
+end
 
 ---------------------------------------------------------------------------
 -- Install a template into <root>/.github/workflows/
@@ -159,7 +169,7 @@ vim.api.nvim_create_user_command('GHWorkflowSelect', function(opts)
   local items = load_templates()
 
   if opts.args ~= '' then
-    items = vim.fn.matchfuzzy(items, opts.args, { key = 'text' })
+    items = filter(items, opts.args)
     if #items == 0 then
       return vim.notify('No templates match "' .. opts.args .. '"', vim.log.levels.WARN)
     end

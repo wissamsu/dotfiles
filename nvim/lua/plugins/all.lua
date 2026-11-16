@@ -1768,6 +1768,21 @@ return {
     name = "sonarlint.nvim",
     ft = { "java", "xml" },
     config = function()
+      if not vim.g.sonarlint_attach_guard then
+        vim.g.sonarlint_attach_guard = true
+        local orig_attach = vim.lsp.buf_attach_client
+        vim.lsp.buf_attach_client = function(bufnr, client_id, ...)
+          local client = vim.lsp.get_client_by_id(client_id)
+          if client and client.name == "sonarlint.nvim" and vim.api.nvim_buf_is_valid(bufnr) then
+            local name = vim.api.nvim_buf_get_name(bufnr)
+            if vim.bo[bufnr].buftype ~= "" or name == "" or name:match("^%a[%w+.-]*://") then
+              return false
+            end
+          end
+          return orig_attach(bufnr, client_id, ...)
+        end
+      end
+
       local analyzers = vim.fn.stdpath("data") .. "/mason/share/sonarlint-analyzers/"
       local cmd = {
         vim.fn.stdpath("data") .. "/mason/bin/sonarlint-language-server",
@@ -1792,6 +1807,7 @@ return {
               rules = {
                 -- example: silence the "complete the TODO" rule
                 ["java:S1135"] = { level = "off" },
+                ["java:S1186"] = { level = "off" }
               },
             },
           },
