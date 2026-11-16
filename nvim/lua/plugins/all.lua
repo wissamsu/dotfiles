@@ -1759,6 +1759,7 @@ return {
     cmd = "Telescope",
     keys = {
       { "<leader>mv", function() require("config.homemade.mvn_search").search() end, desc = "Maven search" },
+      { "<leader>gs", function() require("gh_actions").search() end,                 desc = "GitHub Actions search" },
     },
     tag = "v0.2.0",
     dependencies = { "nvim-lua/plenary.nvim" },

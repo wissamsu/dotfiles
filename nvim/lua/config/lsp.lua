@@ -160,18 +160,54 @@ vim.lsp.config('groovyls', {
   root_markers = { 'Jenkinsfile', '.git' },
 })
 
+local cached_token
+
 vim.lsp.config('gh_actions_ls', {
   cmd = { resolve_command('gh-actions-language-server'), '--stdio' },
   filetypes = { 'yaml.github' },
   root_markers = { '.github', '.git' },
   init_options = { sessionToken = '' },
-  before_init = function(params)
-    local ok, out = pcall(function()
-      return vim.system({ 'gh', 'auth', 'token' }, { text = true }):wait()
-    end)
-    if ok and out.code == 0 then
-      params.initializationOptions = { sessionToken = vim.trim(out.stdout) }
+  before_init = function(params, config)
+    if cached_token == nil then
+      local ok, out = pcall(function()
+        return vim.system({ 'gh', 'auth', 'token' }, { text = true }):wait()
+      end)
+      cached_token = (ok and out.code == 0) and vim.trim(out.stdout) or false
     end
+
+    local root = config.root_dir and vim.fs.normalize(config.root_dir)
+    local options = params.initializationOptions or {}
+    if cached_token then
+      options.sessionToken = cached_token
+    end
+
+    if root then
+      -- Owner/name from the local git remote (no network call)
+      local owner, name = 'unknown', 'unknown'
+      local rok, r = pcall(function()
+        return vim.system(
+          { 'git', '-C', root, 'config', '--get', 'remote.origin.url' },
+          { text = true }
+        ):wait()
+      end)
+      if rok and r.code == 0 then
+        local o, n = vim.trim(r.stdout):match('[:/]([^/:]+)/([^/]+)$')
+        if o and n then
+          owner = o
+          name = (n:gsub('%.git$', ''))
+        end
+      end
+
+      options.repos = { {
+        id = 0,
+        owner = owner,
+        name = name,
+        organizationOwned = false,
+        workspaceUri = vim.uri_from_fname(root),
+      } }
+    end
+
+    params.initializationOptions = options
   end,
   capabilities = {
     workspace = {
