@@ -1184,14 +1184,16 @@ end
 local jdtls_lombok = vim.fn.stdpath('data') .. '/mason/packages/jdtls/lombok.jar'
 
 local jdtls_jvm_args = {
+  '-Xms512m',
   '-Xmx4G',
   '-XX:+UseParallelGC',
   '-XX:GCTimeRatio=4',
   '-XX:AdaptiveSizePolicyWeight=90',
+  '-XX:ParallelGCThreads=2',
+  '-XX:-UsePerfData',
   '-Dsun.zip.disableMemoryMapping=true',
   '-Djava.awt.headless=true',
   '-Xlog:disable',
-  '-XX:ParallelGCThreads=2',
 }
 
 local function start_jdtls(dispatchers, config)
@@ -1274,19 +1276,36 @@ vim.lsp.config('jdtls', {
 local function jdtls_format_and_write(client, bufnr)
   if not vim.api.nvim_buf_is_valid(bufnr) then return end
   local tick = vim.api.nvim_buf_get_changedtick(bufnr)
-  local params = vim.lsp.util.make_formatting_params()
-  params.textDocument = vim.lsp.util.make_text_document_params(bufnr)
-  client:request('textDocument/formatting', params, function(err, edits)
-    if err or not edits or #edits == 0
-        or not vim.api.nvim_buf_is_valid(bufnr)
-        or vim.api.nvim_buf_get_changedtick(bufnr) ~= tick then
+
+  local function write_if_needed()
+    if not vim.api.nvim_buf_is_valid(bufnr)
+        or vim.api.nvim_buf_get_changedtick(bufnr) ~= tick
+        or not vim.bo[bufnr].modified then
       return
     end
     vim.api.nvim_buf_call(bufnr, function()
-      local view = vim.fn.winsaveview()
-      vim.lsp.util.apply_text_edits(edits, bufnr, client.offset_encoding)
-      vim.fn.winrestview(view)
-      vim.cmd('silent noautocmd write')
+      vim.cmd('silent noautocmd update')
+    end)
+  end
+
+  local params = vim.lsp.util.make_formatting_params()
+  params.textDocument = vim.lsp.util.make_text_document_params(bufnr)
+
+  client:request('textDocument/formatting', params, function(err, edits)
+    vim.schedule(function()
+      if not vim.api.nvim_buf_is_valid(bufnr)
+          or vim.api.nvim_buf_get_changedtick(bufnr) ~= tick then
+        return
+      end
+      if not err and edits and #edits > 0 then
+        vim.api.nvim_buf_call(bufnr, function()
+          local view = vim.fn.winsaveview()
+          vim.lsp.util.apply_text_edits(edits, bufnr, client.offset_encoding)
+          vim.fn.winrestview(view)
+        end)
+        tick = vim.api.nvim_buf_get_changedtick(bufnr)
+      end
+      write_if_needed()
     end)
   end, bufnr)
 end
@@ -1304,20 +1323,6 @@ local function organize_jdtls_imports_async(client, bufnr)
       vim.b[bufnr].jdtls_organize_imports_pending = false
       vim.schedule(function() jdtls_format_and_write(client, bufnr) end)
     end
-  end
-
-  local function save_edit()
-    if not vim.api.nvim_buf_is_valid(bufnr) then
-      finish()
-      return
-    end
-
-    if vim.bo[bufnr].modified then
-      vim.api.nvim_buf_call(bufnr, function()
-        vim.cmd('silent noautocmd update')
-      end)
-    end
-    finish()
   end
 
   local function apply_action(action)
@@ -1339,11 +1344,11 @@ local function organize_jdtls_imports_async(client, bufnr)
           if not err and type(result) == 'table' and (result.changes or result.documentChanges) then
             vim.lsp.util.apply_workspace_edit(result, client.offset_encoding)
           end
-          save_edit()
+          finish()
         end)
       end)
     else
-      save_edit()
+      finish()
     end
   end
 

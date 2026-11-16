@@ -1764,6 +1764,43 @@ return {
     dependencies = { "nvim-lua/plenary.nvim" },
   },
   {
+    url = "https://gitlab.com/schrieveslaach/sonarlint.nvim",
+    name = "sonarlint.nvim",
+    ft = { "java", "xml" },
+    config = function()
+      local analyzers = vim.fn.stdpath("data") .. "/mason/share/sonarlint-analyzers/"
+      local cmd = {
+        vim.fn.stdpath("data") .. "/mason/bin/sonarlint-language-server",
+        "-stdio",
+        "-analyzers",
+      }
+      for _, jar in ipairs({
+        "sonarjava.jar",
+        "sonarjavasymbolicexecution.jar",
+        "sonarxml.jar",
+        "sonartext.jar",
+      }) do
+        cmd[#cmd + 1] = analyzers .. jar
+      end
+
+      require("sonarlint").setup({
+        server = {
+          cmd = cmd,
+          capabilities = require("blink.cmp").get_lsp_capabilities(),
+          settings = {
+            sonarlint = {
+              rules = {
+                -- example: silence the "complete the TODO" rule
+                ["java:S1135"] = { level = "off" },
+              },
+            },
+          },
+        },
+        filetypes = { "java", "xml" },
+      })
+    end,
+  },
+  {
     "kristijanhusak/vim-dadbod-ui",
     dependencies = {
       { "tpope/vim-dadbod",                     lazy = true },
