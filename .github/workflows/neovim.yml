@@ -5,6 +5,7 @@ on:
     paths: ['nvim/**', '.github/workflows/neovim.yml']
   pull_request:
     paths: ['nvim/**', '.github/workflows/neovim.yml']
+  workflow_dispatch:
 
 jobs:
   test:
