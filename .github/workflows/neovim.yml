@@ -26,7 +26,14 @@ jobs:
           ln -s "$GITHUB_WORKSPACE/nvim" ~/.config/nvim
 
       - name: Install plugins
-        run: nvim --headless "+Lazy! sync" +qa
+        run: |
+          nvim --headless "+Lazy! sync" +qa 2>&1 | tee sync.log
+          if grep -qiE "error|failed" sync.log; then exit 1; fi
 
       - name: Check startup
-        run: nvim --headless "+checkhealth" +qa
+        run: |
+          nvim --headless +qa 2>&1 | tee startup.log
+          if [ -s startup.log ]; then
+            echo "Startup produced output, treating as failure"
+            exit 1
+          fi
