@@ -24,10 +24,13 @@ jobs:
         run: |
           mkdir -p ~/.config
           ln -s "$GITHUB_WORKSPACE/nvim" ~/.config/nvim
+          ln -sf "$GITHUB_WORKSPACE/nvim/lua/init.lua" "$GITHUB_WORKSPACE/nvim/init.lua"
 
       - name: Debug config
         run: |
           ls -la ~/.config/nvim/
+          echo "Broken symlinks:"
+          find "$GITHUB_WORKSPACE/nvim" -xtype l
           nvim --headless "+lua print(vim.fn.stdpath('config'))" +qa
           nvim --headless "+lua print(package.loaded.lazy ~= nil)" +qa
 
