@@ -25,22 +25,75 @@ function M.client_for_root(name, root)
   end
 end
 
+local execute_cache = {}
+local execute_pending = {}
+local execute_cache_ttl = 5000
+local execute_cache_max = 256
+
+local function execute_key(client, command, arguments)
+  local ok, encoded = pcall(vim.json.encode, arguments or {})
+  return string.format('%d:%s:%s', client.id, command, ok and encoded or vim.inspect(arguments or {}))
+end
+
+local function cache_execute_result(key, result)
+  execute_cache[key] = { result = result, expires = vim.uv.now() + execute_cache_ttl }
+  if vim.tbl_count(execute_cache) > execute_cache_max then
+    local now = vim.uv.now()
+    for cache_key, entry in pairs(execute_cache) do
+      if entry.expires <= now then
+        execute_cache[cache_key] = nil
+      end
+    end
+  end
+end
+
+local function refresh_execute(client, key, params)
+  if execute_pending[key] then return end
+  execute_pending[key] = true
+  local ok = client:request('workspace/executeCommand', params, function(err, result)
+    execute_pending[key] = nil
+    if not err and result ~= nil then
+      cache_execute_result(key, result)
+    end
+  end, 0)
+  if not ok then
+    execute_pending[key] = nil
+  end
+end
+
 ---@param client vim.lsp.Client
 ---@param command string
 ---@param arguments any[]|nil
----@param timeout_ms integer? defaults to 15s
+---@param timeout_ms integer? defaults to 1s
 ---@return any result, string|nil error
 function M.execute(client, command, arguments, timeout_ms)
-  local response = client:request_sync('workspace/executeCommand', {
+  local params = {
     command = command,
     arguments = arguments or {},
-  }, timeout_ms or 15000, 0)
+  }
+  local key = execute_key(client, command, arguments)
+  local entry = execute_cache[key]
+  if entry then
+    if entry.expires <= vim.uv.now() then
+      refresh_execute(client, key, params)
+    end
+    return entry.result
+  end
+
+  local response = client:request_sync(
+    'workspace/executeCommand',
+    params,
+    math.min(timeout_ms or 1000, 1000),
+    0
+  )
   if not response then
+    refresh_execute(client, key, params)
     return nil, 'no response'
   end
   if response.err then
     return nil, type(response.err) == 'table' and response.err.message or tostring(response.err)
   end
+  cache_execute_result(key, response.result)
   return response.result
 end
 

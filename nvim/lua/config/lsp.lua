@@ -1716,6 +1716,47 @@ vim.filetype.add({
 })
 
 local eol_codelens = {}
+local codelens_cache = {}
+local codelens_generation = {}
+local codelens_last_tick = {}
+
+local function codelens_encode(value)
+  local kind = type(value)
+  if kind == 'table' then
+    local keys = {}
+    for key in pairs(value) do
+      keys[#keys + 1] = key
+    end
+    table.sort(keys, function(a, b)
+      local ta, tb = type(a), type(b)
+      if ta ~= tb then return ta < tb end
+      if ta == 'number' or ta == 'string' then return a < b end
+      return tostring(a) < tostring(b)
+    end)
+    local parts = {}
+    for _, key in ipairs(keys) do
+      parts[#parts + 1] = codelens_encode(key) .. '=' .. codelens_encode(value[key])
+    end
+    return '{' .. table.concat(parts, ',') .. '}'
+  end
+  if kind == 'string' then
+    return string.format('%q', value)
+  end
+  return tostring(value)
+end
+
+local function codelens_key(lens)
+  local range = lens.range or {}
+  local start_pos = range.start or {}
+  local end_pos = range['end'] or {}
+  return table.concat({
+    tostring(start_pos.line),
+    tostring(start_pos.character),
+    tostring(end_pos.line),
+    tostring(end_pos.character),
+    codelens_encode(lens.data),
+  }, ':')
+end
 
 local function render_codelens(bufnr)
   if not vim.api.nvim_buf_is_valid(bufnr) then
@@ -1724,66 +1765,113 @@ local function render_codelens(bufnr)
   local tick = vim.api.nvim_buf_get_changedtick(bufnr)
 
   local lens_clients = vim.lsp.get_clients({ bufnr = bufnr, method = 'textDocument/codeLens' })
+  if #lens_clients == 0 then
+    return
+  end
+
+  local all_cached = codelens_last_tick[bufnr] == tick
+  if all_cached then
+    for _, client in ipairs(lens_clients) do
+      if not (codelens_cache[bufnr] and codelens_cache[bufnr][client.id]) then
+        all_cached = false
+        break
+      end
+    end
+  end
+  if all_cached then
+    return
+  end
+
+  local generation = (codelens_generation[bufnr] or 0) + 1
+  codelens_generation[bufnr] = generation
 
   for _, client in ipairs(lens_clients) do
     local ns = vim.api.nvim_create_namespace('eol_codelens_' .. client.id)
     local params = { textDocument = vim.lsp.util.make_text_document_params(bufnr) }
 
     client:request('textDocument/codeLens', params, function(err, lenses)
-      if err or not lenses then
+      if err or type(lenses) ~= 'table' or generation ~= codelens_generation[bufnr] then
         return
       end
 
-      local resolved, pending = {}, #lenses
+      local cached = codelens_cache[bufnr] and codelens_cache[bufnr][client.id] or {}
+      local fresh = {}
+      local resolved = {}
+      local pending = #lenses
+      local supports_resolve = client:supports_method('codeLens/resolve')
+
       local function draw()
-        if
-            not vim.api.nvim_buf_is_valid(bufnr)
-            or vim.api.nvim_buf_get_changedtick(bufnr) ~= tick
-        then
-          return
-        end
-        vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
-
-        local by_line, items = {}, {}
-        for _, lens in ipairs(resolved) do
-          local title = lens.command and lens.command.title
-          if title and title ~= '' then
-            local line = lens.range.start.line
-            by_line[line] = by_line[line] or {}
-            table.insert(by_line[line], title)
-            items[#items + 1] = { client_id = client.id, lens = lens }
+        vim.schedule(function()
+          if
+              generation ~= codelens_generation[bufnr]
+              or not vim.api.nvim_buf_is_valid(bufnr)
+              or vim.api.nvim_buf_get_changedtick(bufnr) ~= tick
+          then
+            return
           end
-        end
-        eol_codelens[bufnr] = eol_codelens[bufnr] or {}
-        eol_codelens[bufnr][client.id] = items
 
-        for line, titles in pairs(by_line) do
-          pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, line, 0, {
-            virt_text = { { '  ' .. table.concat(titles, ' | '), 'LspCodeLens' } },
-            virt_text_pos = 'eol',
-            hl_mode = 'combine',
-          })
+          codelens_cache[bufnr] = codelens_cache[bufnr] or {}
+          codelens_cache[bufnr][client.id] = fresh
+          codelens_last_tick[bufnr] = tick
+
+          vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+
+          local by_line, items = {}, {}
+          for _, lens in ipairs(resolved) do
+            local title = lens.command and lens.command.title
+            if title and title ~= '' then
+              local line = lens.range.start.line
+              by_line[line] = by_line[line] or {}
+              table.insert(by_line[line], title)
+              items[#items + 1] = { client_id = client.id, lens = lens }
+            end
+          end
+          eol_codelens[bufnr] = eol_codelens[bufnr] or {}
+          eol_codelens[bufnr][client.id] = items
+
+          for line, titles in pairs(by_line) do
+            pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, line, 0, {
+              virt_text = { { '  ' .. table.concat(titles, ' | '), 'LspCodeLens' } },
+              virt_text_pos = 'eol',
+              hl_mode = 'combine',
+            })
+          end
+        end)
+      end
+
+      local function complete(index, lens)
+        resolved[index] = lens
+        pending = pending - 1
+        if pending == 0 then
+          draw()
         end
       end
 
       if pending == 0 then
-        return draw()
+        draw()
+        return
       end
 
-      for _, lens in ipairs(lenses) do
-        local function done(l)
-          table.insert(resolved, l or lens)
-          pending = pending - 1
-          if pending == 0 then
-            vim.schedule(draw)
-          end
-        end
-        if lens.command or not client:supports_method('codeLens/resolve') then
-          done(lens)
-        else
+      for index, lens in ipairs(lenses) do
+        local key = codelens_key(lens)
+        if lens.command then
+          fresh[key] = lens.command
+          complete(index, lens)
+        elseif cached[key] then
+          complete(index, { range = lens.range, command = cached[key], data = lens.data })
+        elseif supports_resolve then
           client:request('codeLens/resolve', lens, function(rerr, res)
-            done(not rerr and res or lens)
+            if generation ~= codelens_generation[bufnr] then
+              return
+            end
+            local resolved_lens = (not rerr and res) or lens
+            if resolved_lens.command then
+              fresh[key] = resolved_lens.command
+            end
+            complete(index, resolved_lens)
           end, bufnr)
+        else
+          complete(index, lens)
         end
       end
     end, bufnr)
@@ -1832,6 +1920,9 @@ vim.api.nvim_create_autocmd('BufWipeout', {
       codelens_timers[args.buf] = nil
     end
     eol_codelens[args.buf] = nil
+    codelens_cache[args.buf] = nil
+    codelens_generation[args.buf] = nil
+    codelens_last_tick[args.buf] = nil
   end,
 })
 
@@ -1967,20 +2058,43 @@ if not vim.g._diag_dedupe_installed then
     end
   end
 
-  -- jdtls and Sonar publish at different times, so re-run Sonar's namespaces
-  -- through the filter whenever diagnostics change.
+  local dedupe_timers = {}
+  local dedupe_group = vim.api.nvim_create_augroup('DiagDedupeRefresh', { clear = true })
+
+  local function refresh_sonar(bufnr)
+    if not vim.api.nvim_buf_is_valid(bufnr) then return end
+    for id, ns in pairs(vim.diagnostic.get_namespaces()) do
+      if (ns.name or ''):lower():find('sonar', 1, true) then
+        if #vim.diagnostic.get(bufnr, { namespace = id }) > 0 then
+          vim.diagnostic.show(id, bufnr)
+        end
+      end
+    end
+  end
+
   vim.api.nvim_create_autocmd('DiagnosticChanged', {
-    group = vim.api.nvim_create_augroup('DiagDedupeRefresh', { clear = true }),
+    group = dedupe_group,
     callback = function(args)
       local bufnr = args.buf
-      vim.schedule(function()
-        if not vim.api.nvim_buf_is_valid(bufnr) then return end
-        for id, ns in pairs(vim.diagnostic.get_namespaces()) do
-          if (ns.name or ''):lower():find('sonar', 1, true) then
-            vim.diagnostic.show(id, bufnr)
-          end
-        end
-      end)
+      local timer = dedupe_timers[bufnr]
+      if timer then
+        timer:stop()
+      end
+      dedupe_timers[bufnr] = vim.defer_fn(function()
+        dedupe_timers[bufnr] = nil
+        refresh_sonar(bufnr)
+      end, 100)
+    end,
+  })
+
+  vim.api.nvim_create_autocmd('BufWipeout', {
+    group = dedupe_group,
+    callback = function(args)
+      local timer = dedupe_timers[args.buf]
+      if timer then
+        timer:stop()
+        dedupe_timers[args.buf] = nil
+      end
     end,
   })
 end

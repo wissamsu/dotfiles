@@ -126,8 +126,9 @@ local lsp_cache = {}
 
 local function refresh_diagnostic_cache(buf)
   if not package.loaded["vim.diagnostic"] then
+    local changed = diagnostic_cache[buf] ~= ""
     diagnostic_cache[buf] = ""
-    return
+    return changed
   end
   local counts = vim.diagnostic.count(buf)
   local parts = {}
@@ -145,7 +146,10 @@ local function refresh_diagnostic_cache(buf)
     end
   end
 
-  diagnostic_cache[buf] = table.concat(parts, " ")
+  local cache = table.concat(parts, " ")
+  local changed = diagnostic_cache[buf] ~= cache
+  diagnostic_cache[buf] = cache
+  return changed
 end
 
 local function refresh_lsp_cache(buf)
@@ -184,12 +188,46 @@ _G.statusline_lsp = function()
   return lsp_cache[buf]
 end
 
-vim.api.nvim_create_autocmd({ "BufEnter", "DiagnosticChanged" }, {
-  callback = function(args)
-    refresh_diagnostic_cache(args.buf)
-    if args.buf == vim.api.nvim_get_current_buf() then
-      vim.cmd("redrawstatus")
+local diagnostic_timers = {}
+local statusline_diag_group = vim.api.nvim_create_augroup("StatuslineDiagnostics", { clear = true })
+
+local function refresh_statusline_diagnostics(buf)
+  if refresh_diagnostic_cache(buf) and buf == vim.api.nvim_get_current_buf() then
+    vim.cmd("redrawstatus")
+  end
+end
+
+local function stop_diagnostic_timer(buf)
+  local timer = diagnostic_timers[buf]
+  if timer then
+    timer:stop()
+    diagnostic_timers[buf] = nil
+  end
+end
+
+local function schedule_diagnostic_refresh(buf)
+  if buf ~= vim.api.nvim_get_current_buf() then return end
+  stop_diagnostic_timer(buf)
+  diagnostic_timers[buf] = vim.defer_fn(function()
+    diagnostic_timers[buf] = nil
+    if vim.api.nvim_buf_is_valid(buf) then
+      refresh_statusline_diagnostics(buf)
     end
+  end, 100)
+end
+
+vim.api.nvim_create_autocmd("BufEnter", {
+  group = statusline_diag_group,
+  callback = function(args)
+    stop_diagnostic_timer(args.buf)
+    refresh_statusline_diagnostics(args.buf)
+  end,
+})
+
+vim.api.nvim_create_autocmd("DiagnosticChanged", {
+  group = statusline_diag_group,
+  callback = function(args)
+    schedule_diagnostic_refresh(args.buf)
   end,
 })
 
@@ -212,6 +250,7 @@ vim.api.nvim_create_autocmd({ "BufEnter", "LspAttach", "LspDetach" }, {
 
 vim.api.nvim_create_autocmd("BufWipeout", {
   callback = function(args)
+    stop_diagnostic_timer(args.buf)
     diagnostic_cache[args.buf] = nil
     lsp_cache[args.buf] = nil
   end,
