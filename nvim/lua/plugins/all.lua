@@ -7,12 +7,46 @@ return {
   {
     "nvim-mini/mini.nvim",
     event = { "BufReadPost", "BufNewFile" },
+    keys = {
+      {
+        "<C-n>",
+        function()
+          local MiniFiles = require("mini.files")
+          -- Toggle: close if open, otherwise open fresh at the current file
+          if not MiniFiles.close() then
+            local buf_name = vim.api.nvim_buf_get_name(0)
+            local path = vim.uv.fs_stat(buf_name) and buf_name or vim.uv.cwd()
+            MiniFiles.open(path, false) -- false = don't restore the previous (possibly stale) state
+            pcall(MiniFiles.reveal_cwd)
+          end
+        end,
+        desc = "Toggle file explorer",
+      },
+    },
     config = function()
       local set_hl = function()
         vim.api.nvim_set_hl(0, "MiniIndentscopeSymbol", { fg = "#ffcc66" })
         vim.api.nvim_set_hl(0, "MiniDiffSignAdd", { fg = "#a6e3a1" })
         vim.api.nvim_set_hl(0, "MiniDiffSignChange", { fg = "#f9e2af" })
         vim.api.nvim_set_hl(0, "MiniDiffSignDelete", { fg = "#f38ba8" })
+
+        -- mini.files uses the editor's own background and text color
+        local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
+        vim.api.nvim_set_hl(0, "MiniFilesNormal", { fg = normal.fg, bg = normal.bg })
+        vim.api.nvim_set_hl(0, "MiniFilesTitle", { fg = normal.fg, bg = normal.bg })
+        vim.api.nvim_set_hl(0, "MiniFilesTitleFocused", { fg = normal.fg, bg = normal.bg, bold = true })
+
+        -- borders keep their colors, with the editor background behind them
+        vim.api.nvim_set_hl(0, "MiniFilesBorder", { fg = "#89b4fa", bg = normal.bg })
+        vim.api.nvim_set_hl(0, "MiniFilesBorderFocused", { fg = "#ffcc66", bg = normal.bg })
+
+        -- Java/Kotlin kind icon colors
+        vim.api.nvim_set_hl(0, "JavaKindClass", { fg = "#4fc1e9" })
+        vim.api.nvim_set_hl(0, "JavaKindInterface", { fg = "#62b543" })
+        vim.api.nvim_set_hl(0, "JavaKindRecord", { fg = "#f0d63c" })
+        vim.api.nvim_set_hl(0, "JavaKindEnum", { fg = "#ef6f5a" })
+        vim.api.nvim_set_hl(0, "JavaKindAnnotation", { fg = "#b07ad9" })
+        vim.api.nvim_set_hl(0, "JavaKindException", { fg = "#f0b429" })
       end
       set_hl()
       require("mini.indentscope").setup({
@@ -27,6 +61,267 @@ return {
           style = "sign",
           signs = { add = "+", change = "~", delete = "-" },
         },
+      })
+      -- Java/Kotlin kind icons (class, interface, record, enum, annotation, exception)
+      local kind_icons = {
+        class      = { glyph = "\u{f1b2}", hl = "JavaKindClass" },
+        interface  = { glyph = "\u{f12e}", hl = "JavaKindInterface" },
+        record     = { glyph = "\u{f192}", hl = "JavaKindRecord" },
+        enum       = { glyph = "\u{f009}", hl = "JavaKindEnum" },
+        annotation = { glyph = "\u{f1fa}", hl = "JavaKindAnnotation" },
+        exception  = { glyph = "\u{f0e7}", hl = "JavaKindException" },
+      }
+
+      local kind_cache = {}
+      local kws = { "class", "interface", "enum", "record" }
+      local kt_rules = {
+        { "annotation", "annotation%s+class" },
+        { "enum",       "enum%s+class" },
+        { "record",     "data%s+class" },
+        { "record",     "value%s+class" },
+        { "interface",  "interface" },
+        { "class",      "class" },
+        { "class",      "object" },
+      }
+
+      local kotlin_kind = function(line)
+        for _, r in ipairs(kt_rules) do
+          if line:find("^%s*[%w%s]-%f[%w]" .. r[2] .. "%s+%u") then return r[1] end
+        end
+      end
+
+      local get_kind = function(path)
+        if kind_cache[path] ~= nil then return kind_cache[path] or nil end
+        local result = false
+        local fname = vim.fs.basename(path)
+        local is_kt = fname:match("%.kt$") ~= nil
+        local f = io.open(path, "r")
+        if f then
+          for _ = 1, 120 do
+            local line = f:read("*l")
+            if not line then break end
+
+            local k
+            if is_kt then
+              k = kotlin_kind(line)
+            elseif line:find("^%s*[%w%s]-@interface%s+%u") then
+              k = "annotation"
+            else
+              for _, kw in ipairs(kws) do
+                if line:find("^%s*[%w%s]-%f[%w]" .. kw .. "%s+%u") then
+                  k = kw
+                  break
+                end
+              end
+            end
+
+            if k then
+              if k == "class" and (
+                    fname:match("Exception%.%a+$") or fname:match("Error%.%a+$")
+                    or line:find("extends%s+[%w_%.]*Exception")
+                    or line:find("extends%s+[%w_%.]*Error")
+                    or line:find("extends%s+[%w_%.]*Throwable")
+                    or (is_kt and (
+                      line:find("%)%s*:%s*[%w_%.]*Exception")
+                      or line:find("%)%s*:%s*[%w_%.]*Error")
+                      or line:find("%)%s*:%s*[%w_%.]*Throwable")
+                      or line:find("class%s+[%w_]+%s*:%s*[%w_%.]*Exception")
+                      or line:find("class%s+[%w_]+%s*:%s*[%w_%.]*Error")
+                      or line:find("class%s+[%w_]+%s*:%s*[%w_%.]*Throwable")
+                    ))
+                  ) then
+                k = "exception"
+              end
+              result = k
+              break
+            end
+          end
+          f:close()
+        end
+        kind_cache[path] = result
+        return result or nil
+      end
+
+      -- Clear the cached kind when a file is saved so the icon updates
+      vim.api.nvim_create_autocmd("BufWritePost", {
+        pattern = { "*.java", "*.kt" },
+        callback = function(a) kind_cache[vim.fn.fnamemodify(a.file, ":p")] = nil end,
+      })
+      require("mini.files").setup({
+        options = {
+          use_as_default_explorer = true,
+        },
+        windows = {
+          preview = false,
+          width_focus = 30,
+          width_preview = 40,
+        },
+        mappings = {
+          go_in_plus = "<CR>",
+        },
+        content = {
+          prefix = function(fs_entry)
+            if fs_entry.fs_type == "file" and (fs_entry.name:match("%.java$") or fs_entry.name:match("%.kt$")) then
+              local ki = kind_icons[get_kind(fs_entry.path) or ""]
+              if ki then return ki.glyph .. " ", ki.hl end
+            end
+            return require("mini.files").default_prefix(fs_entry)
+          end,
+        },
+      })
+      -- Diagnostics at the end of each line (files and folders, rolled up)
+      local sev = vim.diagnostic.severity
+      local diag_icons = {
+        [sev.ERROR] = { "\u{f057}", "DiagnosticError" },
+        [sev.WARN]  = { "\u{f071}", "DiagnosticWarn" },
+        [sev.INFO]  = { "\u{f05a}", "DiagnosticInfo" },
+        [sev.HINT]  = { "\u{f0eb}", "DiagnosticHint" },
+      }
+      local diag_ns = vim.api.nvim_create_namespace("mini_files_diagnostics")
+      local diag_map, diag_dirty = {}, true
+
+      local rebuild_diags = function()
+        diag_map = {}
+        for _, d in ipairs(vim.diagnostic.get()) do
+          local name = vim.api.nvim_buf_get_name(d.bufnr)
+          if name ~= "" then
+            local path = vim.fs.normalize(name)
+            -- count it on the file and on every parent folder
+            while path and path ~= "" do
+              local e = diag_map[path] or { 0, 0, 0, 0 }
+              e[d.severity] = e[d.severity] + 1
+              diag_map[path] = e
+              local parent = vim.fs.dirname(path)
+              if parent == path then break end
+              path = parent
+            end
+          end
+        end
+        diag_dirty = false
+      end
+
+      local decorate = function(buf_id)
+        if not vim.api.nvim_buf_is_valid(buf_id) then return end
+        if diag_dirty then rebuild_diags() end
+        vim.api.nvim_buf_clear_namespace(buf_id, diag_ns, 0, -1)
+        local MiniFiles = require("mini.files")
+        for lnum = 1, vim.api.nvim_buf_line_count(buf_id) do
+          local entry = MiniFiles.get_fs_entry(buf_id, lnum)
+          local e = entry and diag_map[vim.fs.normalize(entry.path)]
+          if e then
+            local chunks = {}
+            for s = 1, 4 do
+              if e[s] > 0 then
+                local ic = diag_icons[s]
+                chunks[#chunks + 1] = { " " .. ic[1] .. " " .. e[s], ic[2] }
+              end
+            end
+            if #chunks > 0 then
+              vim.api.nvim_buf_set_extmark(buf_id, diag_ns, lnum - 1, 0, {
+                virt_text = chunks,
+                virt_text_pos = "eol",
+              })
+            end
+          end
+        end
+      end
+
+      vim.api.nvim_create_autocmd("User", {
+        pattern = "MiniFilesBufferUpdate",
+        callback = function(args) decorate(args.data.buf_id) end,
+      })
+
+      vim.api.nvim_create_autocmd("DiagnosticChanged", {
+        callback = function()
+          diag_dirty = true
+          vim.schedule(function()
+            local state = require("mini.files").get_explorer_state()
+            if not state then return end
+            for _, w in ipairs(state.windows) do
+              if vim.api.nvim_win_is_valid(w.win_id) then
+                decorate(vim.api.nvim_win_get_buf(w.win_id))
+              end
+            end
+          end)
+        end,
+      })
+
+      -- Watcher emulation: refresh the explorer on focus gain and after saving a file
+      local refresh_explorer = function()
+        local MiniFiles = require("mini.files")
+        local state = MiniFiles.get_explorer_state()
+        if not state then return end
+        -- never refresh while there are unsaved edits in the explorer
+        for _, w in ipairs(state.windows) do
+          if vim.api.nvim_win_is_valid(w.win_id) and vim.bo[vim.api.nvim_win_get_buf(w.win_id)].modified then
+            return
+          end
+        end
+        MiniFiles.refresh({})
+      end
+
+      vim.api.nvim_create_autocmd({ "FocusGained", "BufWritePost" }, {
+        callback = function() vim.schedule(refresh_explorer) end,
+      })
+      -- Apply file system changes without the confirmation prompt
+      local sync_no_confirm = function()
+        local orig_confirm = vim.fn.confirm
+        vim.fn.confirm = function() return 1 end -- 1 = Yes
+        local ok, err = pcall(require("mini.files").synchronize)
+        vim.fn.confirm = orig_confirm
+        if not ok then vim.notify(tostring(err), vim.log.levels.ERROR) end
+      end
+
+      vim.api.nvim_create_autocmd("User", {
+        pattern = "MiniFilesBufferCreate",
+        callback = function(args)
+          local buf_id = args.data.buf_id
+
+          vim.keymap.set("n", "<Left>", function()
+            require("mini.files").go_out()
+          end, { buffer = buf_id, desc = "Go out" })
+          vim.keymap.set("n", "<Right>", function()
+            require("mini.files").go_in()
+          end, { buffer = buf_id, desc = "Go in" })
+
+          -- Ctrl+S and = both save without confirmation
+          vim.keymap.set("n", "<C-s>", sync_no_confirm, { buffer = buf_id, desc = "Save changes" })
+          vim.keymap.set("n", "=", sync_no_confirm, { buffer = buf_id, desc = "Save changes" })
+
+          -- :w saves without confirmation
+          vim.api.nvim_create_autocmd("BufWriteCmd", {
+            buffer = buf_id,
+            callback = sync_no_confirm,
+          })
+
+          vim.schedule(function()
+            if vim.api.nvim_buf_is_valid(buf_id) then
+              vim.bo[buf_id].buftype = "acwrite"
+            end
+          end)
+        end,
+      })
+      -- Gold border on the focused explorer window, blue on the rest
+      local update_borders = function()
+        local ok, state = pcall(function() return require("mini.files").get_explorer_state() end)
+        if not ok or not state then return end
+        local current = vim.api.nvim_get_current_win()
+        for _, w in ipairs(state.windows) do
+          if vim.api.nvim_win_is_valid(w.win_id) then
+            local border = (w.win_id == current) and "MiniFilesBorderFocused" or "MiniFilesBorder"
+            vim.wo[w.win_id].winhighlight = "NormalFloat:MiniFilesNormal,FloatBorder:" .. border
+          end
+        end
+      end
+
+      vim.api.nvim_create_autocmd("User", {
+        pattern = "MiniFilesWindowUpdate",
+        callback = function() vim.schedule(update_borders) end,
+      })
+      vim.api.nvim_create_autocmd("WinEnter", {
+        callback = function()
+          if vim.bo.filetype == "minifiles" then vim.schedule(update_borders) end
+        end,
       })
       vim.keymap.set("n", "<leader>dg", function()
         require("mini.diff").goto_hunk("next")
@@ -1496,286 +1791,286 @@ return {
     "MunifTanjim/nui.nvim",
     lazy = true,
   },
-  {
-    "FylerOrg/fyler.nvim",
-    dependencies = { "nvim-tree/nvim-web-devicons" },
-    cmd = { "Fyler" },
-    opts = {
-      kind = "split_left_most",
-      integrations = { icon = "nvim_web_devicons" },
-      extensions = { trash = { enabled = true }, watcher = { enabled = true } },
-      mappings = {
-        n = {
-          ["q"] = { action = "close", desc = "Close finder" },
-        },
-      },
-      ui = {
-        hidden_items = {
-          switches = {},
-        },
-      },
-    },
-    config = function(_, opts)
-      local devicons = require("nvim-web-devicons")
-      local orig_get_icon = devicons.get_icon
-
-      local kind_icons = {
-        class      = { glyph = "\u{f1b2}", hl = "JavaKindClass" },
-        interface  = { glyph = "\u{f12e}", hl = "JavaKindInterface" },
-        record     = { glyph = "\u{f192}", hl = "JavaKindRecord" },
-        enum       = { glyph = "\u{f009}", hl = "JavaKindEnum" },
-        annotation = { glyph = "\u{f1fa}", hl = "JavaKindAnnotation" },
-        exception  = { glyph = "\u{f0e7}", hl = "JavaKindException" },
-      }
-
-      local function define_hl()
-        vim.api.nvim_set_hl(0, "JavaKindClass", { fg = "#4fc1e9" })
-        vim.api.nvim_set_hl(0, "JavaKindInterface", { fg = "#62b543" })
-        vim.api.nvim_set_hl(0, "JavaKindRecord", { fg = "#f0d63c" })
-        vim.api.nvim_set_hl(0, "JavaKindEnum", { fg = "#ef6f5a" })
-        vim.api.nvim_set_hl(0, "JavaKindAnnotation", { fg = "#b07ad9" })
-        vim.api.nvim_set_hl(0, "JavaKindException", { fg = "#f0b429" })
-      end
-      define_hl()
-      vim.api.nvim_create_autocmd("ColorScheme", { callback = define_hl })
-
-      local skip_dirs = {
-        [".git"] = true,
-        [".idea"] = true,
-        [".gradle"] = true,
-        target = true,
-        build = true,
-        node_modules = true,
-      }
-
-      local kind_cache = {}
-      local index = {}
-      local index_time = 0
-
-      local function now_ms() return vim.uv.hrtime() / 1e6 end
-
-      local function rebuild_index()
-        index = {}
-        index_time = now_ms()
-        local root = vim.fn.getcwd()
-        for path, type in vim.fs.dir(root, {
-          depth = 15,
-          skip = function(dir) return not skip_dirs[vim.fs.basename(dir)] end,
-        }) do
-          if type == "file" and (path:match("%.java$") or path:match("%.kt$")) then
-            local base = vim.fs.basename(path)
-            index[base] = index[base] or (root .. "/" .. path)
-          end
-        end
-      end
-
-      local function resolve(name)
-        if index[name] then return index[name] end
-        if now_ms() - index_time > 3000 then rebuild_index() end
-        return index[name]
-      end
-
-      local kws = { "class", "interface", "enum", "record" }
-
-      local kt_rules = {
-        { "annotation", "annotation%s+class" },
-        { "enum",       "enum%s+class" },
-        { "record",     "data%s+class" },
-        { "record",     "value%s+class" },
-        { "interface",  "interface" },
-        { "class",      "class" },
-        { "class",      "object" },
-      }
-
-      local function kotlin_kind(line)
-        for _, r in ipairs(kt_rules) do
-          if line:find("^%s*[%w%s]-%f[%w]" .. r[2] .. "%s+%u") then return r[1] end
-        end
-      end
-
-      local function get_kind(path)
-        if kind_cache[path] ~= nil then return kind_cache[path] or nil end
-        local result = false
-        local fname = vim.fs.basename(path)
-        local is_kt = fname:match("%.kt$") ~= nil
-        local f = io.open(path, "r")
-        if f then
-          for _ = 1, 120 do
-            local line = f:read("*l")
-            if not line then break end
-
-            local k
-            if is_kt then
-              k = kotlin_kind(line)
-            elseif line:find("^%s*[%w%s]-@interface%s+%u") then
-              k = "annotation"
-            else
-              for _, kw in ipairs(kws) do
-                if line:find("^%s*[%w%s]-%f[%w]" .. kw .. "%s+%u") then
-                  k = kw
-                  break
-                end
-              end
-            end
-
-            if k then
-              if k == "class" and (
-                    fname:match("Exception%.%a+$") or fname:match("Error%.%a+$")
-                    or line:find("extends%s+[%w_%.]*Exception")
-                    or line:find("extends%s+[%w_%.]*Error")
-                    or line:find("extends%s+[%w_%.]*Throwable")
-                    or (is_kt and (
-                      line:find("%)%s*:%s*[%w_%.]*Exception")
-                      or line:find("%)%s*:%s*[%w_%.]*Error")
-                      or line:find("%)%s*:%s*[%w_%.]*Throwable")
-                      or line:find("class%s+[%w_]+%s*:%s*[%w_%.]*Exception")
-                      or line:find("class%s+[%w_]+%s*:%s*[%w_%.]*Error")
-                      or line:find("class%s+[%w_]+%s*:%s*[%w_%.]*Throwable")
-                    ))
-                  ) then
-                k = "exception"
-              end
-              result = k
-              break
-            end
-          end
-          f:close()
-        end
-        kind_cache[path] = result
-        return result or nil
-      end
-
-      devicons.get_icon = function(name, ext, o)
-        local icon, hl = orig_get_icon(name, ext, o)
-        if type(name) == "string" and (name:match("%.java$") or name:match("%.kt$")) then
-          local path = resolve(name)
-          local ki = path and kind_icons[get_kind(path) or ""]
-          if ki then return ki.glyph, ki.hl end
-        end
-        return icon, hl
-      end
-
-      vim.api.nvim_create_autocmd("BufWritePost", {
-        pattern = { "*.java", "*.kt" },
-        callback = function(a) kind_cache[vim.fn.fnamemodify(a.file, ":p")] = nil end,
-      })
-
-      local function is_fyler_buf(buf)
-        local ft = (vim.bo[buf].filetype or ""):lower()
-        local name = vim.api.nvim_buf_get_name(buf):lower()
-        return ft:find("fyler", 1, true) ~= nil or name:find("fyler", 1, true) ~= nil
-      end
-
-      local function on_folder_line(buf, row)
-        local extmarks = vim.api.nvim_buf_get_extmarks(
-          buf, -1, { row, 0 }, { row, -1 }, { details = true }
-        )
-        for _, m in ipairs(extmarks) do
-          local hl = m[4] and m[4].hl_group
-          if type(hl) == "string" then
-            local l = hl:lower()
-            if l:find("director", 1, true) or l:find("folder", 1, true) then
-              return true
-            end
-          end
-        end
-        return false
-      end
-
-      local function map_o(buf)
-        if vim.b[buf].fyler_o_mapped then return end
-        vim.b[buf].fyler_o_mapped = true
-        vim.keymap.set("n", "o", function()
-          local row = vim.api.nvim_win_get_cursor(0)[1] - 1
-          vim.api.nvim_feedkeys(vim.keycode("o"), "n", false)
-          if on_folder_line(buf, row) then
-            vim.api.nvim_feedkeys(vim.keycode("<Tab>"), "m", false)
-          end
-        end, { buffer = buf, desc = "Fyler: new line (indented inside folders)" })
-      end
-
-      vim.api.nvim_create_autocmd({ "FileType", "BufWinEnter" }, {
-        callback = function(a)
-          if is_fyler_buf(a.buf) then map_o(a.buf) end
-        end,
-      })
-      local sev = vim.diagnostic.severity
-      local diag_icons = {
-        [sev.ERROR] = { "\u{f057}", "DiagnosticError" },
-        [sev.WARN]  = { "\u{f071}", "DiagnosticWarn" },
-        [sev.INFO]  = { "\u{f05a}", "DiagnosticInfo" },
-        [sev.HINT]  = { "\u{f0eb}", "DiagnosticHint" },
-      }
-      local diag_by_name = {}
-      local diag_dirty = true
-
-      local function rebuild_diags()
-        diag_by_name = {}
-        for _, d in ipairs(vim.diagnostic.get()) do
-          local fname = vim.fs.basename(vim.api.nvim_buf_get_name(d.bufnr))
-          if fname ~= "" then
-            local e = diag_by_name[fname] or { 0, 0, 0, 0 }
-            e[d.severity] = e[d.severity] + 1
-            diag_by_name[fname] = e
-          end
-        end
-        diag_dirty = false
-      end
-
-      vim.api.nvim_create_autocmd("DiagnosticChanged", {
-        callback = function()
-          diag_dirty = true
-          vim.schedule(function()
-            for _, win in ipairs(vim.api.nvim_list_wins()) do
-              if is_fyler_buf(vim.api.nvim_win_get_buf(win)) then
-                pcall(vim.api.nvim__redraw, { win = win, valid = false })
-              end
-            end
-          end)
-        end,
-      })
-
-      local ns = vim.api.nvim_create_namespace("fyler_diagnostics")
-      vim.api.nvim_set_decoration_provider(ns, {
-        on_win = function(_, _, buf)
-          if not is_fyler_buf(buf) then return false end
-          if diag_dirty then rebuild_diags() end
-          return true
-        end,
-        on_line = function(_, _, buf, row)
-          local line = vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
-          if not line then return end
-
-          for tok in line:gmatch("%S+") do
-            local e = diag_by_name[tok]
-            if e then
-              local chunks = {}
-              for s = 1, 4 do
-                if e[s] > 0 then
-                  local ic = diag_icons[s]
-                  chunks[#chunks + 1] = { " " .. ic[1] .. " " .. e[s], ic[2] }
-                end
-              end
-              if #chunks > 0 then
-                vim.api.nvim_buf_set_extmark(buf, ns, row, 0, {
-                  virt_text = chunks,
-                  virt_text_pos = "eol",
-                  ephemeral = true,
-                })
-              end
-              break
-            end
-          end
-        end,
-      })
-
-      require("fyler").setup(opts)
-
-      require("fyler.input").get_confirmation = function(_, _, callback)
-        vim.schedule(function() callback(true) end)
-      end
-    end,
-  },
+  -- {
+  --   "FylerOrg/fyler.nvim",
+  --   dependencies = { "nvim-tree/nvim-web-devicons" },
+  --   cmd = { "Fyler" },
+  --   opts = {
+  --     kind = "split_left_most",
+  --     integrations = { icon = "nvim_web_devicons" },
+  --     extensions = { trash = { enabled = true }, watcher = { enabled = true } },
+  --     mappings = {
+  --       n = {
+  --         ["q"] = { action = "close", desc = "Close finder" },
+  --       },
+  --     },
+  --     ui = {
+  --       hidden_items = {
+  --         switches = {},
+  --       },
+  --     },
+  --   },
+  --   config = function(_, opts)
+  --     local devicons = require("nvim-web-devicons")
+  --     local orig_get_icon = devicons.get_icon
+  --
+  --     local kind_icons = {
+  --       class      = { glyph = "\u{f1b2}", hl = "JavaKindClass" },
+  --       interface  = { glyph = "\u{f12e}", hl = "JavaKindInterface" },
+  --       record     = { glyph = "\u{f192}", hl = "JavaKindRecord" },
+  --       enum       = { glyph = "\u{f009}", hl = "JavaKindEnum" },
+  --       annotation = { glyph = "\u{f1fa}", hl = "JavaKindAnnotation" },
+  --       exception  = { glyph = "\u{f0e7}", hl = "JavaKindException" },
+  --     }
+  --
+  --     local function define_hl()
+  --       vim.api.nvim_set_hl(0, "JavaKindClass", { fg = "#4fc1e9" })
+  --       vim.api.nvim_set_hl(0, "JavaKindInterface", { fg = "#62b543" })
+  --       vim.api.nvim_set_hl(0, "JavaKindRecord", { fg = "#f0d63c" })
+  --       vim.api.nvim_set_hl(0, "JavaKindEnum", { fg = "#ef6f5a" })
+  --       vim.api.nvim_set_hl(0, "JavaKindAnnotation", { fg = "#b07ad9" })
+  --       vim.api.nvim_set_hl(0, "JavaKindException", { fg = "#f0b429" })
+  --     end
+  --     define_hl()
+  --     vim.api.nvim_create_autocmd("ColorScheme", { callback = define_hl })
+  --
+  --     local skip_dirs = {
+  --       [".git"] = true,
+  --       [".idea"] = true,
+  --       [".gradle"] = true,
+  --       target = true,
+  --       build = true,
+  --       node_modules = true,
+  --     }
+  --
+  --     local kind_cache = {}
+  --     local index = {}
+  --     local index_time = 0
+  --
+  --     local function now_ms() return vim.uv.hrtime() / 1e6 end
+  --
+  --     local function rebuild_index()
+  --       index = {}
+  --       index_time = now_ms()
+  --       local root = vim.fn.getcwd()
+  --       for path, type in vim.fs.dir(root, {
+  --         depth = 15,
+  --         skip = function(dir) return not skip_dirs[vim.fs.basename(dir)] end,
+  --       }) do
+  --         if type == "file" and (path:match("%.java$") or path:match("%.kt$")) then
+  --           local base = vim.fs.basename(path)
+  --           index[base] = index[base] or (root .. "/" .. path)
+  --         end
+  --       end
+  --     end
+  --
+  --     local function resolve(name)
+  --       if index[name] then return index[name] end
+  --       if now_ms() - index_time > 3000 then rebuild_index() end
+  --       return index[name]
+  --     end
+  --
+  --     local kws = { "class", "interface", "enum", "record" }
+  --
+  --     local kt_rules = {
+  --       { "annotation", "annotation%s+class" },
+  --       { "enum",       "enum%s+class" },
+  --       { "record",     "data%s+class" },
+  --       { "record",     "value%s+class" },
+  --       { "interface",  "interface" },
+  --       { "class",      "class" },
+  --       { "class",      "object" },
+  --     }
+  --
+  --     local function kotlin_kind(line)
+  --       for _, r in ipairs(kt_rules) do
+  --         if line:find("^%s*[%w%s]-%f[%w]" .. r[2] .. "%s+%u") then return r[1] end
+  --       end
+  --     end
+  --
+  --     local function get_kind(path)
+  --       if kind_cache[path] ~= nil then return kind_cache[path] or nil end
+  --       local result = false
+  --       local fname = vim.fs.basename(path)
+  --       local is_kt = fname:match("%.kt$") ~= nil
+  --       local f = io.open(path, "r")
+  --       if f then
+  --         for _ = 1, 120 do
+  --           local line = f:read("*l")
+  --           if not line then break end
+  --
+  --           local k
+  --           if is_kt then
+  --             k = kotlin_kind(line)
+  --           elseif line:find("^%s*[%w%s]-@interface%s+%u") then
+  --             k = "annotation"
+  --           else
+  --             for _, kw in ipairs(kws) do
+  --               if line:find("^%s*[%w%s]-%f[%w]" .. kw .. "%s+%u") then
+  --                 k = kw
+  --                 break
+  --               end
+  --             end
+  --           end
+  --
+  --           if k then
+  --             if k == "class" and (
+  --                   fname:match("Exception%.%a+$") or fname:match("Error%.%a+$")
+  --                   or line:find("extends%s+[%w_%.]*Exception")
+  --                   or line:find("extends%s+[%w_%.]*Error")
+  --                   or line:find("extends%s+[%w_%.]*Throwable")
+  --                   or (is_kt and (
+  --                     line:find("%)%s*:%s*[%w_%.]*Exception")
+  --                     or line:find("%)%s*:%s*[%w_%.]*Error")
+  --                     or line:find("%)%s*:%s*[%w_%.]*Throwable")
+  --                     or line:find("class%s+[%w_]+%s*:%s*[%w_%.]*Exception")
+  --                     or line:find("class%s+[%w_]+%s*:%s*[%w_%.]*Error")
+  --                     or line:find("class%s+[%w_]+%s*:%s*[%w_%.]*Throwable")
+  --                   ))
+  --                 ) then
+  --               k = "exception"
+  --             end
+  --             result = k
+  --             break
+  --           end
+  --         end
+  --         f:close()
+  --       end
+  --       kind_cache[path] = result
+  --       return result or nil
+  --     end
+  --
+  --     devicons.get_icon = function(name, ext, o)
+  --       local icon, hl = orig_get_icon(name, ext, o)
+  --       if type(name) == "string" and (name:match("%.java$") or name:match("%.kt$")) then
+  --         local path = resolve(name)
+  --         local ki = path and kind_icons[get_kind(path) or ""]
+  --         if ki then return ki.glyph, ki.hl end
+  --       end
+  --       return icon, hl
+  --     end
+  --
+  --     vim.api.nvim_create_autocmd("BufWritePost", {
+  --       pattern = { "*.java", "*.kt" },
+  --       callback = function(a) kind_cache[vim.fn.fnamemodify(a.file, ":p")] = nil end,
+  --     })
+  --
+  --     local function is_fyler_buf(buf)
+  --       local ft = (vim.bo[buf].filetype or ""):lower()
+  --       local name = vim.api.nvim_buf_get_name(buf):lower()
+  --       return ft:find("fyler", 1, true) ~= nil or name:find("fyler", 1, true) ~= nil
+  --     end
+  --
+  --     local function on_folder_line(buf, row)
+  --       local extmarks = vim.api.nvim_buf_get_extmarks(
+  --         buf, -1, { row, 0 }, { row, -1 }, { details = true }
+  --       )
+  --       for _, m in ipairs(extmarks) do
+  --         local hl = m[4] and m[4].hl_group
+  --         if type(hl) == "string" then
+  --           local l = hl:lower()
+  --           if l:find("director", 1, true) or l:find("folder", 1, true) then
+  --             return true
+  --           end
+  --         end
+  --       end
+  --       return false
+  --     end
+  --
+  --     local function map_o(buf)
+  --       if vim.b[buf].fyler_o_mapped then return end
+  --       vim.b[buf].fyler_o_mapped = true
+  --       vim.keymap.set("n", "o", function()
+  --         local row = vim.api.nvim_win_get_cursor(0)[1] - 1
+  --         vim.api.nvim_feedkeys(vim.keycode("o"), "n", false)
+  --         if on_folder_line(buf, row) then
+  --           vim.api.nvim_feedkeys(vim.keycode("<Tab>"), "m", false)
+  --         end
+  --       end, { buffer = buf, desc = "Fyler: new line (indented inside folders)" })
+  --     end
+  --
+  --     vim.api.nvim_create_autocmd({ "FileType", "BufWinEnter" }, {
+  --       callback = function(a)
+  --         if is_fyler_buf(a.buf) then map_o(a.buf) end
+  --       end,
+  --     })
+  --     local sev = vim.diagnostic.severity
+  --     local diag_icons = {
+  --       [sev.ERROR] = { "\u{f057}", "DiagnosticError" },
+  --       [sev.WARN]  = { "\u{f071}", "DiagnosticWarn" },
+  --       [sev.INFO]  = { "\u{f05a}", "DiagnosticInfo" },
+  --       [sev.HINT]  = { "\u{f0eb}", "DiagnosticHint" },
+  --     }
+  --     local diag_by_name = {}
+  --     local diag_dirty = true
+  --
+  --     local function rebuild_diags()
+  --       diag_by_name = {}
+  --       for _, d in ipairs(vim.diagnostic.get()) do
+  --         local fname = vim.fs.basename(vim.api.nvim_buf_get_name(d.bufnr))
+  --         if fname ~= "" then
+  --           local e = diag_by_name[fname] or { 0, 0, 0, 0 }
+  --           e[d.severity] = e[d.severity] + 1
+  --           diag_by_name[fname] = e
+  --         end
+  --       end
+  --       diag_dirty = false
+  --     end
+  --
+  --     vim.api.nvim_create_autocmd("DiagnosticChanged", {
+  --       callback = function()
+  --         diag_dirty = true
+  --         vim.schedule(function()
+  --           for _, win in ipairs(vim.api.nvim_list_wins()) do
+  --             if is_fyler_buf(vim.api.nvim_win_get_buf(win)) then
+  --               pcall(vim.api.nvim__redraw, { win = win, valid = false })
+  --             end
+  --           end
+  --         end)
+  --       end,
+  --     })
+  --
+  --     local ns = vim.api.nvim_create_namespace("fyler_diagnostics")
+  --     vim.api.nvim_set_decoration_provider(ns, {
+  --       on_win = function(_, _, buf)
+  --         if not is_fyler_buf(buf) then return false end
+  --         if diag_dirty then rebuild_diags() end
+  --         return true
+  --       end,
+  --       on_line = function(_, _, buf, row)
+  --         local line = vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
+  --         if not line then return end
+  --
+  --         for tok in line:gmatch("%S+") do
+  --           local e = diag_by_name[tok]
+  --           if e then
+  --             local chunks = {}
+  --             for s = 1, 4 do
+  --               if e[s] > 0 then
+  --                 local ic = diag_icons[s]
+  --                 chunks[#chunks + 1] = { " " .. ic[1] .. " " .. e[s], ic[2] }
+  --               end
+  --             end
+  --             if #chunks > 0 then
+  --               vim.api.nvim_buf_set_extmark(buf, ns, row, 0, {
+  --                 virt_text = chunks,
+  --                 virt_text_pos = "eol",
+  --                 ephemeral = true,
+  --               })
+  --             end
+  --             break
+  --           end
+  --         end
+  --       end,
+  --     })
+  --
+  --     require("fyler").setup(opts)
+  --
+  --     require("fyler.input").get_confirmation = function(_, _, callback)
+  --       vim.schedule(function() callback(true) end)
+  --     end
+  --   end,
+  -- },
   {
     "DevDad-Main/spring-tools.nvim",
     opts = {
