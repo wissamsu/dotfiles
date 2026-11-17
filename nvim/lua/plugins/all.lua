@@ -670,7 +670,12 @@ return {
                   end
                   return desc
                 end,
-                highlight = 'BlinkCmpLabelDescription',
+                highlight = function(ctx)
+                  if ctx.label_description == 'required' then
+                    return 'BlinkCmpRequired'
+                  end
+                  return 'BlinkCmpLabelDescription'
+                end,
               },
               kind = {
                 text = function(ctx)
@@ -758,6 +763,32 @@ return {
             transform_items = function(_, items)
               local Snippet = vim.lsp.protocol.InsertTextFormat.Snippet
               local PlainText = vim.lsp.protocol.InsertTextFormat.PlainText
+              local gh = vim.bo.filetype == 'yaml.github'
+
+              -- Required input names come from the server's "Missing required inputs" diagnostic
+              local required = {}
+              if gh then
+                local buf = vim.api.nvim_get_current_buf()
+                local row = vim.api.nvim_win_get_cursor(0)[1] - 1
+                local lines = vim.api.nvim_buf_get_lines(buf, 0, row + 1, false)
+                local uses_row
+                for i = #lines, 1, -1 do
+                  if lines[i]:match('^%s*%-?%s*uses:') then
+                    uses_row = i - 1
+                    break
+                  end
+                end
+                if uses_row then
+                  for _, d in ipairs(vim.diagnostic.get(buf)) do
+                    if d.lnum >= uses_row and d.lnum <= row and d.message:find('Missing required inputs', 1, true) then
+                      for name in d.message:gmatch('`([^`]+)`') do
+                        required[name] = true
+                      end
+                    end
+                  end
+                end
+              end
+
               for _, it in ipairs(items) do
                 if type(it.insertText) == 'string' then
                   it.insertText = it.insertText:gsub('%s+$', '')
@@ -769,6 +800,12 @@ return {
                 local text = (type(it.textEdit) == 'table' and it.textEdit.newText) or it.insertText or ''
                 if it.insertTextFormat == Snippet and text:find('%${[%w_%-]*%.[^}]*}') then
                   it.insertTextFormat = PlainText
+                end
+
+                if gh and required[it.label] then
+                  it.labelDetails = vim.tbl_extend('force', it.labelDetails or {}, {
+                    description = 'required',
+                  })
                 end
               end
               return items
