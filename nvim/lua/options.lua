@@ -34,6 +34,12 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.keymap.set("n", "<CR>", "<CR>", { buffer = true, noremap = true })
   end,
 })
+vim.api.nvim_create_autocmd("BufWritePre", {
+  group = vim.api.nvim_create_augroup("SaveGuard", { clear = true }),
+  callback = function(args)
+    vim.b[args.buf]._save_had_changes = vim.bo[args.buf].modified
+  end,
+})
 vim.keymap.set("n", "<CR>", function()
   local function plain_enter()
     vim.api.nvim_feedkeys(vim.keycode("<CR>"), "n", false)

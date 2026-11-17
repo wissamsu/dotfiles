@@ -1111,7 +1111,8 @@ vim.api.nvim_create_autocmd('LspAttach', {
     vim.api.nvim_create_autocmd('BufWritePost', {
       group = vim.api.nvim_create_augroup('ClangdOnSave' .. args.buf, { clear = true }),
       buffer = args.buf,
-      callback = function()
+      callback = function(event)
+        if not vim.b[event.buf]._save_had_changes then return end
         clangd_fix_includes(client, args.buf, function()
           clangd_format_and_write(client, args.buf)
         end)
@@ -1132,6 +1133,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
       group = group,
       buffer = bufnr,
       callback = function()
+        if not vim.b[bufnr]._save_had_changes then return end
         local client = vim.lsp.get_clients({
           bufnr = bufnr,
           method = 'textDocument/formatting',
@@ -1446,7 +1448,8 @@ vim.api.nvim_create_autocmd('LspAttach', {
     vim.api.nvim_create_autocmd('BufWritePost', {
       group = group,
       buffer = args.buf,
-      callback = function()
+      callback = function(event)
+        if not vim.b[event.buf]._save_had_changes then return end
         organize_jdtls_imports_async(client, args.buf)
       end,
     })
@@ -1532,7 +1535,8 @@ vim.api.nvim_create_autocmd('LspAttach', {
     vim.api.nvim_create_autocmd('BufWritePost', {
       group = vim.api.nvim_create_augroup('KotlinOrganizeImports' .. args.buf, { clear = true }),
       buffer = args.buf,
-      callback = function()
+      callback = function(event)
+        if not vim.b[event.buf]._save_had_changes then return end
         kotlin_organize_imports(client, args.buf)
       end,
     })
@@ -1574,6 +1578,7 @@ vim.api.nvim_create_autocmd('BufWritePost', {
   group = vim.api.nvim_create_augroup('JavaRenameFileToClass', { clear = true }),
   pattern = '*.java',
   callback = function(args)
+    if not vim.b[args.buf]._save_had_changes then return end
     vim.schedule(function()
       rename_file_to_public_type(args.buf)
     end)
@@ -1813,6 +1818,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
 vim.api.nvim_create_autocmd({ 'BufWritePost', 'InsertLeave' }, {
   group = vim.api.nvim_create_augroup('EolCodeLensRefresh', { clear = true }),
   callback = function(args)
+    if args.event == 'BufWritePost' and not vim.b[args.buf]._save_had_changes then return end
     schedule_codelens(args.buf)
   end,
 })

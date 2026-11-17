@@ -261,7 +261,10 @@ return {
       end
 
       vim.api.nvim_create_autocmd({ "FocusGained", "BufWritePost" }, {
-        callback = function() vim.schedule(refresh_explorer) end,
+        callback = function(args)
+          if args.event == "BufWritePost" and not vim.b[args.buf]._save_had_changes then return end
+          vim.schedule(refresh_explorer)
+        end,
       })
       -- Apply file system changes without the confirmation prompt
       local sync_no_confirm = function()
