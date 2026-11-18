@@ -2,7 +2,6 @@
 local rocks = vim.uv.os_homedir() .. "/.luarocks/share/lua/5.1/"
 package.path = package.path .. ";" .. rocks .. "?.lua;" .. rocks .. "?/init.lua"
 local kotlin_prefetch_cache = {}
-
 return {
   {
     "nvim-mini/mini.nvim",
@@ -844,16 +843,52 @@ return {
     },
   },
   {
-    'Exafunction/codeium.vim',
+    'zbirenbaum/copilot.lua',
+    cmd = 'Copilot',
     event = 'InsertEnter',
     config = function()
-      vim.keymap.set('i', '<C-g>', function() return vim.fn['codeium#Accept']() end, { expr = true, silent = true })
-      vim.keymap.set('i', '<c-;>', function() return vim.fn['codeium#CycleCompletions'](1) end,
-        { expr = true, silent = true })
-      vim.keymap.set('i', '<c-,>', function() return vim.fn['codeium#CycleCompletions'](-1) end,
-        { expr = true, silent = true })
-      vim.keymap.set('i', '<c-x>', function() return vim.fn['codeium#Clear']() end, { expr = true, silent = true })
-    end
+      require('copilot').setup({
+        panel = { enabled = false },
+        suggestion = {
+          enabled = true,
+          auto_trigger = true,
+          hide_during_completion = true,
+          keymap = {
+            accept = '<C-g>',
+            accept_word = false,
+            accept_line = false,
+            next = '<M-]>',
+            prev = '<M-[>',
+            dismiss = '<C-]>',
+            toggle_auto_trigger = false,
+          },
+        },
+        filetypes = {
+          ['*'] = true,
+          markdown = false,
+          help = false,
+          text = false,
+          gitcommit = false,
+          gitrebase = false,
+          hgcommit = false,
+          svn = false,
+          cvs = false,
+        },
+        logger = {
+          file_log_level = vim.log.levels.OFF,
+          print_log_level = vim.log.levels.WARN,
+        },
+      })
+
+      vim.api.nvim_create_autocmd('User', {
+        pattern = 'BlinkCmpMenuOpen',
+        callback = function() vim.b.copilot_suggestion_hidden = true end,
+      })
+      vim.api.nvim_create_autocmd('User', {
+        pattern = 'BlinkCmpMenuClose',
+        callback = function() vim.b.copilot_suggestion_hidden = false end,
+      })
+    end,
   },
   -- {
   --   'windwp/nvim-autopairs',
