@@ -839,7 +839,7 @@ return {
   {
     'zbirenbaum/copilot.lua',
     cmd = 'Copilot',
-    event = 'InsertEnter',
+    -- event = 'InsertEnter',
     config = function()
       require('copilot').setup({
         panel = { enabled = false },
@@ -2164,7 +2164,7 @@ return {
   {
     url = "https://gitlab.com/schrieveslaach/sonarlint.nvim",
     name = "sonarlint.nvim",
-    ft = { "java" },
+    lazy = true,
     config = function()
       if not vim.g.sonarlint_attach_guard then
         vim.g.sonarlint_attach_guard = true
