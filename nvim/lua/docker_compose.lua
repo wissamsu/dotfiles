@@ -85,6 +85,10 @@ local function is_compose_buf(bufnr)
     or name:match('^compose[%.%-].*%.ya?ml$') ~= nil
 end
 
+local function is_dockerfile_buf(bufnr)
+  return vim.bo[bufnr].filetype == 'dockerfile'
+end
+
 local function callback_empty(callback)
   callback({ items = {}, is_incomplete_forward = false, is_incomplete_backward = false })
 end
@@ -865,6 +869,45 @@ local function parse_image_line(line, cursor_col)
   return { name = name, tag = tag, start_col = value_start, end_col = value_end }
 end
 
+local function parse_dockerfile_image_line(line, cursor_col)
+  local indent = line:match('^(%s*)') or ''
+  local rest = line:sub(#indent + 1)
+  local keyword = rest:match('^(%S+)')
+  if not keyword or keyword:lower() ~= 'from' then
+    return nil
+  end
+  local pos = #indent + #keyword + 1
+  while pos <= #line and line:sub(pos, pos):match('%s') do
+    pos = pos + 1
+  end
+  local token = line:sub(pos):match('^(%S+)')
+  if not token then
+    return nil
+  end
+  if token:lower():match('^--platform=') then
+    pos = pos + #token
+    while pos <= #line and line:sub(pos, pos):match('%s') do
+      pos = pos + 1
+    end
+    token = line:sub(pos):match('^(%S+)')
+    if not token then
+      return nil
+    end
+  end
+  -- Drop a trailing AS alias if it was accidentally included.
+  token = token:gsub('%s+[Aa][Ss]%s+.*$', '')
+  local start_col = pos - 1
+  local end_col = start_col + #token
+  if cursor_col < start_col or cursor_col > end_col then
+    return nil
+  end
+  local name, tag = split_image_ref(token)
+  if not name then
+    return nil
+  end
+  return { name = name, tag = tag, start_col = start_col, end_col = end_col }
+end
+
 local function indent_of(line)
   return #(line:match('^(%s*)') or '')
 end
@@ -971,7 +1014,11 @@ function source.new(opts)
 end
 
 function source:enabled()
-  return is_compose_buf(api.nvim_get_current_buf())
+  local bufnr = api.nvim_get_current_buf()
+  if self.mode == 'tags' then
+    return is_compose_buf(bufnr) or is_dockerfile_buf(bufnr)
+  end
+  return is_compose_buf(bufnr)
 end
 
 function source:get_trigger_characters()
@@ -983,7 +1030,7 @@ end
 
 function source:get_completions(ctx, callback)
   local bufnr = ctx.bufnr or api.nvim_get_current_buf()
-  if not is_compose_buf(bufnr) then
+  if not is_compose_buf(bufnr) and not is_dockerfile_buf(bufnr) then
     callback_empty(callback)
     return
   end
@@ -993,7 +1040,12 @@ function source:get_completions(ctx, callback)
   local line = ctx.line or lines[row + 1] or ''
 
   if self.mode == 'tags' then
-    local parsed = parse_image_line(line, col)
+    local parsed
+    if is_dockerfile_buf(bufnr) then
+      parsed = parse_dockerfile_image_line(line, col)
+    else
+      parsed = parse_image_line(line, col)
+    end
     if not parsed then
       callback_empty(callback)
       return

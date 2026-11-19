@@ -1089,6 +1089,7 @@ return {
           yaml = { inherit_defaults = true, 'docker_tags', 'docker_env' },
           yml = { inherit_defaults = true, 'docker_tags', 'docker_env' },
           ['yaml.docker-compose'] = { inherit_defaults = true, 'docker_tags', 'docker_env' },
+          dockerfile = { inherit_defaults = true, 'docker_tags' },
         },
         providers = {
           dadbod = { name = 'Dadbod', module = 'vim_dadbod_completion.blink' },
