@@ -1049,8 +1049,9 @@ return {
                     buffer = 'A',
                     snippets = 'S',
                     path = 'F',
-                    docker_tags = 'DT',
-                    docker_env = 'DE',
+                     docker_tags = 'DT',
+                     docker_env = 'DE',
+                     docker_volumes = 'DV',
                   }
                   return '[' .. (names[ctx.source_id] or ctx.source_id:upper()) .. ']'
                 end,
@@ -1086,9 +1087,9 @@ return {
           sql = { 'dadbod', 'snippets', 'buffer' },
           mysql = { 'dadbod', 'snippets', 'buffer' },
           plsql = { 'dadbod', 'snippets', 'buffer' },
-          yaml = { inherit_defaults = true, 'docker_tags', 'docker_env' },
-          yml = { inherit_defaults = true, 'docker_tags', 'docker_env' },
-          ['yaml.docker-compose'] = { inherit_defaults = true, 'docker_tags', 'docker_env' },
+           yaml = { inherit_defaults = true, 'docker_tags', 'docker_env', 'docker_volumes' },
+           yml = { inherit_defaults = true, 'docker_tags', 'docker_env', 'docker_volumes' },
+           ['yaml.docker-compose'] = { inherit_defaults = true, 'docker_tags', 'docker_env', 'docker_volumes' },
           dockerfile = { inherit_defaults = true, 'docker_tags' },
         },
         providers = {
@@ -1104,6 +1105,13 @@ return {
             name = 'Docker env',
             module = 'docker_compose',
             opts = { mode = 'env' },
+            async = true,
+            score_offset = 5,
+          },
+          docker_volumes = {
+            name = 'Docker volumes',
+            module = 'docker_compose',
+            opts = { mode = 'volumes' },
             async = true,
             score_offset = 5,
           },

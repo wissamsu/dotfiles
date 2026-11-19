@@ -608,6 +608,22 @@ local function extract_config_env(env)
   return vars
 end
 
+local function extract_config_volumes(volumes)
+  local paths = {}
+  local seen = {}
+  if type(volumes) ~= 'table' then
+    return paths
+  end
+  for path in pairs(volumes) do
+    if type(path) == 'string' and path ~= '' and not seen[path] then
+      seen[path] = true
+      paths[#paths + 1] = path
+    end
+  end
+  table.sort(paths)
+  return paths
+end
+
 local function registry_headers(registry, repo, callback)
   local headers = { 'Accept: ' .. REGISTRY_ACCEPT }
   if registry ~= 'docker.io' then
@@ -632,26 +648,27 @@ local function fetch_registry_env(registry, repo, tag, callback)
   local host = registry == 'docker.io' and 'registry-1.docker.io' or registry
   registry_headers(registry, repo, function(headers)
     if type(headers) ~= 'table' then
-      callback(nil)
+      callback(nil, nil)
       return
     end
     local function config_env(manifest)
       local digest = type(manifest) == 'table' and type(manifest.config) == 'table' and manifest.config.digest
       if type(digest) ~= 'string' then
-        callback(nil)
+        callback(nil, nil)
         return
       end
       curl_json('https://' .. host .. '/v2/' .. repo .. '/blobs/' .. digest, function(config)
         if type(config) ~= 'table' then
-          callback(nil)
+          callback(nil, nil)
           return
         end
-        callback(extract_config_env(type(config.config) == 'table' and config.config.Env or {}))
+        local cfg = type(config.config) == 'table' and config.config or {}
+        callback(extract_config_env(cfg.Env or {}), extract_config_volumes(cfg.Volumes or {}))
       end, headers)
     end
     local function manifest_result(manifest)
       if type(manifest) ~= 'table' then
-        callback(nil)
+        callback(nil, nil)
         return
       end
       if type(manifest.manifests) ~= 'table' then
@@ -675,7 +692,7 @@ local function fetch_registry_env(registry, repo, tag, callback)
         end
       end
       if not digest then
-        callback(nil)
+        callback(nil, nil)
         return
       end
       curl_json('https://' .. host .. '/v2/' .. repo .. '/manifests/' .. digest, manifest_result, headers)
@@ -690,6 +707,7 @@ local function new_env_state(registry, repo, tag)
     repo = repo,
     tag = tag,
     vars = {},
+    volumes = {},
     complete = false,
     fetching = false,
     fetched_at = 0,
@@ -699,15 +717,16 @@ local function new_env_state(registry, repo, tag)
   }
 end
 
-local function finish_env_state(state, vars)
+local function finish_env_state(state, vars, volumes)
   state.vars = vars or {}
+  state.volumes = volumes or {}
   state.complete = true
   state.fetching = false
   state.fetched_at = uv.now()
   local subscribers = state.subscribers
   state.subscribers = {}
   for subscriber in pairs(subscribers) do
-    subscriber.on_items(state.vars)
+    subscriber.on_items(state.vars, state.volumes)
   end
 end
 
@@ -732,29 +751,34 @@ local function fetch_env_state(state)
   if state.registry ~= 'docker.io' then
     local source = DOC_ENV_SOURCES[state.registry .. '/' .. state.repo]
     if source then
-      state.proc = fetch_docs_env(source, function(vars)
+      state.proc = fetch_docs_env(source, function(vars, err)
         state.proc = nil
         if state.generation ~= generation then
           return
         end
         if vars and #vars > 0 then
-          finish_env_state(state, vars)
+          fetch_registry_env(state.registry, state.repo, state.tag, function(_, volumes)
+            if state.generation ~= generation then
+              return
+            end
+            finish_env_state(state, vars, volumes or {})
+          end)
           return
         end
-        fetch_registry_env(state.registry, state.repo, state.tag, function(registry_vars)
+        fetch_registry_env(state.registry, state.repo, state.tag, function(registry_vars, volumes)
           if state.generation ~= generation then
             return
           end
-          finish_env_state(state, registry_vars or {})
+          finish_env_state(state, registry_vars or {}, volumes or {})
         end)
       end)
       return
     end
-    fetch_registry_env(state.registry, state.repo, state.tag, function(registry_vars)
+    fetch_registry_env(state.registry, state.repo, state.tag, function(registry_vars, volumes)
       if state.generation ~= generation then
         return
       end
-      finish_env_state(state, registry_vars or {})
+      finish_env_state(state, registry_vars or {}, volumes or {})
     end)
     return
   end
@@ -768,14 +792,19 @@ local function fetch_env_state(state)
       vars = extract_env_vars(data.full_description or '')
     end
     if #vars > 0 then
-      finish_env_state(state, vars)
+      fetch_registry_env(state.registry, state.repo, state.tag, function(_, volumes)
+        if state.generation ~= generation then
+          return
+        end
+        finish_env_state(state, vars, volumes or {})
+      end)
       return
     end
-    fetch_registry_env(state.registry, state.repo, state.tag, function(registry_vars)
+    fetch_registry_env(state.registry, state.repo, state.tag, function(registry_vars, volumes)
       if state.generation ~= generation then
         return
       end
-      finish_env_state(state, registry_vars or {})
+      finish_env_state(state, registry_vars or {}, volumes or {})
     end)
   end)
 end
@@ -797,7 +826,7 @@ local function get_env_vars(registry, repo, tag, on_items)
     env_states[key] = state
   end
   if state.complete then
-    on_items(state.vars)
+    on_items(state.vars, state.volumes)
     return function() end
   end
   local subscriber = { on_items = on_items }
@@ -1005,6 +1034,132 @@ local function find_service_image(lines, env_row, env_indent)
   return nil
 end
 
+local function find_volume_block(lines, row)
+  local cursor_indent = indent_of(lines[row + 1] or '')
+  for i = row, 0, -1 do
+    local ind, rest = lines[i + 1]:match('^(%s*)volumes%s*:%s*(.*)$')
+    if ind then
+      local vol_indent = #ind
+      if rest ~= '' and not rest:match('^#') then
+        return nil
+      end
+      if i == row or cursor_indent <= vol_indent then
+        return nil
+      end
+      for j = i + 1, row - 1 do
+        local line = lines[j + 1]
+        if not is_blank_or_comment(line) and indent_of(line) <= vol_indent then
+          return nil
+        end
+      end
+      return { row = i, indent = vol_indent }
+    end
+  end
+  return nil
+end
+
+local function parse_volume_line(line, cursor_col)
+  -- long form: target: <path>
+  local indent = line:match('^(%s*)') or ''
+  local rest = line:sub(#indent + 1)
+  local target_prefix = rest:match('^target%s*:%s*')
+  if target_prefix then
+    local prefix = indent .. target_prefix
+    local value, rel_start, rel_end = strip_yaml_value(line:sub(#prefix + 1))
+    local value_start = #prefix + (rel_start or 0)
+    local value_end = #prefix + (rel_end or 0)
+    if value == nil then
+      value = ''
+      value_start = #prefix
+      value_end = #prefix
+    end
+    if cursor_col < value_start or cursor_col > math.max(value_start, value_end) then
+      -- allow empty at exact position
+      if not (value == '' and cursor_col == value_start) then
+        return nil
+      end
+    end
+    if value == '' then
+      return { start_col = value_start, end_col = value_start }
+    end
+    return { start_col = value_start, end_col = value_end }
+  end
+
+  -- short form list item: - src:dest[:mode]  or - /path
+  local dash = line:match('^(%s*-%s*)')
+  if dash then
+    local after = line:sub(#dash + 1)
+    -- target key on same line after dash
+    local target_key_prefix = after:match('^target%s*:%s*')
+    if target_key_prefix then
+      local prefix = dash .. target_key_prefix
+      local value, rel_start, rel_end = strip_yaml_value(line:sub(#prefix + 1))
+      local value_start = #prefix + (rel_start or 0)
+      local value_end = #prefix + (rel_end or 0)
+      if value == nil then
+        value = ''
+        value_start = #prefix
+        value_end = #prefix
+      end
+      if cursor_col < value_start or cursor_col > math.max(value_start, value_end) then
+        if not (value == '' and cursor_col == value_start) then
+          return nil
+        end
+      end
+      if value == '' then
+        return { start_col = value_start, end_col = value_start }
+      end
+      return { start_col = value_start, end_col = value_end }
+    end
+
+    local value, rel_start, rel_end = strip_yaml_value(after)
+    if value == nil then
+      return nil
+    end
+    local value_start = #dash + (rel_start or 0)
+    local value_end = #dash + (rel_end or 0)
+    if value == '' then
+      if cursor_col == value_start then
+        return { start_col = value_start, end_col = value_start }
+      end
+      return nil
+    end
+    if cursor_col < value_start or cursor_col > value_end then
+      return nil
+    end
+
+    local offset = cursor_col - value_start
+    -- find colon positions (1-based in value)
+    local first = value:find(':', 1, true)
+    if not first then
+      -- anonymous volume: whole value is container path
+      return { start_col = value_start, end_col = value_end }
+    end
+    local second = value:find(':', first + 1, true)
+    local dest_start_offset = first -- 0-based offset of char after first colon
+    local dest_end_1based = second and (second - 1) or #value
+    local dest_end_offset = dest_end_1based -- exclusive end in 0-based? adjust
+    -- convert: dest chars are positions first+1..dest_end_1based (1-based)
+    -- 0-based start = first, exclusive end = dest_end_1based
+    local dest_start = value_start + first
+    local dest_end = value_start + dest_end_1based
+    if offset < first or offset > dest_end_1based then
+      return nil
+    end
+    -- trim leading spaces in dest
+    local dest_text = value:sub(first + 1, dest_end_1based)
+    local lead = dest_text:match('^(%s*)') or ''
+    if #lead > 0 then
+      dest_start = dest_start + #lead
+    end
+    local trail = dest_text:match('%s*$') or ''
+    -- keep end trimmed? edit range end stays at dest_end
+    return { start_col = dest_start, end_col = dest_end }
+  end
+
+  return nil
+end
+
 local source = {}
 
 function source.new(opts)
@@ -1024,6 +1179,9 @@ end
 function source:get_trigger_characters()
   if self.mode == 'tags' then
     return { ':' }
+  end
+  if self.mode == 'volumes' then
+    return { '/' }
   end
   return {}
 end
@@ -1066,6 +1224,50 @@ function source:get_completions(ctx, callback)
       callback_empty(callback)
     end
     return get_tags(registry, repo, parsed.name, edit_range, on_items, on_done)
+  end
+
+  if self.mode == 'volumes' then
+    if line:match('^%s*#') then
+      callback_empty(callback)
+      return
+    end
+    local block = find_volume_block(lines, row)
+    if not block then
+      callback_empty(callback)
+      return
+    end
+    local parsed = parse_volume_line(line, col)
+    if not parsed then
+      callback_empty(callback)
+      return
+    end
+    local image_name, image_tag = find_service_image(lines, block.row, block.indent)
+    if not image_name then
+      callback_empty(callback)
+      return
+    end
+    local registry, repo = image_registry_repo(image_name)
+    if not registry or not repo then
+      callback_empty(callback)
+      return
+    end
+    local edit_range = {
+      start = { line = row, character = parsed.start_col },
+      ['end'] = { line = row, character = parsed.end_col },
+    }
+    local kinds = require('blink.cmp.types').CompletionItemKind
+    return get_env_vars(registry, repo, image_tag, function(_, volumes)
+      local items = {}
+      for _, path in ipairs(volumes or {}) do
+        items[#items + 1] = {
+          label = path,
+          filterText = path,
+          kind = kinds.Folder,
+          textEdit = item_edit(edit_range, path),
+        }
+      end
+      callback({ items = items, is_incomplete_forward = false, is_incomplete_backward = false })
+    end)
   end
 
   if not ctx.bounds or line:match('^%s*#') then
@@ -1113,7 +1315,7 @@ function source:get_completions(ctx, callback)
   }
   local suffix = style == 'list' and '=' or ': '
   local base = (repo:match('([^/]+)$') or repo):upper():gsub('[^A-Z0-9]', '_')
-  return get_env_vars(registry, repo, image_tag, function(vars)
+  return get_env_vars(registry, repo, image_tag, function(vars, _)
     local items = make_env_items(vars, existing, base, image_name, edit_range, suffix)
     callback({ items = items, is_incomplete_forward = false, is_incomplete_backward = false })
   end)
