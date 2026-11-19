@@ -356,6 +356,16 @@ vim.lsp.config('docker_compose_ls', {
   root_markers = { 'docker-compose.yaml', 'docker-compose.yml', 'compose.yaml', 'compose.yml', '.git' },
 })
 
+vim.api.nvim_create_autocmd('LspAttach', {
+  group = vim.api.nvim_create_augroup('DockerComposeCodeLens', { clear = true }),
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if client and client.name == 'docker_compose_ls' then
+      client.server_capabilities.codeLensProvider = nil
+    end
+  end,
+})
+
 vim.lsp.config('terraformls', {
   cmd = { resolve_command('terraform-ls'), 'serve' },
   filetypes = { 'terraform', 'terraform-vars', 'tf', 'tfvars' },
