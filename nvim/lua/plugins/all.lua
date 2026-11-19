@@ -329,18 +329,12 @@ return {
         require("mini.diff").goto_hunk("next")
       end, { desc = "Next git hunk" })
       vim.api.nvim_create_autocmd("ColorScheme", { callback = set_hl })
-      vim.api.nvim_create_autocmd("InsertEnter", {
-        once = true,
-        callback = function()
-          require("mini.pairs").setup()
-
-          -- Enter between a pair puts the cursor on its own indented line
-          vim.keymap.set("i", "<CR>", "v:lua.MiniPairs.cr()", { expr = true, replace_keycodes = false })
-          -- Backspace between a pair deletes both characters
-          vim.keymap.set("i", "<BS>", "v:lua.MiniPairs.bs()", { expr = true, replace_keycodes = false })
-        end,
-      })
     end,
+  },
+  {
+    'windwp/nvim-autopairs',
+    event = "InsertEnter",
+    config = true
   },
   {
     "JavaHello/lemminx-maven.nvim",
@@ -2137,7 +2131,7 @@ return {
   {
     url = "https://gitlab.com/schrieveslaach/sonarlint.nvim",
     name = "sonarlint.nvim",
-    ft = { "java", "xml" },
+    ft = { "java" },
     config = function()
       if not vim.g.sonarlint_attach_guard then
         vim.g.sonarlint_attach_guard = true
