@@ -123,7 +123,7 @@ vim.lsp.config('helm_ls', {
 --yaml_lsp (kubernetes manifests, CRDs, schema store)
 vim.api.nvim_create_autocmd('FileType', {
   group = vim.api.nvim_create_augroup('YamlLspLazySetup', { clear = true }),
-  pattern = 'yaml',
+  pattern = { 'yaml', 'yaml.docker-compose' },
   once = true,
   callback = function()
     local yaml_companion = require('yaml-companion')
@@ -147,10 +147,20 @@ vim.api.nvim_create_autocmd('FileType', {
 
     vim.lsp.config('yamlls', vim.tbl_deep_extend('force', yamlls_config, {
       cmd = { resolve_command('yaml-language-server'), '--stdio' },
-      filetypes = { 'yaml', 'yaml.gitlab', 'yaml.helm-values' },
+      filetypes = { 'yaml', 'yaml.gitlab', 'yaml.helm-values', 'yaml.docker-compose' },
       root_markers = { '.git' },
     }))
     vim.lsp.enable('yamlls')
+  end,
+})
+
+vim.api.nvim_create_autocmd('LspAttach', {
+  group = vim.api.nvim_create_augroup('YamllsComposeCapabilities', { clear = true }),
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if client and client.name == 'yamlls' and vim.bo[args.buf].filetype == 'yaml.docker-compose' then
+      client.server_capabilities.completionProvider = nil
+    end
   end,
 })
 
@@ -1704,12 +1714,6 @@ vim.api.nvim_create_autocmd('LspAttach', {
 })
 
 vim.filetype.add({
-  filename = {
-    ['compose.yaml'] = 'yaml.docker-compose',
-    ['compose.yml'] = 'yaml.docker-compose',
-    ['docker-compose.yaml'] = 'yaml.docker-compose',
-    ['docker-compose.yml'] = 'yaml.docker-compose',
-  },
   pattern = {
     ['.*/nginx/.*%.conf'] = 'nginx',
   },

@@ -160,6 +160,18 @@ vim.api.nvim_create_autocmd("VimEnter", {
   callback = function()
     vim.schedule(function()
       vim.g.did_load_filetypes = nil
+      vim.filetype.add({
+        filename = {
+          ['compose.yaml'] = 'yaml.docker-compose',
+          ['compose.yml'] = 'yaml.docker-compose',
+          ['docker-compose.yaml'] = 'yaml.docker-compose',
+          ['docker-compose.yml'] = 'yaml.docker-compose',
+        },
+        pattern = {
+          ['.*/compose[^/]*%.ya?ml'] = { 'yaml.docker-compose', { priority = 10 } },
+          ['.*/docker%-compose[^/]*%.ya?ml'] = { 'yaml.docker-compose', { priority = 10 } },
+        },
+      })
       vim.cmd("filetype plugin indent on")
       vim.cmd("filetype detect")
       vim.cmd("doautoall filetypedetect BufRead")

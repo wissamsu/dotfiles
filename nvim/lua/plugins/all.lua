@@ -1044,7 +1044,14 @@ return {
               },
               source_name = {
                 text = function(ctx)
-                  local names = { lsp = 'LS', buffer = 'A', snippets = 'S', path = 'F' }
+                  local names = {
+                    lsp = 'LS',
+                    buffer = 'A',
+                    snippets = 'S',
+                    path = 'F',
+                    docker_tags = 'DT',
+                    docker_env = 'DE',
+                  }
                   return '[' .. (names[ctx.source_id] or ctx.source_id:upper()) .. ']'
                 end,
                 highlight = 'BlinkCmpSource',
@@ -1079,9 +1086,26 @@ return {
           sql = { 'dadbod', 'snippets', 'buffer' },
           mysql = { 'dadbod', 'snippets', 'buffer' },
           plsql = { 'dadbod', 'snippets', 'buffer' },
+          yaml = { inherit_defaults = true, 'docker_tags', 'docker_env' },
+          yml = { inherit_defaults = true, 'docker_tags', 'docker_env' },
+          ['yaml.docker-compose'] = { inherit_defaults = true, 'docker_tags', 'docker_env' },
         },
         providers = {
           dadbod = { name = 'Dadbod', module = 'vim_dadbod_completion.blink' },
+          docker_tags = {
+            name = 'Docker tags',
+            module = 'docker_compose',
+            opts = { mode = 'tags' },
+            async = true,
+            score_offset = 10,
+          },
+          docker_env = {
+            name = 'Docker env',
+            module = 'docker_compose',
+            opts = { mode = 'env' },
+            async = true,
+            score_offset = 5,
+          },
           buffer = {
             min_keyword_length = 1,
           },
