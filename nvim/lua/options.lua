@@ -609,7 +609,12 @@ end
 vim.api.nvim_create_autocmd("BufWipeout", {
   callback = function(args) tabline_cache[args.buf] = nil end,
 })
-vim.api.nvim_create_autocmd({ "BufModifiedSet", "BufWritePost" }, {
+vim.api.nvim_create_autocmd("OptionSet", {
+  pattern = "modified",
+  callback = function() vim.cmd.redrawtabline() end,
+})
+
+vim.api.nvim_create_autocmd("BufWritePost", {
   callback = function() vim.cmd.redrawtabline() end,
 })
 
