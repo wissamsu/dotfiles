@@ -76,6 +76,10 @@ vim.lsp.config('jsonls', {
           fileMatch = { 'tsconfig*.json' },
           url = 'https://json.schemastore.org/tsconfig.json',
         },
+        {
+          fileMatch = { '*-realm.json' },
+          url = 'https://jirutka.github.io/keycloak-json-schema/keycloak-realm-26.json',
+        },
       },
       validate = { enable = true },
     },
