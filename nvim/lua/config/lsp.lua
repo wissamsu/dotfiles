@@ -326,7 +326,18 @@ vim.lsp.config('angularls', {
 vim.lsp.config('buf_ls', {
   cmd = { resolve_command('buf'), 'beta', 'lsp' },
   filetypes = { 'proto' },
-  root_markers = { 'buf.yaml', 'buf.work.yaml', '.git' },
+  root_dir = function(bufnr, on_dir)
+    local fname = vim.api.nvim_buf_get_name(bufnr)
+    local proto_root = fname:match('^(.*/src/main/proto)/')
+    if proto_root then
+      local yaml = proto_root .. '/buf.yaml'
+      if vim.uv.fs_stat(yaml) == nil then
+        vim.fn.writefile({ 'version: v2' }, yaml)
+      end
+      return on_dir(proto_root)
+    end
+    on_dir(vim.fs.root(bufnr, { 'buf.yaml', 'buf.work.yaml', '.git' }))
+  end,
 })
 
 --cmake_lsp
