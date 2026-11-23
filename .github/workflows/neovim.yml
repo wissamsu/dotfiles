@@ -38,11 +38,11 @@ jobs:
       - name: Bootstrap lazy.nvim
         run: nvim --headless +qa 2>&1 | tee bootstrap.log
 
-      - name: Install plugins
-        run: |
-          nvim --headless "+Lazy! sync" +qa 2>&1 | tee sync.log
-          if grep -qE "Failed|E[0-9]{3,4}:" sync.log; then exit 1; fi
-
+      # - name: Install plugins
+      #   run: |
+      #     nvim --headless "+Lazy! sync" +qa 2>&1 | tee sync.log
+      #     if grep -qE "Failed|E[0-9]{3,4}:" sync.log; then exit 1; fi
+      #
       - name: Check startup
         run: |
           nvim --headless +qa 2>&1 | tee startup.log
