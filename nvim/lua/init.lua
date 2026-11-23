@@ -183,13 +183,6 @@ vim.opt.foldmethod = "manual"
 vim.opt.foldenable = true
 vim.opt.foldlevel = 99
 
-vim.keymap.set("n", "<CR>", function()
-  if vim.bo.buftype == "" then
-    pcall(vim.cmd, "normal! za")
-  else
-    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, false, true), "n", false)
-  end
-end, { silent = true, desc = "Toggle fold with Enter safely" })
 vim.keymap.set("n", "<leader>u", function()
   vim.cmd.packadd("nvim.undotree")
   vim.cmd.Undotree()
