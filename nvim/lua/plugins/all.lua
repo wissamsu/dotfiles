@@ -461,7 +461,7 @@ return {
     opts = {
       autocmd = {
         enabled = true,
-        updatetime = 5,
+        updatetime = 1,
       },
       sign = { enabled = true },
       virtual_text = { enabled = false },
@@ -497,12 +497,12 @@ return {
       },
       {
         "<leader>dn",
-        function() vim.diagnostic.jump({ count = 1, float = true }) end,
+        function() vim.diagnostic.jump({ count = 1 }) end,
         desc = "Next diagnostic",
       },
       {
         "<leader>dp",
-        function() vim.diagnostic.jump({ count = -1, float = true }) end,
+        function() vim.diagnostic.jump({ count = -1 }) end,
         desc = "Prev diagnostic",
       },
       {
@@ -603,6 +603,31 @@ return {
   {
     "mosheavni/yaml-companion.nvim",
     ft = { "yaml", "yml" },
+  },
+  {
+    "rachartier/tiny-inline-diagnostic.nvim",
+    event = "LspAttach",
+    priority = 1000,
+    config = function()
+      vim.diagnostic.config({ virtual_text = false })
+      require("tiny-inline-diagnostic").setup({
+        preset = "modern",
+        options = {
+          show_diags_only_under_cursor = false, -- show on every line, not just the cursor line
+          multilines = {
+            enabled = true,
+            always_show = true, -- long multi-line messages also show on all lines
+          },
+        },
+      })
+    end,
+  },
+  {
+    "Fildo7525/pretty_hover",
+    opts = {},
+    keys = {
+      { "K", function() require("pretty_hover").hover() end, desc = "Hover (pretty)" },
+    },
   },
   {
     'skanehira/github-actions.nvim',
