@@ -456,9 +456,15 @@ return {
     end,
   },
   {
-    "aznhe21/actions-preview.nvim",
-    keys = {
-      { "<leader>ca", function() require("actions-preview").code_actions() end, mode = { "n", "v" } },
+    'kosayoda/nvim-lightbulb',
+    event = 'LspAttach',
+    opts = {
+      autocmd = {
+        enabled = true,
+        updatetime = 5,
+      },
+      sign = { enabled = true },
+      virtual_text = { enabled = false },
     },
   },
   {
