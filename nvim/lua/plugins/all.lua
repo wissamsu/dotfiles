@@ -540,6 +540,14 @@ return {
     },
   },
   {
+    "emrearmagan/dockyard.nvim",
+    cmd = { "Dockyard", "DockyardFloat" },
+    lazy = true,
+    config = function()
+      require("dockyard").setup({})
+    end,
+  },
+  {
     "NickvanDyke/opencode.nvim",
     keys = {
       { "<C-o>", function() require("opencode").ask("@this: ", { submit = true }) end, mode = { "n", "x" }, desc = "Ask opencode…" },
@@ -1087,9 +1095,9 @@ return {
           sql = { 'dadbod', 'snippets', 'buffer' },
           mysql = { 'dadbod', 'snippets', 'buffer' },
           plsql = { 'dadbod', 'snippets', 'buffer' },
-           yaml = { inherit_defaults = true, 'docker_tags', 'docker_env', 'docker_volumes', 'docker_ports' },
-           yml = { inherit_defaults = true, 'docker_tags', 'docker_env', 'docker_volumes', 'docker_ports' },
-           ['yaml.docker-compose'] = { inherit_defaults = true, 'docker_tags', 'docker_env', 'docker_volumes', 'docker_ports' },
+          yaml = { inherit_defaults = true, 'docker_tags', 'docker_env', 'docker_volumes', 'docker_ports' },
+          yml = { inherit_defaults = true, 'docker_tags', 'docker_env', 'docker_volumes', 'docker_ports' },
+          ['yaml.docker-compose'] = { inherit_defaults = true, 'docker_tags', 'docker_env', 'docker_volumes', 'docker_ports' },
           dockerfile = { inherit_defaults = true, 'docker_tags' },
         },
         providers = {
